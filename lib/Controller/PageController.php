@@ -6,14 +6,14 @@ use OCA\X2Mail\Util\SnappyMailHelper;
 use OCA\X2Mail\ContentSecurityPolicy;
 
 use OCP\AppFramework\Controller;
+use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\TemplateResponse;
 
 class PageController extends Controller
 {
-	/**
-	 * @NoAdminRequired
-	 * @NoCSRFRequired
-	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function index()
 	{
 		$config = \OC::$server->getConfig();
@@ -82,28 +82,22 @@ class PageController extends Controller
 		return $response;
 	}
 
-	/**
-	 * @NoAdminRequired
-	 * @NoCSRFRequired
-	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function appGet()
 	{
 		return SnappyMailHelper::startApp(true);
 	}
 
-	/**
-	 * @NoAdminRequired
-	 * @NoCSRFRequired
-	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function appPost()
 	{
 		return SnappyMailHelper::startApp(true);
 	}
 
-	/**
-	 * @NoAdminRequired
-	 * @NoCSRFRequired
-	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function indexPost()
 	{
 		return SnappyMailHelper::startApp(true);

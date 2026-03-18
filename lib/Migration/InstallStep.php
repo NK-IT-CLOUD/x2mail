@@ -70,26 +70,27 @@ class InstallStep implements IRepairStep
 			$bSave = true;
 		}
 
-		// Pre-configure domain
-		$oProvider = \RainLoop\Api::Actions()->DomainProvider();
-		$oDomain = $oProvider->Load('nextcloud');
-		if (!$oDomain) {
-			$output->info('Add nextcloud as domain');
-			$oDomain = new \RainLoop\Model\Domain('nextcloud');
-			$iSecurityType = \MailSo\Net\Enumerations\ConnectionSecurityType::NONE;
-			$oDomain->ImapSettings()->host = 'localhost';
-			$oDomain->ImapSettings()->type = $iSecurityType;
-			$oDomain->ImapSettings()->shortLogin = true;
-			$oDomain->SieveSettings()->enabled = true;
-			$oDomain->SieveSettings()->host = 'localhost';
-			$oDomain->SieveSettings()->type = $iSecurityType;
-			$oDomain->SmtpSettings()->host = 'localhost';
-			$oDomain->SmtpSettings()->type = $iSecurityType;
-			$oDomain->SmtpSettings()->shortLogin = true;
-			$oProvider->Save($oDomain);
-			if (!$oConfig->Get('login', 'default_domain', '')) {
-				$oConfig->Set('login', 'default_domain', 'nextcloud');
-				$bSave = true;
+		// Remove SM default domains — X2Mail uses the Setup Wizard for domain config
+		$smDefaults = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'nextcloud', 'default'];
+		/** @var IConfig $ncConfig */
+		$ncConfig = \OC::$server->get(IConfig::class);
+		$dataDir = \rtrim(\trim($ncConfig->getSystemValue('datadirectory', '')), '\\/');
+		$domainsPath = $dataDir . '/appdata_x2mail/_data_/_default_/domains';
+		if (\is_dir($domainsPath)) {
+			foreach ($smDefaults as $name) {
+				$file = $domainsPath . '/' . $name . '.json';
+				if (\file_exists($file)) {
+					\unlink($file);
+					$output->info("Removed SM default domain: {$name}");
+				}
+			}
+			// Remove SM internal hash domain (e.g. 76eaa44ce9a9.json)
+			foreach (\glob($domainsPath . '/*.json') ?: [] as $file) {
+				$basename = \basename($file, '.json');
+				if (\preg_match('/\A[0-9a-f]{12}\z/', $basename)) {
+					\unlink($file);
+					$output->info("Removed SM hash domain: {$basename}");
+				}
 			}
 		}
 

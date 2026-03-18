@@ -11,7 +11,7 @@ document.onreadystatechange = () => {
 		passThemesToIFrame();
 		let form = document.querySelector('form.snappymail');
 		form && SnappyMailFormHelper(form);
-		setupUnifiedSearchListener()
+		setupUnifiedSearchListener();
 	}
 };
 

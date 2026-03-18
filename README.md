@@ -170,7 +170,7 @@ Shows configured domains, IMAP/SMTP settings, auth methods, OIDC status, and Sna
 | `--smtp-ssl` | none | `none`, `ssl`, or `tls` |
 | `--smtp-auth` | no | Require SMTP authentication |
 | `--domain` | (required) | Mail domain (e.g. `example.com`) |
-| `--auth` | plain | `plain`, `oauthbearer`, or `xoauth2` |
+| `--auth` | plain | `plain` or `oauthbearer` (SSO via OAUTHBEARER/XOAUTH2) |
 | `--oidc-provider` | user_oidc | `user_oidc` (recommended) or `oidc_login` |
 | `--sieve` | no | Enable Sieve filtering |
 | `--skip-checks` | no | Skip connectivity and capability checks |
@@ -239,7 +239,7 @@ Access tokens typically expire after 5 minutes. X2Mail's `TokenRefreshMiddleware
 
 - Check that `app_path` in SM config matches the NC custom_apps path
 - Run `occ x2mail:status` to verify app_path
-- Clear opcache: `php -r 'opcache_reset();'`
+- Restart PHP-FPM container after deploy to clear OPcache: `docker restart nextcloud`
 
 ## Requirements
 
@@ -257,6 +257,11 @@ cd x2mail
 make update-core    # Download SnappyMail engine
 make build          # Build release tarball
 make clean          # Clean build artifacts
+
+# Deploy to Nextcloud (Docker FPM setup)
+./scripts/deploy.sh              # Build + deploy + restart FPM
+./scripts/deploy.sh --build-only # Only create tarball
+./scripts/deploy.sh --skip-build # Deploy existing tarball
 ```
 
 See [RELEASE.md](RELEASE.md) for versioning and release process.
