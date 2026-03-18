@@ -32,8 +32,16 @@ class TokenRefreshMiddleware extends Middleware {
 				return;
 			}
 
+			// Proactive refresh: refresh when token is expired OR expiring soon (>50% lifetime)
+			// This prevents SM from using an about-to-expire token for IMAP
+			$needsRefresh = false;
 			if (method_exists($token, 'isExpired') && $token->isExpired()) {
-				// Token expired — trigger refresh
+				$needsRefresh = true;
+			} elseif (method_exists($token, 'isExpiring') && $token->isExpiring()) {
+				$needsRefresh = true;
+			}
+
+			if ($needsRefresh) {
 				$refreshed = $tokenService->getToken(true);
 				if ($refreshed !== null) {
 					$this->session->set('oidc_access_token', $refreshed->getAccessToken());
