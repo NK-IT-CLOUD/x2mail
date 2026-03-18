@@ -207,5 +207,20 @@ else
     skip "ICalendar/DateTime.php: getDateTimes"
 fi
 
+# ── Chrome 117+ RegExp v-flag compat ──────────────────────────────
 echo ""
-echo "=== All PHP 8.4 patches applied ==="
+echo "--- Browser compat patches ---"
+
+# PopupsFolderCreate.html: invalid regex pattern with escaped backslash in character class
+FILE="${BASE}/app/templates/Views/User/PopupsFolderCreate.html"
+if grep -q 'pattern="\^\\[\\^\\\\\\\\\/\\]\\+\$"' "$FILE" 2>/dev/null || grep -q 'pattern="\^\[^\\\\/\]+\$"' "$FILE" 2>/dev/null; then
+    sed -i 's|pattern="\^[^\\/]*\$"|pattern="^[^/]+$"|' "$FILE"
+    # Fallback: direct replacement
+    sed -i 's|pattern="\^\[^\\\\/\]+\$"|pattern="^[^/]+$"|' "$FILE"
+    ok "PopupsFolderCreate.html: regex pattern"
+else
+    skip "PopupsFolderCreate.html: regex pattern"
+fi
+
+echo ""
+echo "=== All patches applied ==="
