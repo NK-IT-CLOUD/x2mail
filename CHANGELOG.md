@@ -6,6 +6,26 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-03-18
+
+### Fixed
+- MailSo: SMTP CRLF injection prevention in MailFrom/Rcpt
+- MailSo: IMAP EscapeString strips CR/LF/NUL from quoted strings
+- MailSo: MIME parser recursion depth limit (max 50 levels)
+- MailSo: SSLContext property whitelist in fromArray()
+- MailSo: Sieve script name CRLF stripping
+- MailSo: fix undefined variable in IdnToUtf8/IdnToAscii
+- MailSo: Xxtea return type and parameter type for PHP 8.4
+- NC Plugin: replace all `\OC::$server` with `\OCP\Server::get()`
+
+### Changed
+- Static version path `app/snappymail/v/current/` — no renames on version bumps
+- `APP_VERSION` read from info.xml at runtime (single source of truth)
+- Update check against own GitHub releases instead of snappymail.eu
+- Auto-update disabled (managed via scripts/release.sh)
+- About page: X2Mail branding with NK-IT Dev + GitHub link
+- `scripts/bump-version.sh` for automated version bumps
+
 ## [0.3.0] — 2026-03-18
 
 ### Security
