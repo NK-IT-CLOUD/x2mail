@@ -51,11 +51,11 @@ class TAR
 		\header('Content-Transfer-Encoding: binary');
 		if (false !== $this->gzip) {
 			$name .= '.tgz';
-			$tname = \preg_match('#^[\x01-\x7F]*$#D', $name) ? $name : '=?UTF-8?B?'.\base64_encode($name).'?=';
+			$tname = \preg_match('#^[\x20-\x7E]*$#D', $name) ? $name : '=?UTF-8?B?'.\base64_encode($name).'?=';
 			\header("Content-Type: application/gzip; name=\"{$tname}\"");
 		} else {
 			$name .= '.tar';
-			$tname = \preg_match('#^[\x01-\x7F]*$#D', $name) ? $name : '=?UTF-8?B?'.\base64_encode($name).'?=';
+			$tname = \preg_match('#^[\x20-\x7E]*$#D', $name) ? $name : '=?UTF-8?B?'.\base64_encode($name).'?=';
 			\header("Content-Type: application/x-ustar; name=\"{$tname}\"");
 		}
 		\MailSo\Base\Http::setContentDisposition('attachment', ['filename' => $name]);
@@ -166,7 +166,7 @@ class TAR
 			420,
 			$time
 		);
-		$l += $this->write($data);
+		$l = $this->write($data);
 		if ($l = $l % 512) {
 			$l = 512 - $l;
 			$this->write(\pack("a{$l}", ''));

@@ -11,7 +11,7 @@ class Socket extends \SnappyMail\HTTP\Request
 		return \function_exists('openssl_open');
 	}
 
-	private static $Authorization = [];
+	private array $Authorization = [];
 	protected function __doRequest(string &$method, string &$request_url, &$body, array $extra_headers) : Response
 	{
 		$parts = \parse_url($request_url);
@@ -38,9 +38,9 @@ class Socket extends \SnappyMail\HTTP\Request
 			'Connection: Close',
 		);
 		if (isset($extra_headers['Authorization'])) {
-			static::$Authorization[$host] = $extra_headers['Authorization'];
-		} else if (isset(static::$Authorization[$host])) {
-			$extra_headers['Authorization'] = static::$Authorization[$host];
+			$this->Authorization[$host] = $extra_headers['Authorization'];
+		} else if (isset($this->Authorization[$host])) {
+			$extra_headers['Authorization'] = $this->Authorization[$host];
 		}
 		if ($extra_headers) {
 			$headers = \array_merge($headers, $extra_headers);

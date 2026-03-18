@@ -27,7 +27,7 @@ class IMagick extends \Imagick implements \SnappyMail\Image
 			$imagick->clear();
 			return false;
 		}
-		$imagick->setImageMatte(true);
+		$imagick->setImageAlphaChannel(\Imagick::ALPHACHANNEL_ACTIVATE);
 		return $imagick;
 	}
 
@@ -41,7 +41,7 @@ class IMagick extends \Imagick implements \SnappyMail\Image
 		if (!$imagick->readImageFile($fp)) {
 			throw new \InvalidArgumentException('Failed to load image');
 		}
-		$imagick->setImageMatte(true);
+		$imagick->setImageAlphaChannel(\Imagick::ALPHACHANNEL_ACTIVATE);
 		return $imagick;
 */
 	}

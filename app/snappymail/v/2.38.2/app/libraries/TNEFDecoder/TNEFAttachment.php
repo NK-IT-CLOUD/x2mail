@@ -133,6 +133,9 @@ class TNEFAttachment
 	{
 		$attribute = $buffer->geti32();      // attribute if
 		$length = $buffer->geti32();         // length
+		if ($length < 0 || $length > $buffer->getRemainingBytes()) {
+			return;
+		}
 		$value = $buffer->getBytes($length); // data
 		$checksumAtt = $buffer->geti16();    // checksum
 		if ($value !== null && $this->validateChecksum) {

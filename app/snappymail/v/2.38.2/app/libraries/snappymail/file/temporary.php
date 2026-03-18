@@ -14,7 +14,7 @@ class Temporary
 		if ($prefix) {
 			$this->filename = @\tempnam($tmpdir, $name);
 		} else {
-			$this->filename = $tmpdir . '/' . $name;
+			$this->filename = $tmpdir . '/' . \basename($name);
 		}
 	}
 

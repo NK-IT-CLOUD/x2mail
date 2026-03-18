@@ -559,7 +559,7 @@ class ServiceActions
 				$this->Cacher()->Delete(KeyPathHelper::SsoCacherKey($sSsoHash));
 
 				if (\is_array($aData) && !empty($aData['Email']) && isset($aData['Password'], $aData['Time']) &&
-					(0 === $aData['Time'] || \time() - 10 < $aData['Time']))
+					(\time() - 10 < $aData['Time']))
 				{
 					$aAdditionalOptions = (isset($aData['AdditionalOptions']) && \is_array($aData['AdditionalOptions']))
 						? $aData['AdditionalOptions'] : [];

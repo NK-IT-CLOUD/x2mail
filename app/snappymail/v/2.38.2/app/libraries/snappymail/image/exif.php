@@ -20,6 +20,10 @@ class Exif
 	{
 		$image_info = empty($image_info['mime']) ? \getimagesizefromstring($data) : $image_info;
 		if (!empty($image_info['mime']) && \IMG_JPG == $image_info[2] && \is_callable('exif_read_data')) {
+			$allowedMimes = ['image/jpeg', 'image/tiff', 'image/png', 'image/webp'];
+			if (!\in_array($image_info['mime'], $allowedMimes, true)) {
+				return 0;
+			}
 			$exif = \exif_read_data('data://'.$image_info['mime'].';base64,' . \base64_encode($data));
 			if (false !== $exif) {
 				return \max(0, \intval($exif['IFD0.Orientation'] ?? 0));

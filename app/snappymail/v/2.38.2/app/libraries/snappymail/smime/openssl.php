@@ -38,6 +38,7 @@ class OpenSSL
 			return false;
 		}
 		$key = \str_replace(':', '', $data['extensions']['subjectKeyIdentifier'] ?? $data['hash']);
+		$key = \basename($key);
 		$filename = "{$this->homedir}/{$key}.crt";
 		if (\file_exists($filename)) {
 			\SnappyMail\Log::debug('OpenSSL', "certificate {$key} already imported");
@@ -232,7 +233,7 @@ class OpenSSL
 			$encrypted .= $line;
 		} while (true);
 
-		return $data;
+		return $encrypted;
 	}
 
 	public function sign(/*string|Temporary*/$input, bool $detached = true)
@@ -264,9 +265,6 @@ class OpenSSL
 		$micalg = '';
 		while (!\feof($fp)) {
 			$line = \fgets($fp);
-			$fp = $output->fopen();
-			while (!\feof($fp)) {
-				$line = \fgets($fp);
 /*
 				if (!$micalg && \str_contains($line, 'Content-Type: multipart/signed')) {
 					\preg_match('/micalg="([^"+])"/', $line, $match);
@@ -288,7 +286,6 @@ class OpenSSL
 						$signature .= $line;
 					} while (true);
 				}
-			}
 		}
 
 		throw new \RuntimeException('OpenSSL sign: failed to find p7s');

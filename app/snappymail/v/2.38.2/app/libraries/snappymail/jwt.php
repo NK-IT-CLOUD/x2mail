@@ -132,26 +132,19 @@ abstract class JWT
 			case 'RS256':
 			case 'RS384':
 			case 'RS512':
-				$free_key = !\is_resource($key);
-				if ($free_key) {
+				if (!\is_resource($key) && !($key instanceof \OpenSSLAsymmetricKey)) {
 					$key = \openssl_pkey_get_private($key, $passphrase);
 					if (!$key) {
 						throw new \ValueError('Invalid key, reason: ' . \openssl_error_string());
 					}
 				}
-				try {
-					$details = \openssl_pkey_get_details($key);
-					if (!isset($details['key']) || OPENSSL_KEYTYPE_RSA !== $details['type']) {
-						throw new \ValueError('Key is not compatible with RSA signatures');
-					}
-					$signature = '';
-					if (!\openssl_sign($msg, $signature, $key, 'SHA'.\substr($alg,2))) {
-						throw new \DomainException('OpenSSL unable to sign data: ' . \openssl_error_string());
-					}
-				} finally {
-					if ($free_key) {
-						\openssl_pkey_free($key);
-					}
+				$details = \openssl_pkey_get_details($key);
+				if (!isset($details['key']) || OPENSSL_KEYTYPE_RSA !== $details['type']) {
+					throw new \ValueError('Key is not compatible with RSA signatures');
+				}
+				$signature = '';
+				if (!\openssl_sign($msg, $signature, $key, 'SHA'.\substr($alg,2))) {
+					throw new \DomainException('OpenSSL unable to sign data: ' . \openssl_error_string());
 				}
 				return $signature;
 
@@ -186,26 +179,19 @@ abstract class JWT
 			case 'RS256':
 			case 'RS384':
 			case 'RS512':
-				$free_key = !\is_resource($key);
-				if ($free_key) {
+				if (!\is_resource($key) && !($key instanceof \OpenSSLAsymmetricKey)) {
 					$key = \openssl_pkey_get_public($key);
 					if (!$key) {
 						throw new \ValueError('Invalid key, reason: ' . openssl_error_string());
 					}
 				}
-				try {
-					$details = \openssl_pkey_get_details($key);
-					if (!isset($details['key']) || OPENSSL_KEYTYPE_RSA !== $details['type']) {
-						throw new \ValueError('Key is not compatible with RSA signatures');
-					}
-					$success = \openssl_verify($msg, $signature, $key, 'SHA'.\substr($alg,2));
-					if (-1 == $success) {
-						throw new \DomainException('OpenSSL unable to verify data: ' . \openssl_error_string());
-					}
-				} finally {
-					if ($free_key) {
-						\openssl_pkey_free($key);
-					}
+				$details = \openssl_pkey_get_details($key);
+				if (!isset($details['key']) || OPENSSL_KEYTYPE_RSA !== $details['type']) {
+					throw new \ValueError('Key is not compatible with RSA signatures');
+				}
+				$success = \openssl_verify($msg, $signature, $key, 'SHA'.\substr($alg,2));
+				if (-1 == $success) {
+					throw new \DomainException('OpenSSL unable to verify data: ' . \openssl_error_string());
 				}
 				return $success;
 

@@ -294,7 +294,7 @@ class HtmlFormatter
 			// convert character to Unicode
 			$utf8 = \iconv($srcEnc, 'UTF-8', \chr($code));
 		}
-		return $utf8 ? $utf8 : \mb_convert_encoding("&#{$code};", 'UTF-8', 'HTML-ENTITIES');
+		return $utf8 ? $utf8 : \html_entity_decode("&#{$code};", ENT_QUOTES, 'UTF-8');
 	}
 
 	protected function write(string $txt)

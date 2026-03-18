@@ -148,7 +148,7 @@ class SnappyMailHelper
 		}
 
 		// If the current user ID is identical to login ID
-		if ($ocSession->get('snappymail-nc-uid') == $sUID) {
+		if ($ocSession->get('snappymail-nc-uid') === $sUID) {
 
 			// If OpenID Connect (OIDC) is enabled and used for login, use this.
 			if (static::isOIDCLogin()) {

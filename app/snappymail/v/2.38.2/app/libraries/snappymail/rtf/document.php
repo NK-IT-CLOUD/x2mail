@@ -14,6 +14,7 @@ class Document
 	private int $pos = 0; // Current position in RTF string
 	public ?Group $root = null; // Root group
 	private ?Group $group = null; // Current group
+	private int $depth = 0;
 
 	private string $char = '';
 	private array $uc = [];
@@ -118,6 +119,7 @@ class Document
 	// Store state of document on stack.
 	protected function startGroup()
 	{
+		if (++$this->depth > 100) { return; }
 		$group = new Group();
 		if ('\\' === $this->nextChar(true)) {
 			$cword = null;
@@ -174,6 +176,7 @@ class Document
 	// Retrieve state of document from stack.
 	protected function endGroup()
 	{
+		$this->depth = \max(0, $this->depth - 1);
 		$this->group = $this->group->parent;
 		\array_pop($this->uc);
 	}

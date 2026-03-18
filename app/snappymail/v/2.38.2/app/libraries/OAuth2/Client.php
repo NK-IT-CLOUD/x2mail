@@ -365,7 +365,7 @@ class Client
     private function generateMACSignature($url, $parameters, $http_method)
     {
         $timestamp = time();
-        $nonce = uniqid();
+        $nonce = \bin2hex(\random_bytes(16));
         $parsed_url = parse_url($url);
         if (!isset($parsed_url['port']))
         {
