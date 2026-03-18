@@ -2,7 +2,7 @@
 
 if (!defined('APP_VERSION'))
 {
-	define('APP_VERSION', '2.38.2');
+	define('APP_VERSION', '0.3.0');
 	define('APP_INDEX_ROOT_PATH', __DIR__ . DIRECTORY_SEPARATOR);
 }
 

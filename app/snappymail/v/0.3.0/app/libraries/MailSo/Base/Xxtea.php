@@ -95,7 +95,7 @@ class Xxtea
 		if ($aW) {
 			$iM = $aV[$iLen - 1];
 			if (($iM < $iN - 3) || ($iM > $iN)) {
-				return false;
+				return '';
 			}
 			$iN = $iM;
 		}
@@ -106,11 +106,11 @@ class Xxtea
 		return $aW ? \substr(\join('', $aS), 0, $iN) : \join('', $aS);
 	}
 
-	private static function str2long(string $sS, string $sW) : array
+	private static function str2long(string $sS, bool $bW) : array
 	{
 		$aV = \unpack('V*', $sS . \str_repeat("\0", (4 - \strlen($sS) % 4) & 3));
 		$aV = \array_values($aV);
-		if ($sW) {
+		if ($bW) {
 			$aV[\count($aV)] = \strlen($sS);
 		}
 		return $aV;

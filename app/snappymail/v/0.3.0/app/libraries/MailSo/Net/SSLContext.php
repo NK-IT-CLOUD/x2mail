@@ -52,9 +52,12 @@ class SSLContext implements \JsonSerializable
 
 	public static function fromArray(array $settings) : self
 	{
+		$allowed = ['verify_peer', 'verify_peer_name', 'allow_self_signed', 'SNI_enabled', 'disable_compression', 'security_level', 'cafile', 'capath', 'local_cert'];
 		$object = new static;
 		foreach ($settings as $key => $value) {
-			$object->$key = $value;
+			if (\in_array($key, $allowed, true)) {
+				$object->$key = $value;
+			}
 		}
 		return $object;
 	}

@@ -83,8 +83,11 @@ abstract class Parser
 	 * @param resource $rStreamHandle
 	 */
 	public static function parseStreamRecursive(Part $oPart, $rStreamHandle, int &$iOffset,
-		string &$sPrevBuffer, string &$sBuffer, array &$aBoundaryStack, bool &$bIsOef, bool $bNotFirstRead = false) : void
+		string &$sPrevBuffer, string &$sBuffer, array &$aBoundaryStack, bool &$bIsOef, bool $bNotFirstRead = false, int $depth = 0) : void
 	{
+		if ($depth > 50) {
+			return;
+		}
 		$iPos = 0;
 		$iParsePosition = self::POS_HEADERS;
 		$sCurrentBoundary = '';
@@ -226,7 +229,7 @@ abstract class Parser
 						$oSubPart = new Part;
 
 						static::parseStreamRecursive($oSubPart, $rStreamHandle,
-							$iOffset, $sPrevBuffer, $sBuffer, $aBoundaryStack, $bIsOef, true);
+							$iOffset, $sPrevBuffer, $sBuffer, $aBoundaryStack, $bIsOef, true, $depth + 1);
 
 						$oPart->SubParts->append($oSubPart);
 						static::$LineParts[] = $oSubPart;

@@ -248,6 +248,7 @@ class SieveClient extends \MailSo\Net\NetClient
 	 */
 	public function GetScript(string $sScriptName) : string
 	{
+		$sScriptName = \str_replace(["\r", "\n"], '', $sScriptName);
 		$sScriptName = \addcslashes($sScriptName, '"\\');
 		$this->sendRequest('GETSCRIPT "'.$sScriptName.'"');
 		$aResponse = $this->parseResponse();
@@ -275,6 +276,7 @@ class SieveClient extends \MailSo\Net\NetClient
 	 */
 	public function PutScript(string $sScriptName, string $sScriptSource) : self
 	{
+		$sScriptName = \str_replace(["\r", "\n"], '', $sScriptName);
 		$sScriptName = \addcslashes($sScriptName, '"\\');
 		$sScriptSource = \preg_replace('/\r?\n/', "\r\n", $sScriptSource);
 		$this->sendRequest('PUTSCRIPT "'.$sScriptName.'" {'.\strlen($sScriptSource).'+}');
@@ -304,6 +306,7 @@ class SieveClient extends \MailSo\Net\NetClient
 	 */
 	public function SetActiveScript(string $sScriptName) : self
 	{
+		$sScriptName = \str_replace(["\r", "\n"], '', $sScriptName);
 		$sScriptName = \addcslashes($sScriptName, '"\\');
 		$this->sendRequestWithCheck('SETACTIVE "'.$sScriptName.'"');
 
@@ -317,6 +320,7 @@ class SieveClient extends \MailSo\Net\NetClient
 	 */
 	public function DeleteScript(string $sScriptName) : self
 	{
+		$sScriptName = \str_replace(["\r", "\n"], '', $sScriptName);
 		$sScriptName = \addcslashes($sScriptName, '"\\');
 		$this->sendRequestWithCheck('DELETESCRIPT "'.$sScriptName.'"');
 
@@ -330,6 +334,8 @@ class SieveClient extends \MailSo\Net\NetClient
 	 */
 	public function RenameScript(string $sOldName, string $sNewName) : self
 	{
+		$sOldName = \str_replace(["\r", "\n"], '', $sOldName);
+		$sNewName = \str_replace(["\r", "\n"], '', $sNewName);
 		$sOldName = \addcslashes($sOldName, '"\\');
 		$sNewName = \addcslashes($sNewName, '"\\');
 		$this->sendRequestWithCheck('RENAMESCRIPT "'.$sOldName.'" "'.$sNewName.'"');

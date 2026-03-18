@@ -698,8 +698,8 @@ abstract class Utils
 		\SnappyMail\Log::warning('MailSo', "Deprecated function IdnToUtf8 called at {$trace['file']}#{$trace['line']}");
 		if (\preg_match('/(^|\.|@)xn--/i', $sStr)) {
 			$sStr = \str_contains($sStr, '@')
-			? \SnappyMail\IDN::emailToUtf8($string)
-			: \idn_to_utf8($string);
+			? \SnappyMail\IDN::emailToUtf8($sStr)
+			: \idn_to_utf8($sStr);
 		}
 		return $sStr;
 	}
@@ -714,7 +714,7 @@ abstract class Utils
 		$aParts = \explode('@', $sStr);
 		$sDomain = \array_pop($aParts);
 		if (\preg_match('/[^\x20-\x7E]/', $sDomain)) {
-			$sDomain = \idn_to_ascii($string);
+			$sDomain = \idn_to_ascii($sDomain);
 		}
 		if ($bLowerCase) {
 			$sDomain = \strtolower($sDomain);

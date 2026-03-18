@@ -614,6 +614,7 @@ class ImapClient extends \MailSo\Net\NetClient
 		}
 */
 		// quoted-string
+		$sStringForEscape = \str_replace(["\r", "\n", "\0"], '', $sStringForEscape);
 		return '"' . \addcslashes($sStringForEscape, '\\"') . '"';
 	}
 

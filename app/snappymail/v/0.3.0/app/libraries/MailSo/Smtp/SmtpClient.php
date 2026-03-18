@@ -250,6 +250,7 @@ class SmtpClient extends \MailSo\Net\NetClient
 	public function MailFrom(string $sFrom, int $iSizeIfSupported = 0, bool $bDsn = false, bool $bRequireTLS = false) : self
 	{
 //		$sFrom = IDN::emailToAscii($sFrom);
+		$sFrom = \str_replace(["\r", "\n"], '', $sFrom);
 		$sCmd = "FROM:<{$sFrom}>";
 		// RFC 6531
 		if ($this->hasCapability('SMTPUTF8')) {
@@ -300,6 +301,7 @@ class SmtpClient extends \MailSo\Net\NetClient
 		}
 
 //		$sTo = IDN::emailToAscii($sTo);
+		$sTo = \str_replace(["\r", "\n"], '', $sTo);
 
 		$sCmd = 'TO:<'.$sTo.'>';
 
