@@ -1,0 +1,29 @@
+# X2Mail Commit Message Convention
+# ─────────────────────────────────
+# Format: <type>: <short description>
+#
+# Types:
+#   feat     New feature or capability
+#   fix      Bug fix
+#   docs     Documentation only
+#   refactor Code change that neither fixes a bug nor adds a feature
+#   style    Formatting, missing semicolons, etc (no code change)
+#   test     Adding or updating tests
+#   build    Build system, CI, dependencies
+#   release  Version bump and release prep
+#
+# Rules:
+#   - Subject line: max 72 chars, lowercase after type
+#   - Body: explain WHY, not WHAT (the diff shows what)
+#   - Blank line between subject and body
+#   - Reference issues: Fixes #123, Closes #456
+#   - NO Co-Authored-By or AI references
+#
+# Team: NKIT Dev (https://github.com/NK-IT-CLOUD)
+# Repo: https://github.com/NK-IT-CLOUD/x2mail
+#
+# Examples:
+#   feat: add occ x2mail:setup command with preflight checks
+#   fix: DomainConfigService writes full SM domain config format
+#   docs: add Dovecot OAUTHBEARER setup guide to README
+#   release: v0.2.0
