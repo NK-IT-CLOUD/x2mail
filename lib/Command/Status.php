@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\X2Mail\Command;
 
 use OCA\X2Mail\Service\DomainConfigService;
+use OCA\X2Mail\Service\LogService;
 use OC\Core\Command\Base;
 use OCP\IConfig;
 use Symfony\Component\Console\Input\InputInterface;
@@ -109,6 +110,15 @@ class Status extends Base
 		} else {
 			$output->writeln('  <comment>SM core not present at app/</comment>');
 		}
+
+		$output->writeln('');
+
+		// Debug log status
+		$output->writeln('<comment>Debug Log:</comment>');
+		$debugEnabled = LogService::isEnabled();
+		$output->writeln('  Status: ' . ($debugEnabled ? '<info>enabled</info>' : 'disabled'));
+		$output->writeln('  File: ' . $this->domainService->getDataPath() . '/x2mail.log');
+		$output->writeln('  Toggle: occ config:app:set x2mail debug_log --value=1|0');
 
 		$output->writeln('');
 		$output->writeln('  Data path: ' . $this->domainService->getDataPath());

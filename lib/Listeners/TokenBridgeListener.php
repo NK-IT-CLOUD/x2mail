@@ -4,23 +4,21 @@ declare(strict_types=1);
 
 namespace OCA\X2Mail\Listeners;
 
+use OCA\X2Mail\Service\LogService;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use OCP\ISession;
 use OCP\IUserSession;
-use Psr\Log\LoggerInterface;
 
 /**
  * Bridge user_oidc TokenObtainedEvent to SnappyMail session keys.
  *
  * IMPORTANT: Do NOT import any OCA\UserOIDC classes here.
- * This avoids autoload interference when user_oidc is not installed.
  */
 class TokenBridgeListener implements IEventListener {
 	public function __construct(
 		private IUserSession $userSession,
 		private ISession $session,
-		private LoggerInterface $logger,
 	) {}
 
 	public function handle(Event $event): void {
@@ -32,7 +30,7 @@ class TokenBridgeListener implements IEventListener {
 		$accessToken = $tokenData['access_token'] ?? null;
 
 		if (!$accessToken) {
-			$this->logger->warning('X2Mail: TokenObtainedEvent without access_token');
+			LogService::warning('TokenObtainedEvent without access_token');
 			return;
 		}
 
@@ -45,6 +43,7 @@ class TokenBridgeListener implements IEventListener {
 			$this->session->set('snappymail-nc-uid', $uid);
 		}
 
-		$this->logger->info('X2Mail: stored OIDC token, uid=' . ($uid ?? 'pending'));
+		$tokenLen = \strlen($accessToken);
+		LogService::info("OIDC token stored (len={$tokenLen}), uid=" . ($uid ?? 'pending'));
 	}
 }

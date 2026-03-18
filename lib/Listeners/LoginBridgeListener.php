@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace OCA\X2Mail\Listeners;
 
+use OCA\X2Mail\Service\LogService;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use OCP\ISession;
 use OCP\User\Events\UserLoggedInEvent;
-use Psr\Log\LoggerInterface;
 
 /**
  * Set snappymail-nc-uid on UserLoggedInEvent.
@@ -17,7 +17,6 @@ use Psr\Log\LoggerInterface;
 class LoginBridgeListener implements IEventListener {
 	public function __construct(
 		private ISession $session,
-		private LoggerInterface $logger,
 	) {}
 
 	public function handle(Event $event): void {
@@ -35,7 +34,9 @@ class LoginBridgeListener implements IEventListener {
 
 		if ($this->session->get('is_oidc')) {
 			$this->session->set('snappymail-passphrase', 'oidc_token_bridge');
-			$this->logger->info('X2Mail: LoginBridge uid=' . $uid . ' is_oidc=true');
+			LogService::info("Login bridge: uid={$uid}, is_oidc=true");
+		} else {
+			LogService::debug("Login bridge: uid={$uid}, is_oidc=false (password auth)");
 		}
 	}
 }
