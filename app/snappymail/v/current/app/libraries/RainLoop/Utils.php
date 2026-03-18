@@ -122,12 +122,8 @@ class Utils
 
 	public static function WebVersionPath() : string
 	{
-		return self::WebPath() . 'snappymail/v/' . APP_VERSION . '/';
-		/**
-		 * TODO: solve this to support other paths.
-		 * https://github.com/the-djmaze/snappymail/issues/685
-		 */
-//		return self::WebPath() . \str_replace(APP_INDEX_ROOT_PATH, '', APP_VERSION_ROOT_PATH);
+		// X2Mail: use static 'current' path — version is in info.xml, not the directory name
+		return self::WebPath() . 'snappymail/v/current/';
 	}
 
 	public static function WebStaticPath(string $path = '') : string
