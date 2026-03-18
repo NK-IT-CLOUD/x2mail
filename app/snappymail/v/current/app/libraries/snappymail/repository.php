@@ -4,8 +4,8 @@ namespace SnappyMail;
 
 abstract class Repository
 {
-	// snappyMailRepo
-	const BASE_URL = 'https://snappymail.eu/repository/v2/';
+	// X2Mail: check our own GitHub releases instead of upstream SM
+	const BASE_URL = 'https://api.github.com/repos/NK-IT-CLOUD/x2mail/';
 
 	private static function get(string $path) : string
 	{
@@ -137,27 +137,41 @@ abstract class Repository
 			$info->file
 			$info->warnings
 	 */
+	/**
+	 * X2Mail: check GitHub releases for latest version.
+	 */
 	public static function getLatestCoreInfo()
 	{
-		\RainLoop\Api::Actions()->IsAdminLoggined();
-		$sRep = static::get('core.json');
-		return $sRep ? \json_decode($sRep, false, 3, JSON_THROW_ON_ERROR) : null;
+		try {
+			$oHTTP = HTTP\Request::factory();
+			$oHTTP->max_response_kb = 64;
+			$response = $oHTTP->doRequest('GET', 'https://api.github.com/repos/NK-IT-CLOUD/x2mail/releases/latest');
+			if ($response && 200 === $response->status) {
+				$data = \json_decode($response->body, false, 5);
+				if ($data && !empty($data->tag_name)) {
+					$version = \ltrim($data->tag_name, 'v');
+					return (object) [
+						'version' => $version,
+						'file' => $data->html_url ?? '',
+						'warnings' => ''
+					];
+				}
+			}
+		} catch (\Throwable $e) {
+			\SnappyMail\Log::warning('X2Mail', 'Update check failed: ' . $e->getMessage());
+		}
+		return null;
 	}
 
+	// X2Mail: auto-update disabled — use scripts/release.sh
 	public static function downloadCore() : ?string
 	{
-		$info = static::getLatestCoreInfo();
-		return ($info && \version_compare(APP_VERSION, $info->version, '<'))
-			? static::download($info->file) // '../latest.tar.gz'
-			: null;
+		return null;
 	}
 
 	public static function canUpdateCore() : bool
 	{
-		return \version_compare(APP_VERSION, '2.0', '>')
-			&& \is_writable(\dirname(APP_VERSION_ROOT_PATH))
-			&& \is_writable(APP_INDEX_ROOT_PATH . 'index.php')
-			&& \RainLoop\Api::Config()->Get('admin_panel', 'allow_update', false);
+		return false;
 	}
 
 	public static function getEnabledPackagesNames() : array
