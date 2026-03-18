@@ -24,6 +24,11 @@ This stylesheet is used when SnappyMail runs in embed mode.
 	display: none;
 }
 
+/* Hide redundant folder settings icon in sidebar — settings accessible via dropdown menu */
+#rl-left .b-toolbar a[data-bind*="configureFolders"] {
+	display: none;
+}
+
 #rl-app select,
 #rl-app input
 {
