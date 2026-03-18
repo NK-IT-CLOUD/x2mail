@@ -14,7 +14,13 @@ This stylesheet is used when SnappyMail runs in embed mode.
 	min-height: 100%;
 }
 
+/* Hide SM admin logout (admin panel accessed via NC settings) */
 #V-AdminPane .btn-logout {
+	display: none;
+}
+
+/* SSO mode: hide user logout (users log out via Nextcloud, not SM) */
+#top-system-dropdown-id + menu > li.dividerbar:last-child {
 	display: none;
 }
 
