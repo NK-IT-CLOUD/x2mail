@@ -243,8 +243,8 @@ Access tokens typically expire after 5 minutes. X2Mail's `TokenRefreshMiddleware
 
 ## Requirements
 
-- Nextcloud 28 — 35
-- PHP 8.1+
+- Nextcloud 33 (tested), other versions untested
+- PHP 8.4+
 - IMAP server (Dovecot recommended)
 - OIDC provider (Keycloak, Authentik, etc.) for SSO mode
 - `user_oidc` or `oidc_login` NC app
