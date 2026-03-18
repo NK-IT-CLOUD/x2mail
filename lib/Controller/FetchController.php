@@ -48,12 +48,14 @@ class FetchController extends Controller {
 			$sPath = '';
 
 			if (isset($_POST['appname']) && 'x2mail' === $_POST['appname']) {
-				$this->config->setAppValue('x2mail', 'snappymail-autologin',
-					isset($_POST['snappymail-autologin']) ? '1' === $_POST['snappymail-autologin'] : false);
-				$this->config->setAppValue('x2mail', 'snappymail-autologin-with-email',
-					isset($_POST['snappymail-autologin']) ? '2' === $_POST['snappymail-autologin'] : false);
-				$this->config->setAppValue('x2mail', 'snappymail-no-embed', isset($_POST['snappymail-no-embed']));
-				$this->config->setAppValue('x2mail', 'snappymail-autologin-oidc', isset($_POST['snappymail-autologin-oidc']));
+				// OIDC auto-login is the primary auth method
+				$oidcEnabled = isset($_POST['snappymail-autologin-oidc']);
+				$this->config->setAppValue('x2mail', 'snappymail-autologin-oidc', $oidcEnabled ? '1' : '0');
+				// Auto-login must be on for OIDC to work
+				$this->config->setAppValue('x2mail', 'snappymail-autologin', $oidcEnabled ? '1' : '0');
+				$this->config->setAppValue('x2mail', 'snappymail-no-embed', isset($_POST['snappymail-no-embed']) ? '1' : '0');
+				// X2Mail debug log
+				$this->config->setAppValue('x2mail', 'debug_log', isset($_POST['x2mail-debug-log']) ? '1' : '0');
 			} else {
 				return new JSONResponse([
 					'status' => 'error',
@@ -70,13 +72,6 @@ class FetchController extends Controller {
 			$oConfig->Set('webmail', 'allow_languages_on_settings', empty($_POST['snappymail-nc-lang']));
 			$oConfig->Set('login', 'allow_languages_on_login', empty($_POST['snappymail-nc-lang']));
 			$oConfig->Save();
-
-			if (!empty($_POST['import-rainloop'])) {
-				return new JSONResponse([
-					'status' => 'success',
-					'Message' => \implode("\n", \OCA\X2Mail\Util\RainLoop::import())
-				]);
-			}
 
 			$debug = !empty($_POST['snappymail-debug']);
 			$oConfig = \RainLoop\Api::Config();

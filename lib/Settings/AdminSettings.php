@@ -21,16 +21,15 @@ class AdminSettings implements ISettings
 		\OCA\X2Mail\Util\SnappyMailHelper::loadApp();
 
 		$keys = [
-			'snappymail-autologin',
-			'snappymail-autologin-with-email',
+			'snappymail-autologin-oidc',
 			'snappymail-no-embed',
-			'snappymail-autologin-oidc'
 		];
 		$parameters = [];
 		foreach ($keys as $k) {
 			$v = $this->config->getAppValue('x2mail', $k);
 			$parameters[$k] = $v;
 		}
+		$parameters['x2mail-debug-log'] = $this->config->getAppValue('x2mail', 'debug_log', '0') === '1';
 		$uid = \OC::$server->getUserSession()->getUser()->getUID();
 		if (\OC_User::isAdminUser($uid)) {
 			SnappyMailHelper::loadApp();
@@ -48,10 +47,7 @@ class AdminSettings implements ISettings
 		}
 		$parameters['snappymail-admin-password'] = $sPassword;
 
-		$parameters['can-import-rainloop'] = $sPassword && \is_dir(
-			\rtrim(\trim(\OC::$server->getSystemConfig()->getValue('datadirectory', '')), '\\/')
-			. '/rainloop-storage'
-		);
+		// RainLoop import removed — X2Mail is OIDC-first
 
 		$parameters['snappymail-debug'] = $oConfig->Get('debug', 'enable', false);
 
