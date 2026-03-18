@@ -1,4 +1,4 @@
-app/
+app/data/
 build/
 *.tar.gz
 appinfo/signature.json
