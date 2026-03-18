@@ -362,6 +362,14 @@ class lessc {
 	const mPrefix = '$'; // prefix of abstract blocks
 	const parentSelector = '&';
 
+	protected $parser;
+	protected $env;
+	protected $scope;
+	protected $storeEnv;
+	protected $count;
+	protected $inExp = false;
+	protected $sourceName;
+
 	// set to the parser that generated the current line when compiling
 	// so we know how to create error messages
 	protected $sourceParser = null;
@@ -1775,6 +1783,15 @@ class lessc_parser {
 
 	protected $blockDirectives = array("font-face", "keyframes", "page");
 	protected $lineDirectives = array("charset");
+
+	protected $inExp = false;
+	protected $eatWhiteDefault = true;
+	protected $buffer;
+	protected $count = 0;
+	protected $line = 0;
+	protected $seenComments = [];
+	protected $currentProperty;
+	protected $sourceName;
 
 	/**
 	 * if we are in parens we can be more liberal with whitespace around

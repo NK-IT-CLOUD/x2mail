@@ -311,7 +311,7 @@ class HtmlFormatter
 			$this->previousStyle = clone $this->style;
 			$this->openTag('span', $this->style);
 		}
-		$this->output .= $txt;
+		$this->output .= \htmlspecialchars($txt, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 	}
 
 	protected function openTag(string $tag, string $attr = '')

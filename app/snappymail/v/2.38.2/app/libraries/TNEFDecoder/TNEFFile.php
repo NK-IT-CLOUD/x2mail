@@ -65,6 +65,7 @@ class TNEFFile extends TNEFFileBase
 			case TNEF_AATTACHCREATEDATE:
 				$this->created = new TNEFDate();
 				$this->created->setTnefBuffer(new TNEFBuffer($value));
+				break;
 
 			case TNEF_AATTACHMODDATE:
 				$this->modified = new TNEFDate();

@@ -27,12 +27,12 @@ class TNEFvCard extends TNEFFileBase
 		$nickname_is_unicode = FALSE,
 		$company_is_unicode = FALSE;
 	public string
-		$surname,
-		$given_name,
-		$middle_name,
-		$nickname,
-		$company,
-		$metafile;
+		$surname = '',
+		$given_name = '',
+		$middle_name = '',
+		$nickname = '',
+		$company = '',
+		$metafile = '';
 	public array
 		$homepages = [],
 		$addresses = [],

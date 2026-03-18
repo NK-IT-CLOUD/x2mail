@@ -311,7 +311,7 @@ class OpenSSL
 		if (true !== \openssl_pkcs7_verify(
 			$input->filename(),
 //			$flags = 0, // \PKCS7_NOVERIFY | \PKCS7_NOCHAIN | \PKCS7_NOSIGS
-			\PKCS7_NOVERIFY | \PKCS7_NOCHAIN | \PKCS7_NOSIGS,
+			\PKCS7_NOVERIFY | \PKCS7_NOCHAIN,
 			$signers_certificates_filename ?: null,
 			$ca_info = [],
 			$this->untrusted_certificates_filename,

@@ -22,6 +22,11 @@ class IMagick extends \Imagick implements \SnappyMail\Image
 		if (!$imagick->readImageBlob($data)) {
 			throw new \InvalidArgumentException('Failed to load image');
 		}
+		$geo = $imagick->getImageGeometry();
+		if ($geo['width'] * $geo['height'] > 25000000) { // 25 megapixels max
+			$imagick->clear();
+			return false;
+		}
 		$imagick->setImageMatte(true);
 		return $imagick;
 	}

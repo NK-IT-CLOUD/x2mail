@@ -63,6 +63,10 @@ class TAR
 			if (\preg_match('#(^|/)PaxHeader/#', $header['filename'])) {
 			} else if (\substr($header['filename'], -1) !== '/') {
 				$filename = ($header['path'] ? $header['path'] . '/' : '') . $header['filename'];
+				// Prevent path traversal
+				if (\str_contains($filename, '..')) {
+					continue;
+				}
 				if ($files && !\preg_match($files, $filename)) {
 					continue;
 				}

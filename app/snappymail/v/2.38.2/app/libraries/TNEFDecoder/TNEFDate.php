@@ -24,14 +24,14 @@ class TNEFDate extends \DateTime
 	public function setTnefBuffer(TNEFBuffer $buffer)
 	{
 		$this->setDate(
-			$buffer->geti16(), // year
-			$buffer->geti16(), // month
-			$buffer->geti16()  // day
+			$buffer->geti16() ?? 0, // year
+			$buffer->geti16() ?? 0, // month
+			$buffer->geti16() ?? 0  // day
 		);
 		$this->setTime(
-			$buffer->geti16(), // hour
-			$buffer->geti16(), // minute
-			$buffer->geti16()  // second
+			$buffer->geti16() ?? 0, // hour
+			$buffer->geti16() ?? 0, // minute
+			$buffer->geti16() ?? 0  // second
 		);
 	}
 }

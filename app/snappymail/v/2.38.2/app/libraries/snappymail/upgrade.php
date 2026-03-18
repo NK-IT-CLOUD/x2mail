@@ -152,7 +152,7 @@ abstract class Upgrade
 		try {
 			return \json_decode($sData, true, 512, JSON_THROW_ON_ERROR) ?: array();
 		} catch (\Throwable $e) {
-			return \unserialize($sData) ?: array();
+			return \unserialize($sData, ['allowed_classes' => false]) ?: array();
 		}
 	}
 

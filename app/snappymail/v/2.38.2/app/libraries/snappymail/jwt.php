@@ -8,7 +8,7 @@ abstract class JWT
 {
 	private static function jsonEncode($data)
 	{
-		return Utils::UrlSafeBase64Encode(\json_encode($payload, JSON_THROW_ON_ERROR));
+		return Utils::UrlSafeBase64Encode(\json_encode($data, JSON_THROW_ON_ERROR));
 	}
 
 	private static function jsonDecode($data)

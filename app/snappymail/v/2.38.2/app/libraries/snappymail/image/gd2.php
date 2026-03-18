@@ -54,6 +54,12 @@ class GD2 implements \SnappyMail\Image
 		if (!$gd2->img) {
 			throw new \InvalidArgumentException('Failed to load image');
 		}
+		$w = \imagesx($gd2->img);
+		$h = \imagesy($gd2->img);
+		if ($w * $h > 25000000) { // 25 megapixels max
+			\imagedestroy($gd2->img);
+			return false;
+		}
 		$gd2->file = 'blob';
 		$gd2->type = (int) $imginfo[2];
 		$gd2->format = $format;
