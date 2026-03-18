@@ -212,7 +212,8 @@ echo ""
 echo "--- Browser compat patches ---"
 
 # PopupsFolderCreate.html: invalid regex pattern with escaped backslash in character class
-FILE="${BASE}/app/templates/Views/User/PopupsFolderCreate.html"
+SM_ROOT="/opt/x2mail/app/snappymail/v/${SM_VERSION}"
+FILE="${SM_ROOT}/app/templates/Views/User/PopupsFolderCreate.html"
 if grep -q 'pattern="\^\\[\\^\\\\\\\\\/\\]\\+\$"' "$FILE" 2>/dev/null || grep -q 'pattern="\^\[^\\\\/\]+\$"' "$FILE" 2>/dev/null; then
     sed -i 's|pattern="\^[^\\/]*\$"|pattern="^[^/]+$"|' "$FILE"
     # Fallback: direct replacement
@@ -220,6 +221,102 @@ if grep -q 'pattern="\^\\[\\^\\\\\\\\\/\\]\\+\$"' "$FILE" 2>/dev/null || grep -q
     ok "PopupsFolderCreate.html: regex pattern"
 else
     skip "PopupsFolderCreate.html: regex pattern"
+fi
+
+# ── Security fixes (Audit 2026-03-18) ────────────────────────────
+echo ""
+echo "--- Security audit patches ---"
+
+# S1. OAuth2/Client.php — enable SSL verification when no certificate_file
+FILE="${LIB}/OAuth2/Client.php"
+if grep -q 'CURLOPT_SSL_VERIFYPEER, false' "$FILE" 2>/dev/null; then
+    sed -i 's/CURLOPT_SSL_VERIFYPEER, false/CURLOPT_SSL_VERIFYPEER, true/' "$FILE"
+    sed -i 's/CURLOPT_SSL_VERIFYHOST, 0/CURLOPT_SSL_VERIFYHOST, 2/' "$FILE"
+    ok "OAuth2/Client.php: SSL verification enabled"
+else
+    skip "OAuth2/Client.php: SSL verification already enabled"
+fi
+
+# S2. HTTP Socket — replace removed \split() with \explode()
+FILE="${LIB}/snappymail/http/request/socket.php"
+if grep -q '\\split(' "$FILE" 2>/dev/null; then
+    sed -i "s/\\\\split('/\\\\explode('/g" "$FILE"
+    ok "socket.php: replaced \\split() with \\explode()"
+else
+    skip "socket.php: \\split() already replaced"
+fi
+
+# S3. HTTP Socket — \random_int() needs arguments
+if grep -q '\\random_int()' "$FILE" 2>/dev/null; then
+    sed -i 's/\\random_int()/\\random_int(0, PHP_INT_MAX)/' "$FILE"
+    ok "socket.php: fixed \\random_int() arguments"
+else
+    skip "socket.php: \\random_int() already fixed"
+fi
+
+# S4. ImapClient.php — remove OAUTHBEARER from PLAIN/SCRAM branch
+FILE="${LIB}/MailSo/Imap/ImapClient.php"
+if grep -q "'OAUTHBEARER' === \$type || \\\\str_starts_with" "$FILE" 2>/dev/null; then
+    sed -i "s/'OAUTHBEARER' === \$type || \\\\str_starts_with/\\\\str_starts_with/" "$FILE"
+    ok "ImapClient.php: removed OAUTHBEARER from PLAIN/SCRAM branch"
+else
+    skip "ImapClient.php: OAUTHBEARER already removed from PLAIN/SCRAM branch"
+fi
+
+# S5. HTTP Request — verify_peer default true
+FILE="${LIB}/snappymail/http/request.php"
+if grep -q 'verify_peer = false' "$FILE" 2>/dev/null; then
+    sed -i 's/verify_peer = false/verify_peer = true/' "$FILE"
+    ok "request.php: verify_peer default set to true"
+else
+    skip "request.php: verify_peer already true"
+fi
+
+# S6. CURL — uncomment CURLOPT_SSL_VERIFYHOST
+FILE="${LIB}/snappymail/http/request/curl.php"
+if grep -q '//.*CURLOPT_SSL_VERIFYHOST' "$FILE" 2>/dev/null; then
+    sed -i 's|//\s*CURLOPT_SSL_VERIFYHOST => \$this->verify_peer ? 2 : 0,|CURLOPT_SSL_VERIFYHOST => $this->verify_peer ? 2 : 0,|' "$FILE"
+    ok "curl.php: CURLOPT_SSL_VERIFYHOST uncommented"
+else
+    skip "curl.php: CURLOPT_SSL_VERIFYHOST already uncommented"
+fi
+
+# S7. SASL CRAM — add undeclared $algo property
+FILE="${LIB}/snappymail/sasl/cram.php"
+if grep -q 'protected string \$algo;' "$FILE" 2>/dev/null; then
+    skip "cram.php: \$algo property already declared"
+else
+    sed -i '/^class Cram extends/,/^{/ { /^{/a\\tprotected string $algo;' "$FILE"
+    ok "cram.php: added \$algo property declaration"
+fi
+
+# S8. Contacts.php — remove deprecated auto_detect_line_endings
+FILE="${LIB}/RainLoop/Actions/Contacts.php"
+if grep -q 'auto_detect_line_endings' "$FILE" 2>/dev/null; then
+    sed -i "/auto_detect_line_endings/d" "$FILE"
+    ok "Contacts.php: removed auto_detect_line_endings"
+else
+    skip "Contacts.php: auto_detect_line_endings already removed"
+fi
+
+# S9. AdditionalAccount.php — fix $aData→$aAccountHash in NewInstanceFromTokenArray
+#     Only replace $aData['smtp']['pass'] where DecryptUrlSafe or empty string is assigned
+#     (inside NewInstanceFromTokenArray), NOT in asTokenArray where $aData is correct
+FILE="${LIB}/RainLoop/Model/AdditionalAccount.php"
+if grep -q 'NewInstanceFromTokenArray' "$FILE" 2>/dev/null && grep -A30 'NewInstanceFromTokenArray' "$FILE" | grep -q "\$aData\['smtp'\]\['pass'\]" 2>/dev/null; then
+    sed -i '/NewInstanceFromTokenArray/,/^[[:space:]]*}$/ s/\$aData\['"'"'smtp'"'"'\]\['"'"'pass'"'"'\]/\$aAccountHash['"'"'smtp'"'"']['"'"'pass'"'"']/g' "$FILE"
+    ok "AdditionalAccount.php: fixed \$aData → \$aAccountHash in NewInstanceFromTokenArray"
+else
+    skip "AdditionalAccount.php: \$aData already fixed"
+fi
+
+# S10. Folders.php — fix undefined $iErrorCode
+FILE="${LIB}/RainLoop/Actions/Folders.php"
+if grep -q 'FalseResponse(\$iErrorCode' "$FILE" 2>/dev/null && ! grep -q '\$iErrorCode = \$_FILES' "$FILE" 2>/dev/null; then
+    sed -i '/FalseResponse(\$iErrorCode/i\\t\t\t$iErrorCode = $_FILES['"'"'appendFile'"'"']['"'"'error'"'"'];' "$FILE"
+    ok "Folders.php: defined \$iErrorCode from \$_FILES"
+else
+    skip "Folders.php: \$iErrorCode already defined"
 fi
 
 echo ""
