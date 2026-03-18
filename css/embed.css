@@ -20,18 +20,18 @@ This stylesheet is used when SnappyMail runs in embed mode.
 }
 
 /* SSO mode: hide user logout (users log out via Nextcloud, not SM) */
-#top-system-dropdown-id + menu > li.dividerbar:last-child {
-	display: none;
+#rl-app [data-bind*="logoutClick"] {
+	display: none !important;
 }
 
 /* Hide toggleLeftPanel button in settings view — no left panel to toggle */
-#V-SettingsPane .b-toolbar .toggleLeft {
-	display: none;
+#rl-app .b-toolbar .toggleLeft {
+	display: none !important;
 }
 
 /* Hide redundant folder settings icon in sidebar — settings accessible via dropdown menu */
-#rl-left .b-toolbar a[data-bind*="configureFolders"] {
-	display: none;
+#rl-app [data-bind*="configureFolders"] {
+	display: none !important;
 }
 
 #rl-app select,
