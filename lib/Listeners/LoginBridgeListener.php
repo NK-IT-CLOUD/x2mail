@@ -8,19 +8,17 @@ use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use OCP\ISession;
 use OCP\User\Events\UserLoggedInEvent;
+use Psr\Log\LoggerInterface;
 
 /**
  * Set snappymail-nc-uid on UserLoggedInEvent.
- *
- * This ensures the SM session UID is set for all login methods,
- * including OIDC logins that go through user_oidc.
+ * Also sets snappymail-passphrase for OIDC sessions.
  */
 class LoginBridgeListener implements IEventListener {
-	private ISession $session;
-
-	public function __construct(ISession $session) {
-		$this->session = $session;
-	}
+	public function __construct(
+		private ISession $session,
+		private LoggerInterface $logger,
+	) {}
 
 	public function handle(Event $event): void {
 		if (!($event instanceof UserLoggedInEvent)) {
@@ -32,6 +30,12 @@ class LoginBridgeListener implements IEventListener {
 			return;
 		}
 
-		$this->session->set('snappymail-nc-uid', $user->getUID());
+		$uid = $user->getUID();
+		$this->session->set('snappymail-nc-uid', $uid);
+
+		if ($this->session->get('is_oidc')) {
+			$this->session->set('snappymail-passphrase', 'oidc_token_bridge');
+			$this->logger->debug('X2Mail: LoginBridge uid=' . $uid . ' is_oidc=true');
+		}
 	}
 }

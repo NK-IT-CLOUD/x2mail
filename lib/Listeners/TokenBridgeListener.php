@@ -8,6 +8,7 @@ use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use OCP\ISession;
 use OCP\IUserSession;
+use Psr\Log\LoggerInterface;
 
 /**
  * Bridge user_oidc TokenObtainedEvent to SnappyMail session keys.
@@ -19,10 +20,10 @@ class TokenBridgeListener implements IEventListener {
 	public function __construct(
 		private IUserSession $userSession,
 		private ISession $session,
+		private LoggerInterface $logger,
 	) {}
 
 	public function handle(Event $event): void {
-		// Use method_exists — no class imports, no instanceof, no autoload issues
 		if (!method_exists($event, 'getToken')) {
 			return;
 		}
@@ -31,17 +32,19 @@ class TokenBridgeListener implements IEventListener {
 		$accessToken = $tokenData['access_token'] ?? null;
 
 		if (!$accessToken) {
+			$this->logger->warning('X2Mail: TokenObtainedEvent without access_token');
 			return;
 		}
 
-		// Set session keys that SnappyMail's nextcloud plugin reads
 		$this->session->set('oidc_access_token', $accessToken);
 		$this->session->set('is_oidc', true);
 
-		// User may not be logged in yet at TokenObtainedEvent time
 		$user = $this->userSession->getUser();
-		if ($user) {
-			$this->session->set('snappymail-nc-uid', $user->getUID());
+		$uid = $user ? $user->getUID() : null;
+		if ($uid) {
+			$this->session->set('snappymail-nc-uid', $uid);
 		}
+
+		$this->logger->debug('X2Mail: stored OIDC token, uid=' . ($uid ?? 'pending'));
 	}
 }
