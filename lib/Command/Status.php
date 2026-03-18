@@ -45,7 +45,8 @@ class Status extends Base
 				if ($config) {
 					$imapHost = $config['IMAP']['host'] ?? '?';
 					$imapPort = $config['IMAP']['port'] ?? '?';
-					$imapSsl = DomainConfigService::sslToString($config['IMAP']['ssl'] ?? 0);
+					$sslVal = $config['IMAP']['ssl'] ?? 0;
+					$imapSsl = \is_int($sslVal) ? DomainConfigService::sslToString($sslVal) : 'custom';
 					$smtpHost = $config['SMTP']['host'] ?? '?';
 					$smtpPort = $config['SMTP']['port'] ?? '?';
 					$sasl = $config['IMAP']['sasl'] ?? [];
