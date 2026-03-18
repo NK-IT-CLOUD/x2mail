@@ -28,6 +28,11 @@ return [
 			'verb' => 'POST'
 		],
 		[
+			'name' => 'fetch#setAdmin',
+			'url' => '/fetch/admin.php',
+			'verb' => 'POST'
+		],
+		[
 			'name' => 'fetch#setPersonal',
 			'url' => '/fetch/personal.php',
 			'verb' => 'POST'
