@@ -81,7 +81,7 @@ SMTP can use password auth, no auth (trusted network), or XOAUTH2 — configured
 
 ```bash
 # Download release
-wget https://github.com/x2mail/x2mail/releases/download/v0.1.0/x2mail-0.1.0.tar.gz
+wget https://github.com/NK-IT-CLOUD/x2mail/releases/download/v0.1.0/x2mail-0.1.0.tar.gz
 
 # Extract to NC custom_apps
 cd /path/to/nextcloud/custom_apps
@@ -97,7 +97,7 @@ occ app:enable x2mail
 ### From Source
 
 ```bash
-git clone https://github.com/x2mail/x2mail.git
+git clone https://github.com/NK-IT-CLOUD/x2mail.git
 cd x2mail
 make update-core   # Download SnappyMail engine
 make build         # → build/x2mail-VERSION.tar.gz
@@ -252,16 +252,11 @@ Access tokens typically expire after 5 minutes. X2Mail's `TokenRefreshMiddleware
 ## Development
 
 ```bash
-git clone https://github.com/x2mail/x2mail.git
+git clone https://github.com/NK-IT-CLOUD/x2mail.git
 cd x2mail
 make update-core    # Download SnappyMail engine
 make build          # Build release tarball
 make clean          # Clean build artifacts
-
-# Deploy to Nextcloud (Docker FPM setup)
-./scripts/deploy.sh              # Build + deploy + restart FPM
-./scripts/deploy.sh --build-only # Only create tarball
-./scripts/deploy.sh --skip-build # Deploy existing tarball
 ```
 
 See [RELEASE.md](RELEASE.md) for versioning and release process.
