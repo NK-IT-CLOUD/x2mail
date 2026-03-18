@@ -1,0 +1,18 @@
+<header>
+	<a class="close" href="#" data-bind="click: close">×</a>
+	<h3 data-i18n="NEXTCLOUD/SELECT_FOLDER" data-bind="hidden:files"></h3>
+	<h3 data-i18n="NEXTCLOUD/SELECT_FILES" data-bind="visible:files"></h3>
+</header>
+<div class="modal-body form-horizontal">
+<!--
+	TODO: built tree of directories and optional files
+	In case of directories: radiobutton to select one OR click selects
+	In case of files: checkbox to select (multiple)
+-->
+	<ul id="sm-nc-files-tree"></ul>
+</div>
+<footer data-bind="visible:files">
+	<button data-bind="click:attach" name="select" data-icon="📎" class="button-vue">Прикрепить с ПК</button>
+	<button data-bind="click:shareInternal" name="share-internal" data-icon="🔗" class="button-vue">Внутреняя</button>
+	<button data-bind="click:sharePublic" name="share-public" data-icon="🔗" class="button-vue">Публичная</button>
+</footer>
