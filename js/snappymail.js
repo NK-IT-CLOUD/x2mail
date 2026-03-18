@@ -105,7 +105,7 @@ function SnappyMailFormHelper(oForm)
 			let data = new FormData(oForm);
 			data.set('appname', 'x2mail');
 
-			fetch(OC.filePath('x2mail', 'fetch', oForm.getAttribute('action')), {
+			fetch(OC.generateUrl('/apps/x2mail/fetch/' + oForm.getAttribute('action')), {
 				mode: 'same-origin',
 				cache: 'no-cache',
 				redirect: 'error',

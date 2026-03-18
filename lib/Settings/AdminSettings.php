@@ -78,7 +78,7 @@ class AdminSettings implements ISettings
 
 	public function getSection()
 	{
-		return 'additional';
+		return 'x2mail';
 	}
 
 	public function getPriority()

@@ -30,6 +30,7 @@ Works with Keycloak, Authentik, and any OpenID Connect provider. Powered by Snap
 	</dependencies>
 	<settings>
 		<admin>OCA\X2Mail\Settings\AdminSettings</admin>
+		<admin-section>OCA\X2Mail\Settings\AdminSection</admin-section>
 		<personal>OCA\X2Mail\Settings\PersonalSettings</personal>
 	</settings>
 	<navigations>
