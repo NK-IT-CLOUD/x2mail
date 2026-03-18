@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>x2mail</id>
+	<name>X2Mail</name>
+	<summary>Webmail with native XOAUTH2/OAUTHBEARER SSO support</summary>
+	<version>0.1.0</version>
+	<licence>agpl</licence>
+	<author>x2mail</author>
+	<description><![CDATA[**X2Mail — Feature-rich webmail client for Nextcloud with native Single Sign-On support via XOAUTH2 and OAUTHBEARER.**
+
+Works with Keycloak, Authentik, and any OpenID Connect provider. Powered by SnappyMail engine.
+
+- **Native XOAUTH2/OAUTHBEARER support**
+- **Auto token refresh for seamless SSO**
+- **Works with user_oidc and oidc_login**
+- **Dark mode and responsive design**
+- **Full Sieve filtering support**
+- **Integration with Nextcloud** (Contacts, Files, Calendar, Unified Search)
+- **Multiple mail accounts and identities**
+- **OpenPGP and S/MIME encryption**
+	]]></description>
+	<namespace>X2Mail</namespace>
+	<category>integration</category>
+	<category>office</category>
+	<dependencies>
+		<php min-version="8.1" min-int-size="64" />
+		<lib>mbstring</lib>
+		<lib>zlib</lib>
+		<nextcloud min-version="28" max-version="35" />
+	</dependencies>
+	<settings>
+		<admin>OCA\X2Mail\Settings\AdminSettings</admin>
+		<personal>OCA\X2Mail\Settings\PersonalSettings</personal>
+	</settings>
+	<navigations>
+		<navigation>
+			<name>Email</name>
+			<route>x2mail.page.index</route>
+			<icon>logo-white-64x64.png</icon>
+			<order>4</order>
+		</navigation>
+	</navigations>
+	<repair-steps>
+		<install>
+			<step>OCA\X2Mail\Migration\InstallStep</step>
+		</install>
+		<post-migration>
+			<step>OCA\X2Mail\Migration\InstallStep</step>
+		</post-migration>
+	</repair-steps>
+	<commands>
+		<command>OCA\X2Mail\Command\Setup</command>
+		<command>OCA\X2Mail\Command\Status</command>
+		<command>OCA\X2Mail\Command\Settings</command>
+	</commands>
+</info>

@@ -1,0 +1,5 @@
+app/
+build/
+*.tar.gz
+appinfo/signature.json
+vendor/
