@@ -6,6 +6,50 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-03-18
+
+### Security
+- Fix S/MIME signature verification bypass (PKCS7_NOSIGS removed)
+- Fix unsafe `unserialize()` in upgrade.php — restrict to scalars (prevent RCE)
+- Fix TAR path traversal in plugin/update extraction
+- Fix XSS via crafted RTF content (htmlspecialchars on output)
+- Fix JWT broken encoding (wrong variable name)
+- Add image decompression bomb protection (25MP limit)
+- Fix SSO hash Time=0 bypass — require valid timestamp
+- S/MIME cert path: basename() to prevent directory traversal
+- Temp file: basename() to prevent path traversal
+- TAR/ZIP: restrict Content-Type header chars to printable ASCII
+- RTF: add recursion depth limit (max 100 levels)
+- HTTP socket: instance-level Authorization storage (prevent cross-request leak)
+- EXIF: validate MIME type before data:// URI construction
+- Strict === comparison for session UID check
+
+### Fixed
+- PHP 8.4: OAuth2 MAC nonce — `uniqid()` replaced with `random_bytes()`
+- PHP 8.4: JWT `openssl_pkey_free()` removed (deprecated since PHP 8.0)
+- PHP 8.4: JWT `is_resource()` check updated for OpenSSLAsymmetricKey objects
+- PHP 8.4: Imagick `setImageMatte()` replaced with `setImageAlphaChannel()`
+- PHP 8.4: RTF `mb_convert_encoding` HTML-ENTITIES replaced with `html_entity_decode`
+- PHP 8.4: OAuth2 SSL verification enabled by default (was disabled — MITM risk)
+- PHP 8.4: HTTP socket `\split()` replaced with `\explode()` (removed since PHP 7)
+- PHP 8.4: HTTP socket `\random_int()` fixed with required arguments
+- PHP 8.4: CRAM SASL property declaration added
+- PHP 8.4: `auto_detect_line_endings` removed (deprecated since PHP 8.1)
+- PHP 8.4: lessphp class property declarations (15 dynamic properties)
+- IMAP: OAUTHBEARER removed from wrong PLAIN/SCRAM branch (dead code fix)
+- HTTP: `verify_peer` default changed to `true`, `CURLOPT_SSL_VERIFYHOST` enabled
+- AdditionalAccount: fix `$aData` → `$aAccountHash` variable name bug
+- Folders: fix undefined `$iErrorCode` variable
+- TNEFDecoder: missing break in switch, null coalescing for buffer reads, typed property defaults
+- TAR stream: fix undefined variable in addFromString
+- S/MIME encrypt(): fix dead code return, remove duplicate fopen in sign()
+- TNEFAttachment: buffer length sanity check
+
+### Changed
+- **Fork migration: SM Core v2.38.2 now tracked in git** (was gitignored + sed patches)
+- Full SM Core audit completed: 6 CRITICAL, 15 HIGH, 16 MEDIUM findings fixed
+- `scripts/release.sh` — automated release flow (build, sign, GitHub, NC App Store)
+
 ## [0.2.0] — 2026-03-18
 
 ### Added
