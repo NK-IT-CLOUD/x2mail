@@ -107,7 +107,22 @@ class DomainConfigService
 	}
 
 	/**
-	 * Build a domain config array from setup parameters.
+	 * SM SSL config object template.
+	 */
+	private static function sslConfig(): array {
+		return [
+			'verify_peer' => true,
+			'verify_peer_name' => true,
+			'allow_self_signed' => false,
+			'SNI_enabled' => true,
+			'disable_compression' => true,
+			'security_level' => 1,
+		];
+	}
+
+	/**
+	 * Build a complete SM domain config from setup parameters.
+	 * Uses the full SM format with all required keys.
 	 */
 	public function buildDomainConfig(
 		string $imapHost,
@@ -120,41 +135,65 @@ class DomainConfigService
 		string $authType,
 		bool $sieve,
 	): array {
-		$imapSslInt = self::sslToInt($imapSsl);
-		$smtpSslInt = self::sslToInt($smtpSsl);
+		$imapType = self::sslToInt($imapSsl);
+		$smtpType = self::sslToInt($smtpSsl);
 
-		// Determine SASL methods based on auth type
 		$imapSasl = match ($authType) {
 			'oauthbearer' => ['OAUTHBEARER', 'XOAUTH2', 'PLAIN', 'LOGIN'],
 			'xoauth2' => ['XOAUTH2', 'OAUTHBEARER', 'PLAIN', 'LOGIN'],
 			default => ['PLAIN', 'LOGIN'],
 		};
 
-		$smtpSasl = ['PLAIN', 'LOGIN'];
-
-		$config = [
+		return [
 			'IMAP' => [
 				'host' => $imapHost,
 				'port' => $imapPort,
-				'ssl' => $imapSslInt,
-				'shortLogin' => true,
+				'type' => $imapType,
+				'timeout' => 300,
+				'shortLogin' => false,
+				'lowerLogin' => true,
+				'stripLogin' => '',
 				'sasl' => $imapSasl,
+				'ssl' => self::sslConfig(),
+				'use_expunge_all_on_delete' => false,
+				'fast_simple_search' => true,
+				'force_select' => false,
+				'message_all_headers' => false,
+				'message_list_limit' => 10000,
+				'search_filter' => '',
+				'spam_headers' => 'rspamd,spamassassin,bogofilter',
+				'virus_headers' => 'rspamd,clamav',
+				'disabled_capabilities' => [],
 			],
 			'SMTP' => [
 				'host' => $smtpHost,
 				'port' => $smtpPort,
-				'ssl' => $smtpSslInt,
-				'shortLogin' => true,
+				'type' => $smtpType,
+				'timeout' => 60,
+				'shortLogin' => false,
+				'lowerLogin' => true,
+				'stripLogin' => '',
+				'sasl' => ['PLAIN', 'LOGIN'],
+				'ssl' => self::sslConfig(),
 				'useAuth' => $smtpAuth,
-				'sasl' => $smtpSasl,
+				'setSender' => false,
+				'usePhpMail' => false,
+				'authPlainLine' => false,
 			],
 			'Sieve' => [
-				'enabled' => $sieve,
 				'host' => $imapHost,
 				'port' => 4190,
+				'type' => 0,
+				'timeout' => 10,
+				'shortLogin' => false,
+				'lowerLogin' => true,
+				'stripLogin' => '',
+				'sasl' => ['PLAIN', 'LOGIN'],
+				'ssl' => self::sslConfig(),
+				'enabled' => $sieve,
+				'authLiteral' => true,
 			],
+			'whiteList' => '',
 		];
-
-		return $config;
 	}
 }
