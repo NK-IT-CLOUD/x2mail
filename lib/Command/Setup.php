@@ -320,9 +320,9 @@ class Setup extends Base
 
 			\stream_set_timeout($fp, 10);
 			$banner = \fgets($fp, 4096);
-			\fclose($fp);
 
 			if (!$banner) {
+				\fclose($fp);
 				$result['error'] = 'No response from server';
 				return $result;
 			}
@@ -333,6 +333,33 @@ class Setup extends Base
 			if (\preg_match('/\[CAPABILITY\s+([^\]]+)\]/', $banner, $m)) {
 				$result['capabilities'] = \explode(' ', \trim($m[1]));
 			}
+
+			// If banner didn't include capabilities, send explicit CAPABILITY command
+			if (empty($result['capabilities'])) {
+				\fwrite($fp, "A001 CAPABILITY\r\n");
+				$capLine = '';
+				$tries = 0;
+				while ($tries++ < 10) {
+					$line = \fgets($fp, 4096);
+					if ($line === false) {
+						break;
+					}
+					if (\str_starts_with($line, '* CAPABILITY ')) {
+						$capLine = \trim(\substr($line, 13));
+					}
+					// Tagged response means end of command
+					if (\str_starts_with($line, 'A001 ')) {
+						break;
+					}
+				}
+				if ($capLine !== '') {
+					$result['capabilities'] = \explode(' ', $capLine);
+				}
+			}
+
+			// Clean logout
+			\fwrite($fp, "A002 LOGOUT\r\n");
+			\fclose($fp);
 		} catch (\Throwable $e) {
 			$result['error'] = $e->getMessage();
 		}

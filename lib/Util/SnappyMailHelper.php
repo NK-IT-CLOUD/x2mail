@@ -101,7 +101,7 @@ class SnappyMailHelper
 	public static function isOIDCLogin() : bool
 	{
 		$config = \OC::$server->getConfig();
-		if ($config->getAppValue('x2mail', 'snappymail-autologin-oidc', false)) {
+		if ($config->getAppValue('x2mail', 'snappymail-autologin-oidc', '0') !== '0') {
 			// Check if either OIDC Login app or user_oidc app is enabled
 			if (\OC::$server->getAppManager()->isEnabledForUser('oidc_login') || \OC::$server->getAppManager()->isEnabledForUser('user_oidc')) {
 				// Check if session is an OIDC Login
@@ -150,10 +150,10 @@ class SnappyMailHelper
 
 			$sEmail = '';
 			$sPassword = '';
-			if ($config->getAppValue('x2mail', 'snappymail-autologin', false)) {
+			if ($config->getAppValue('x2mail', 'snappymail-autologin', '0') !== '0') {
 				$sEmail = $sUID;
 				$sPassword = $ocSession['snappymail-passphrase'];
-			} else if ($config->getAppValue('x2mail', 'snappymail-autologin-with-email', false)) {
+			} else if ($config->getAppValue('x2mail', 'snappymail-autologin-with-email', '0') !== '0') {
 				$sEmail = $config->getUserValue($sUID, 'settings', 'email');
 				$sPassword = $ocSession['snappymail-passphrase'];
 			}

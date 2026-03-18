@@ -99,7 +99,7 @@ class Application extends App implements IBootstrap
 			return;
 		}
 
-		$dispatcher = $context->getAppContainer()->query('OCP\EventDispatcher\IEventDispatcher');
+		$dispatcher = $context->getServerContainer()->get(\OCP\EventDispatcher\IEventDispatcher::class);
 		$dispatcher->addListener(PostLoginEvent::class, function (PostLoginEvent $Event) {
 			$sUID = $Event->getUser()->getUID();
 			\OC::$server->getSession()['snappymail-nc-uid'] = $sUID;

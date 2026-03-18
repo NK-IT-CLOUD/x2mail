@@ -68,7 +68,12 @@ class DomainConfigService
 
 		$file = $domainsPath . '/' . $domain . '.json';
 		$json = \json_encode($config, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES);
-		\file_put_contents($file, $json);
+		if ($json === false) {
+			throw new \RuntimeException('Failed to encode domain config as JSON: ' . \json_last_error_msg());
+		}
+		if (\file_put_contents($file, $json) === false) {
+			throw new \RuntimeException('Failed to write domain config to ' . $file);
+		}
 	}
 
 	/**
@@ -97,7 +102,7 @@ class DomainConfigService
 		}
 
 		$domains = [];
-		foreach (\glob($domainsPath . '/*.json') as $file) {
+		foreach (\glob($domainsPath . '/*.json') ?: [] as $file) {
 			$name = \basename($file, '.json');
 			if ($name !== 'disabled') {
 				$domains[] = $name;
@@ -144,6 +149,12 @@ class DomainConfigService
 			default => ['PLAIN', 'LOGIN'],
 		};
 
+		$smtpSasl = match ($authType) {
+			'oauthbearer' => ['OAUTHBEARER', 'XOAUTH2', 'PLAIN', 'LOGIN'],
+			'xoauth2' => ['XOAUTH2', 'OAUTHBEARER', 'PLAIN', 'LOGIN'],
+			default => ['PLAIN', 'LOGIN'],
+		};
+
 		return [
 			'IMAP' => [
 				'host' => $imapHost,
@@ -173,7 +184,7 @@ class DomainConfigService
 				'shortLogin' => false,
 				'lowerLogin' => true,
 				'stripLogin' => '',
-				'sasl' => ['PLAIN', 'LOGIN'],
+				'sasl' => $smtpSasl,
 				'ssl' => self::sslConfig(),
 				'useAuth' => $smtpAuth,
 				'setSender' => false,

@@ -26,15 +26,26 @@ class TokenRefreshMiddleware extends Middleware {
 
 		try {
 			$tokenService = \OCP\Server::get('OCA\UserOIDC\Service\TokenService');
-			$token = $tokenService->getToken();
+			$token = $tokenService->getToken(false); // don't auto-refresh yet
 
-			if ($token !== null) {
+			if ($token === null) {
+				return;
+			}
+
+			if (method_exists($token, 'isExpired') && $token->isExpired()) {
+				// Token expired — trigger refresh
+				$refreshed = $tokenService->getToken(true);
+				if ($refreshed !== null) {
+					$this->session->set('oidc_access_token', $refreshed->getAccessToken());
+					$expiresIn = method_exists($refreshed, 'getExpiresInFromNow') ? $refreshed->getExpiresInFromNow() : '?';
+					LogService::info("Token refreshed (expires_in={$expiresIn}s)");
+				}
+			} else {
+				// Token still valid — just sync session if needed
 				$freshToken = $token->getAccessToken();
 				$current = $this->session->get('oidc_access_token');
 				if ($freshToken !== $current) {
 					$this->session->set('oidc_access_token', $freshToken);
-					$expiresIn = method_exists($token, 'getExpiresInFromNow') ? $token->getExpiresInFromNow() : '?';
-					LogService::info("Token refreshed (expires_in={$expiresIn}s)");
 				}
 			}
 		} catch (\Throwable $e) {
