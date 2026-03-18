@@ -43,7 +43,7 @@ class LogService {
 
 	private static function getLogFile(): string {
 		if (self::$logFile === null) {
-			$dataDir = \rtrim(\trim(\OC::$server->getSystemConfig()->getValue('datadirectory', '')), '\\/');
+			$dataDir = \rtrim(\trim(\OCP\Server::get(IConfig::class)->getSystemValue('datadirectory', '')), '\\/');
 			$logDir = $dataDir . '/appdata_x2mail';
 			if (!\is_dir($logDir)) {
 				@\mkdir($logDir, 0750, true);

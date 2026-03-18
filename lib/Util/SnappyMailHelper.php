@@ -2,6 +2,13 @@
 
 namespace OCA\X2Mail\Util;
 
+use OCP\App\IAppManager;
+use OCP\IConfig;
+use OCP\IGroupManager;
+use OCP\ISession;
+use OCP\IURLGenerator;
+use OCP\IUserSession;
+
 class SnappyMailResponse extends \OCP\AppFramework\Http\Response
 {
 	public function render(): string
@@ -35,7 +42,7 @@ class SnappyMailHelper
 		$_ENV['SNAPPYMAIL_INCLUDE_AS_API'] = true;
 
 		// Set data path BEFORE loading SM core — otherwise SM falls back to app/data/
-		\define('APP_DATA_FOLDER_PATH', \rtrim(\trim(\OC::$server->getSystemConfig()->getValue('datadirectory', '')), '\\/').'/appdata_x2mail/');
+		\define('APP_DATA_FOLDER_PATH', \rtrim(\trim(\OCP\Server::get(IConfig::class)->getSystemValue('datadirectory', '')), '\\/').'/appdata_x2mail/');
 
 		$app_dir = \dirname(\dirname(__DIR__)) . '/app';
 		require_once $app_dir . '/index.php';
@@ -55,7 +62,7 @@ class SnappyMailHelper
 			$oActions = \RainLoop\Api::Actions();
 			if (isset($_GET[$oConfig->Get('security', 'admin_panel_key', 'admin')])) {
 				if ($oConfig->Get('security', 'allow_admin_panel', true)
-				&& \OC_User::isAdminUser(\OC::$server->getUserSession()->getUser()->getUID())
+				&& \OCP\Server::get(IGroupManager::class)->isAdmin(\OCP\Server::get(IUserSession::class)->getUser()->getUID())
 				&& !$oActions->IsAdminLoggined(false)
 				) {
 					$sRand = \MailSo\Base\Utils::Sha1Rand();
@@ -79,9 +86,9 @@ class SnappyMailHelper
 					} catch (\Throwable $e) {
 						// Login failure, reset password to prevent more attempts
 						if (!$isOIDC) {
-							$sUID = \OC::$server->getUserSession()->getUser()->getUID();
-							\OC::$server->getSession()['snappymail-passphrase'] = '';
-							\OC::$server->getConfig()->setUserValue($sUID, 'x2mail', 'passphrase', '');
+							$sUID = \OCP\Server::get(IUserSession::class)->getUser()->getUID();
+							\OCP\Server::get(ISession::class)->set('snappymail-passphrase', '');
+							\OCP\Server::get(IConfig::class)->setUserValue($sUID, 'x2mail', 'passphrase', '');
 						}
 					}
 				}
@@ -100,12 +107,13 @@ class SnappyMailHelper
 	// Check if OpenID Connect (OIDC) is enabled and used for login
 	public static function isOIDCLogin() : bool
 	{
-		$config = \OC::$server->getConfig();
+		$config = \OCP\Server::get(IConfig::class);
 		if ($config->getAppValue('x2mail', 'snappymail-autologin-oidc', '0') !== '0') {
 			// Check if either OIDC Login app or user_oidc app is enabled
-			if (\OC::$server->getAppManager()->isEnabledForUser('oidc_login') || \OC::$server->getAppManager()->isEnabledForUser('user_oidc')) {
+			$appManager = \OCP\Server::get(IAppManager::class);
+			if ($appManager->isEnabledForUser('oidc_login') || $appManager->isEnabledForUser('user_oidc')) {
 				// Check if session is an OIDC Login
-				$ocSession = \OC::$server->getSession();
+				$ocSession = \OCP\Server::get(ISession::class);
 				if ($ocSession->get('is_oidc')) {
 					if ($ocSession->get('oidc_access_token')) {
 						return true;
@@ -123,9 +131,9 @@ class SnappyMailHelper
 
 	private static function getLoginCredentials() : array
 	{
-		$sUID = \OC::$server->getUserSession()->getUser()->getUID();
-		$config = \OC::$server->getConfig();
-		$ocSession = \OC::$server->getSession();
+		$sUID = \OCP\Server::get(IUserSession::class)->getUser()->getUID();
+		$config = \OCP\Server::get(IConfig::class);
+		$ocSession = \OCP\Server::get(ISession::class);
 
 		// If the user has set credentials for SnappyMail in their personal settings,
 		// this has the first priority.
@@ -140,7 +148,7 @@ class SnappyMailHelper
 		}
 
 		// If the current user ID is identical to login ID
-		if ($ocSession['snappymail-nc-uid'] == $sUID) {
+		if ($ocSession->get('snappymail-nc-uid') == $sUID) {
 
 			// If OpenID Connect (OIDC) is enabled and used for login, use this.
 			if (static::isOIDCLogin()) {
@@ -152,10 +160,10 @@ class SnappyMailHelper
 			$sPassword = '';
 			if ($config->getAppValue('x2mail', 'snappymail-autologin', '0') !== '0') {
 				$sEmail = $sUID;
-				$sPassword = $ocSession['snappymail-passphrase'];
+				$sPassword = $ocSession->get('snappymail-passphrase');
 			} else if ($config->getAppValue('x2mail', 'snappymail-autologin-with-email', '0') !== '0') {
 				$sEmail = $config->getUserValue($sUID, 'settings', 'email');
-				$sPassword = $ocSession['snappymail-passphrase'];
+				$sPassword = $ocSession->get('snappymail-passphrase');
 			}
 			if ($sPassword) {
 				return [$sUID, $sEmail, static::decodePassword($sPassword, $sUID)];
@@ -167,7 +175,7 @@ class SnappyMailHelper
 
 	public static function getAppUrl() : string
 	{
-		return \OC::$server->getURLGenerator()->linkToRoute('x2mail.page.appGet');
+		return \OCP\Server::get(IURLGenerator::class)->linkToRoute('x2mail.page.appGet');
 	}
 
 	public static function normalizeUrl(string $sUrl) : string

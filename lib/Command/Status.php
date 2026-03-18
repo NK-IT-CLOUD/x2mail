@@ -7,6 +7,7 @@ namespace OCA\X2Mail\Command;
 use OCA\X2Mail\Service\DomainConfigService;
 use OCA\X2Mail\Service\LogService;
 use OC\Core\Command\Base;
+use OCP\App\IAppManager;
 use OCP\IConfig;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -17,11 +18,13 @@ class Status extends Base
 
 	protected IConfig $config;
 	protected DomainConfigService $domainService;
+	protected IAppManager $appManager;
 
-	public function __construct(IConfig $config, DomainConfigService $domainService) {
+	public function __construct(IConfig $config, DomainConfigService $domainService, IAppManager $appManager) {
 		parent::__construct();
 		$this->config = $config;
 		$this->domainService = $domainService;
+		$this->appManager = $appManager;
 	}
 
 	protected function configure() {
@@ -74,10 +77,9 @@ class Status extends Base
 		$oidcEnabled = $this->config->getAppValue(self::APP_ID, 'snappymail-autologin-oidc', '0');
 		$output->writeln('  OIDC auto-login: ' . ($oidcEnabled === '1' ? 'enabled' : 'disabled'));
 
-		$appManager = \OC::$server->getAppManager();
 		$providers = ['user_oidc', 'oidc_login'];
 		foreach ($providers as $provider) {
-			$installed = $appManager->isEnabledForUser($provider);
+			$installed = $this->appManager->isEnabledForUser($provider);
 			$output->writeln("  {$provider}: " . ($installed ? 'installed' : 'not installed'));
 			if ($installed && $provider === 'user_oidc') {
 				$storeToken = $this->config->getAppValue('user_oidc', 'store_login_token', '0');

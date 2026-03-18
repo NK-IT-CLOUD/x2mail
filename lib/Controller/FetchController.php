@@ -17,11 +17,14 @@ class FetchController extends Controller {
 	private IAppManager $appManager;
 	private IL10N $l;
 
-	public function __construct(string $appName, IRequest $request, IAppManager $appManager, IConfig $config, IL10N $l) {
+	private ?string $userId;
+
+	public function __construct(string $appName, IRequest $request, IAppManager $appManager, IConfig $config, IL10N $l, ?string $userId) {
 		parent::__construct($appName, $request);
 		$this->config = $config;
 		$this->appManager = $appManager;
 		$this->l = $l;
+		$this->userId = $userId;
 	}
 
 	public function upgrade(): JSONResponse {
@@ -48,15 +51,16 @@ class FetchController extends Controller {
 			$sUrl = '';
 			$sPath = '';
 
-			if (isset($_POST['appname']) && 'x2mail' === $_POST['appname']) {
+			$appname = $this->request->getParam('appname', '');
+			if ($appname === 'x2mail') {
 				// OIDC auto-login is the primary auth method
-				$oidcEnabled = isset($_POST['snappymail-autologin-oidc']);
+				$oidcEnabled = $this->request->getParam('snappymail-autologin-oidc') !== null;
 				$this->config->setAppValue('x2mail', 'snappymail-autologin-oidc', $oidcEnabled ? '1' : '0');
 				// Auto-login must be on for OIDC to work
 				$this->config->setAppValue('x2mail', 'snappymail-autologin', $oidcEnabled ? '1' : '0');
-				$this->config->setAppValue('x2mail', 'snappymail-no-embed', isset($_POST['snappymail-no-embed']) ? '1' : '0');
+				$this->config->setAppValue('x2mail', 'snappymail-no-embed', $this->request->getParam('snappymail-no-embed') !== null ? '1' : '0');
 				// X2Mail debug log
-				$this->config->setAppValue('x2mail', 'debug_log', isset($_POST['x2mail-debug-log']) ? '1' : '0');
+				$this->config->setAppValue('x2mail', 'debug_log', $this->request->getParam('x2mail-debug-log') !== null ? '1' : '0');
 			} else {
 				return new JSONResponse([
 					'status' => 'error',
@@ -67,14 +71,19 @@ class FetchController extends Controller {
 			SnappyMailHelper::loadApp();
 
 			$oConfig = \RainLoop\Api::Config();
-			if (!empty($_POST['snappymail-app_path'])) {
-				$oConfig->Set('webmail', 'app_path', $_POST['snappymail-app_path']);
+			$appPath = $this->request->getParam('snappymail-app_path', '');
+			if ($appPath !== '') {
+				// Validate app_path: must start with / and must not contain protocol
+				if (\str_starts_with($appPath, '/') && !\str_contains($appPath, '://')) {
+					$oConfig->Set('webmail', 'app_path', $appPath);
+				}
 			}
-			$oConfig->Set('webmail', 'allow_languages_on_settings', empty($_POST['snappymail-nc-lang']));
-			$oConfig->Set('login', 'allow_languages_on_login', empty($_POST['snappymail-nc-lang']));
+			$ncLang = $this->request->getParam('snappymail-nc-lang');
+			$oConfig->Set('webmail', 'allow_languages_on_settings', $ncLang === null);
+			$oConfig->Set('login', 'allow_languages_on_login', $ncLang === null);
 			$oConfig->Save();
 
-			$debug = !empty($_POST['snappymail-debug']);
+			$debug = $this->request->getParam('snappymail-debug') !== null;
 			$oConfig = \RainLoop\Api::Config();
 			if ($debug != $oConfig->Get('debug', 'enable', false)) {
 				$oConfig->Set('debug', 'enable', $debug);
@@ -97,13 +106,16 @@ class FetchController extends Controller {
 	public function setPersonal(): JSONResponse {
 		try {
 			$sEmail = '';
-			if (isset($_POST['appname'], $_POST['snappymail-password'], $_POST['snappymail-email']) && 'x2mail' === $_POST['appname']) {
-				$sUser =  \OC::$server->getUserSession()->getUser()->getUID();
+			$appname = $this->request->getParam('appname', '');
+			$password = $this->request->getParam('snappymail-password');
+			$email = $this->request->getParam('snappymail-email');
+			if ($appname === 'x2mail' && $password !== null && $email !== null) {
+				$sUser = $this->userId;
 
-				$sEmail = $_POST['snappymail-email'];
+				$sEmail = $email;
 				$this->config->setUserValue($sUser, 'x2mail', 'snappymail-email', $sEmail);
 
-				$sPass = $_POST['snappymail-password'];
+				$sPass = $password;
 				if ('******' !== $sPass) {
 					$this->config->setUserValue($sUser, 'x2mail', 'passphrase',
 						$sPass ? SnappyMailHelper::encodePassword($sPass, \md5($sEmail)) : '');

@@ -9,32 +9,40 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\TemplateResponse;
+use OCP\IConfig;
+use OCP\IRequest;
 
 class PageController extends Controller
 {
+	public function __construct(string $appName, IRequest $request, private IConfig $config) {
+		parent::__construct($appName, $request);
+	}
+
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function index()
 	{
-		$config = \OC::$server->getConfig();
-
 		$bAdmin = false;
-		if (!empty($_SERVER['QUERY_STRING'])) {
+		$queryString = $this->request->server['QUERY_STRING'] ?? '';
+		if ($queryString !== '') {
 			SnappyMailHelper::loadApp();
-			$bAdmin = \RainLoop\Api::Config()->Get('security', 'admin_panel_key', 'admin') == $_SERVER['QUERY_STRING'];
+			$adminKey = \RainLoop\Api::Config()->Get('security', 'admin_panel_key', 'admin');
+			$bAdmin = \hash_equals($adminKey, $queryString);
 			if (!$bAdmin) {
 				return SnappyMailHelper::startApp(true);
 			}
 		}
 
-		if (!$bAdmin && $config->getAppValue('x2mail', 'snappymail-no-embed')) {
+		if (!$bAdmin && $this->config->getAppValue('x2mail', 'snappymail-no-embed')) {
 			\OCP\Server::get(\OCP\INavigationManager::class)->setActiveEntry('x2mail');
 			\OCP\Util::addScript('x2mail', 'snappymail');
 			\OCP\Util::addStyle('x2mail', 'style');
 			SnappyMailHelper::startApp();
+			$target = $this->request->getParam('target', '');
+			$target = \preg_replace('/[^a-zA-Z0-9\/\-_.]/', '', $target);
 			$response = new TemplateResponse('x2mail', 'index', [
 				'snappymail-iframe-url' => SnappyMailHelper::normalizeUrl(SnappyMailHelper::getAppUrl())
-					. (empty($_GET['target']) ? '' : "#{$_GET['target']}")
+					. ($target === '' ? '' : "#{$target}")
 			]);
 			$csp = new ContentSecurityPolicy();
 			$csp->addAllowedFrameDomain("'self'");
@@ -89,6 +97,8 @@ class PageController extends Controller
 		return SnappyMailHelper::startApp(true);
 	}
 
+	// NoCSRFRequired: SnappyMail's internal AJAX does not carry Nextcloud CSRF
+	// tokens; it uses its own CSRF protection within the SM session.
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function appPost()
@@ -96,6 +106,8 @@ class PageController extends Controller
 		return SnappyMailHelper::startApp(true);
 	}
 
+	// NoCSRFRequired: SnappyMail's internal AJAX does not carry Nextcloud CSRF
+	// tokens; it uses its own CSRF protection within the SM session.
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function indexPost()

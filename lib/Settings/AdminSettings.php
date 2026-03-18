@@ -3,17 +3,23 @@
 namespace OCA\X2Mail\Settings;
 
 use OCA\X2Mail\Util\SnappyMailHelper;
+use OCP\App\IAppManager;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\IConfig;
+use OCP\IGroupManager;
+use OCP\IURLGenerator;
+use OCP\IUserSession;
 use OCP\Settings\ISettings;
 
 class AdminSettings implements ISettings
 {
-	private $config;
-
-	public function __construct(IConfig $config)
-	{
-		$this->config = $config;
+	public function __construct(
+		private IConfig $config,
+		private IUserSession $userSession,
+		private IURLGenerator $urlGenerator,
+		private IAppManager $appManager,
+		private IGroupManager $groupManager,
+	) {
 	}
 
 	public function getForm()
@@ -30,12 +36,12 @@ class AdminSettings implements ISettings
 			$parameters[$k] = $v;
 		}
 		$parameters['x2mail-debug-log'] = $this->config->getAppValue('x2mail', 'debug_log', '0') === '1';
-		$user = \OC::$server->getUserSession()->getUser();
+		$user = $this->userSession->getUser();
 		$uid = $user ? $user->getUID() : '';
-		if ($uid && \OC_User::isAdminUser($uid)) {
+		if ($uid && $this->groupManager->isAdmin($uid)) {
 			SnappyMailHelper::loadApp();
 			$parameters['snappymail-admin-panel-link'] =
-				\OC::$server->getURLGenerator()->linkToRoute('x2mail.page.index')
+				$this->urlGenerator->linkToRoute('x2mail.page.index')
 				. '?' . \RainLoop\Api::Config()->Get('security', 'admin_panel_key', 'admin');
 		}
 
@@ -63,7 +69,7 @@ class AdminSettings implements ISettings
 
 		$app_path = $oConfig->Get('webmail', 'app_path');
 		if (!$app_path) {
-			$app_path = \OC::$server->getAppManager()->getAppWebPath('x2mail') . '/app/';
+			$app_path = $this->appManager->getAppWebPath('x2mail') . '/app/';
 			$oConfig->Set('webmail', 'app_path', $app_path);
 			$oConfig->Set('webmail', 'theme', 'NextcloudV25+');
 			$oConfig->Save();

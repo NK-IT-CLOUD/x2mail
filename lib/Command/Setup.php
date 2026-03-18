@@ -6,6 +6,7 @@ namespace OCA\X2Mail\Command;
 
 use OCA\X2Mail\Service\DomainConfigService;
 use OC\Core\Command\Base;
+use OCP\App\IAppManager;
 use OCP\IConfig;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -18,6 +19,7 @@ class Setup extends Base
 	public function __construct(
 		private IConfig $config,
 		private DomainConfigService $domainService,
+		private IAppManager $appManager,
 	) {
 		parent::__construct();
 	}
@@ -90,9 +92,8 @@ class Setup extends Base
 		if ($isOAuth) {
 			$output->writeln('  <comment>[OIDC]</comment> Checking OIDC provider...');
 
-			$appManager = \OC::$server->getAppManager();
-			$userOidcInstalled = $appManager->isEnabledForUser('user_oidc');
-			$oidcLoginInstalled = $appManager->isEnabledForUser('oidc_login');
+			$userOidcInstalled = $this->appManager->isEnabledForUser('user_oidc');
+			$oidcLoginInstalled = $this->appManager->isEnabledForUser('oidc_login');
 
 			if (!$userOidcInstalled && !$oidcLoginInstalled) {
 				$output->writeln('  <error>  FAIL: No OIDC provider installed!</error>');
@@ -259,7 +260,7 @@ class Setup extends Base
 			try {
 				\OCA\X2Mail\Util\SnappyMailHelper::loadApp();
 				$oConfig = \RainLoop\Api::Config();
-				$appPath = \OC::$server->getAppManager()->getAppWebPath(self::APP_ID) . '/app/';
+				$appPath = $this->appManager->getAppWebPath(self::APP_ID) . '/app/';
 				$oConfig->Set('webmail', 'app_path', $appPath);
 				$oConfig->Set('login', 'default_domain', $domain);
 				$oConfig->Save();

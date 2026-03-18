@@ -44,7 +44,7 @@ class InstallStep implements IRepairStep
 
 		if (!$oConfig->Get('webmail', 'app_path')) {
 			$output->info('Set config [webmail]app_path');
-			$oConfig->Set('webmail', 'app_path', \OC::$server->getAppManager()->getAppWebPath('x2mail') . '/app/');
+			$oConfig->Set('webmail', 'app_path', \OCP\Server::get(\OCP\App\IAppManager::class)->getAppWebPath('x2mail') . '/app/');
 			$oConfig->Set('webmail', 'allow_languages_on_settings', false);
 			$oConfig->Set('login', 'allow_languages_on_login', false);
 			$bSave = true;
@@ -73,7 +73,7 @@ class InstallStep implements IRepairStep
 		// Remove SM default domains — X2Mail uses the Setup Wizard for domain config
 		$smDefaults = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'nextcloud', 'default'];
 		/** @var IConfig $ncConfig */
-		$ncConfig = \OC::$server->get(IConfig::class);
+		$ncConfig = \OCP\Server::get(IConfig::class);
 		$dataDir = \rtrim(\trim($ncConfig->getSystemValue('datadirectory', '')), '\\/');
 		$domainsPath = $dataDir . '/appdata_x2mail/_data_/_default_/domains';
 		if (\is_dir($domainsPath)) {
@@ -105,20 +105,23 @@ class InstallStep implements IRepairStep
 		// Check for custom initial config file
 		try {
 			/** @var IConfig $ncConfig */
-			$ncConfig = \OC::$server->get(IConfig::class);
+			$ncConfig = \OCP\Server::get(IConfig::class);
 			$customConfigFile = $ncConfig->getAppValue(Application::APP_ID, 'custom_config_file');
 			if ($customConfigFile) {
 				$output->info("Load custom config: {$customConfigFile}");
-				if (!\str_contains($customConfigFile, ':') && \is_readable($customConfigFile)) {
-					require $customConfigFile;
+				// Security: restrict to appdata_x2mail/ directory
+				$resolved = \realpath($customConfigFile);
+				$allowedDir = \realpath($dataDir . '/appdata_x2mail');
+				if ($resolved && $allowedDir && \str_starts_with($resolved, $allowedDir . '/')) {
+					require $resolved;
 				} else {
-					throw new \Exception("not found {$customConfigFile}");
+					throw new \Exception("custom config must be inside appdata_x2mail/");
 				}
 			}
 		} catch (\Throwable $e) {
 			$output->warning("custom config error: " . $e->getMessage());
 			/** @var \Psr\Log\LoggerInterface $logger */
-			$logger = \OC::$server->get(\Psr\Log\LoggerInterface::class);
+			$logger = \OCP\Server::get(\Psr\Log\LoggerInterface::class);
 			$logger->error("custom config error: " . $e->getMessage());
 		}
 	}

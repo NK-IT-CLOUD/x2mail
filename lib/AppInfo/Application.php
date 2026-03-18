@@ -19,6 +19,7 @@ use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\IConfig;
+use OCP\ISession;
 use OCP\User\Events\PostLoginEvent;
 use OCP\User\Events\BeforeUserLoggedOutEvent;
 use OCP\User\Events\UserLoggedInEvent;
@@ -72,11 +73,12 @@ class Application extends App implements IBootstrap
 			return;
 		}
 
+		$session = $context->getServerContainer()->get(ISession::class);
 		$dispatcher = $context->getServerContainer()->get(\OCP\EventDispatcher\IEventDispatcher::class);
-		$dispatcher->addListener(PostLoginEvent::class, function (PostLoginEvent $Event) {
+		$dispatcher->addListener(PostLoginEvent::class, function (PostLoginEvent $Event) use ($session) {
 			$sUID = $Event->getUser()->getUID();
-			\OC::$server->getSession()['snappymail-nc-uid'] = $sUID;
-			\OC::$server->getSession()['snappymail-passphrase'] = SnappyMailHelper::encodePassword($Event->getPassword(), $sUID);
+			$session->set('snappymail-nc-uid', $sUID);
+			$session->set('snappymail-passphrase', SnappyMailHelper::encodePassword($Event->getPassword(), $sUID));
 		});
 
 		$dispatcher->addListener(BeforeUserLoggedOutEvent::class, function (BeforeUserLoggedOutEvent $Event) {
@@ -87,13 +89,13 @@ class Application extends App implements IBootstrap
 		// https://github.com/nextcloud/impersonate/issues/179
 		$class = 'OCA\Impersonate\Events\BeginImpersonateEvent';
 		if (\class_exists($class)) {
-			$dispatcher->addListener($class, function ($Event) {
-				\OC::$server->getSession()['snappymail-passphrase'] = '';
+			$dispatcher->addListener($class, function ($Event) use ($session) {
+				$session->set('snappymail-passphrase', '');
 				SnappyMailHelper::loadApp();
 				\RainLoop\Api::Actions()->Logout(true);
 			});
-			$dispatcher->addListener('OCA\Impersonate\Events\EndImpersonateEvent', function ($Event) {
-				\OC::$server->getSession()['snappymail-passphrase'] = '';
+			$dispatcher->addListener('OCA\Impersonate\Events\EndImpersonateEvent', function ($Event) use ($session) {
+				$session->set('snappymail-passphrase', '');
 				SnappyMailHelper::loadApp();
 				\RainLoop\Api::Actions()->Logout(true);
 			});

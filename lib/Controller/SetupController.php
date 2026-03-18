@@ -179,6 +179,12 @@ class SetupController extends Controller
 		if ($imapHost === '') {
 			return new JSONResponse(['status' => 'error', 'message' => 'IMAP host is required'], 400);
 		}
+		if ($imapPort < 1 || $imapPort > 65535) {
+			return new JSONResponse(['status' => 'error', 'message' => 'Invalid IMAP port'], 400);
+		}
+		if ($smtpPort < 1 || $smtpPort > 65535) {
+			return new JSONResponse(['status' => 'error', 'message' => 'Invalid SMTP port'], 400);
+		}
 		if (!\in_array($authType, ['plain', 'oauthbearer', 'xoauth2'])) {
 			return new JSONResponse(['status' => 'error', 'message' => 'Invalid auth type'], 400);
 		}
