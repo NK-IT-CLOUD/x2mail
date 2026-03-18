@@ -45,8 +45,7 @@
 		<label for="wiz-auth-type"><?php echo($l->t('Auth Type')); ?></label>
 		<select id="wiz-auth-type">
 			<option value="plain">Plain (password)</option>
-			<option value="oauthbearer">OAUTHBEARER (SSO)</option>
-			<option value="xoauth2">XOAUTH2 (SSO)</option>
+			<option value="oauthbearer">SSO (OAUTHBEARER/XOAUTH2)</option>
 		</select>
 
 		<label for="wiz-oidc-provider" id="wiz-oidc-label" style="display:none"><?php echo($l->t('OIDC Provider')); ?></label>
@@ -67,7 +66,7 @@
 
 	<div class="wizard-actions">
 		<button id="wiz-save-btn" class="button primary"><?php echo($l->t('Save Configuration')); ?></button>
-		<button id="wiz-delete-btn" class="button" style="display:none; color:var(--color-error,#e9322d)"><?php echo($l->t('Delete Domain')); ?></button>
+		<button id="wiz-delete-btn" class="button" style="display:none"><?php echo($l->t('Delete Domain')); ?></button>
 		<span class="status-msg" id="wiz-status-msg"></span>
 	</div>
 </div>

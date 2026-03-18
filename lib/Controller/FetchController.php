@@ -6,6 +6,7 @@ use OCA\X2Mail\Util\SnappyMailHelper;
 
 use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
+use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IConfig;
 use OCP\IL10N;
@@ -92,9 +93,7 @@ class FetchController extends Controller {
 		}
 	}
 
-	/**
-	 * @NoAdminRequired
-	 */
+	#[NoAdminRequired]
 	public function setPersonal(): JSONResponse {
 		try {
 			$sEmail = '';

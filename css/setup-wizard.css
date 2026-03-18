@@ -72,12 +72,12 @@
 }
 
 #x2mail-wizard .preflight-results.success {
-	background: color-mix(in srgb, var(--color-success, #46ba61) 10%, transparent);
+	background: color-mix(in srgb, var(--color-success, #46ba61) 15%, var(--color-main-background, #fff));
 	border: 1px solid var(--color-success, #46ba61);
 }
 
 #x2mail-wizard .preflight-results.error {
-	background: color-mix(in srgb, var(--color-error, #e9322d) 10%, transparent);
+	background: color-mix(in srgb, var(--color-error, #e9322d) 15%, var(--color-main-background, #fff));
 	border: 1px solid var(--color-error, #e9322d);
 }
 
@@ -86,15 +86,28 @@
 }
 
 #x2mail-wizard .check-ok {
-	color: var(--color-success, #46ba61);
+	color: var(--color-success-text, #2d6c3e);
 }
 
 #x2mail-wizard .check-fail {
-	color: var(--color-error, #e9322d);
+	color: var(--color-error-text, #a5232e);
 }
 
 #x2mail-wizard .check-warn {
-	color: var(--color-warning, #eca700);
+	color: var(--color-warning-text, #956000);
+}
+
+/* Delete domain button */
+#x2mail-wizard #wiz-delete-btn {
+	color: var(--color-error-text, #a5232e);
+	border-color: var(--color-error, #e9322d);
+	background: transparent;
+}
+
+#x2mail-wizard #wiz-delete-btn:hover,
+#x2mail-wizard #wiz-delete-btn:focus-visible {
+	background: var(--color-error, #e9322d);
+	color: #fff;
 }
 
 /* Actions row */

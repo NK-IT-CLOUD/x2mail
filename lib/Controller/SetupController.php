@@ -7,6 +7,7 @@ namespace OCA\X2Mail\Controller;
 use OCA\X2Mail\Service\DomainConfigService;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IConfig;
 use OCP\IRequest;
@@ -27,10 +28,8 @@ class SetupController extends Controller
 
 	/**
 	 * Load current setup configuration for the wizard form.
-	 *
-	 * @AdminRequired
-	 * @NoCSRFRequired
 	 */
+	#[NoCSRFRequired]
 	public function getConfig(): JSONResponse
 	{
 		$domains = $this->domainService->listDomains();
@@ -88,8 +87,6 @@ class SetupController extends Controller
 
 	/**
 	 * Run preflight checks against IMAP/SMTP/OIDC.
-	 *
-	 * @AdminRequired
 	 */
 	public function preflightCheck(): JSONResponse
 	{
@@ -158,8 +155,6 @@ class SetupController extends Controller
 
 	/**
 	 * Save setup configuration (create or update domain).
-	 *
-	 * @AdminRequired
 	 */
 	public function saveSetup(): JSONResponse
 	{
@@ -233,8 +228,6 @@ class SetupController extends Controller
 
 	/**
 	 * Delete a domain configuration.
-	 *
-	 * @AdminRequired
 	 */
 	public function deleteDomain(): JSONResponse
 	{

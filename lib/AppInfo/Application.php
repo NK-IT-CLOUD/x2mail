@@ -18,8 +18,7 @@ use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
 use OCP\AppFramework\Bootstrap\IBootContext;
-use OCP\IL10N;
-use OCP\IUser;
+use OCP\IConfig;
 use OCP\User\Events\PostLoginEvent;
 use OCP\User\Events\BeforeUserLoggedOutEvent;
 use OCP\User\Events\UserLoggedInEvent;
@@ -35,50 +34,8 @@ class Application extends App implements IBootstrap
 
 	public function register(IRegistrationContext $context): void
 	{
-		/**
-		 * Controllers
-		 */
-		$context->registerService(
-			'PageController', function($c) {
-				return new PageController(
-					$c->query('AppName'),
-					$c->query('Request')
-				);
-			}
-		);
-
-		$context->registerService(
-			'FetchController', function($c) {
-				return new FetchController(
-					$c->query('AppName'),
-					$c->query('Request'),
-					$c->getServer()->getAppManager(),
-					$c->query('ServerContainer')->getConfig(),
-					$c->query(IL10N::class)
-				);
-			}
-		);
-
-		$context->registerService(
-			'SetupController', function($c) {
-				return new SetupController(
-					$c->query('AppName'),
-					$c->query('Request'),
-					$c->query('ServerContainer')->getConfig(),
-					$c->getServer()->getAppManager(),
-					$c->query(DomainConfigService::class)
-				);
-			}
-		);
-
-		/**
-		 * Utils
-		 */
-		$context->registerService(
-			'SnappyMailHelper', function($c) {
-				return new SnappyMailHelper();
-			}
-		);
+		// NC 28+: Controllers use autowiring — no manual registerService needed.
+		// The DI container resolves constructor dependencies automatically.
 
 		$context->registerSearchProvider(Provider::class);
 
@@ -109,7 +66,9 @@ class Application extends App implements IBootstrap
 
 	public function boot(IBootContext $context): void
 	{
-		if (!\is_dir(\rtrim(\trim(\OC::$server->getSystemConfig()->getValue('datadirectory', '')), '\\/') . '/appdata_x2mail')) {
+		$config = $context->getServerContainer()->get(IConfig::class);
+		$dataDir = \rtrim(\trim($config->getSystemValue('datadirectory', '')), '\\/');
+		if (!\is_dir($dataDir . '/appdata_x2mail')) {
 			return;
 		}
 

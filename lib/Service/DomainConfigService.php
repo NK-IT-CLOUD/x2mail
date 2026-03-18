@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OCA\X2Mail\Service;
 
+use OCP\IConfig;
+
 /**
  * Service to programmatically read/write SM domain config files.
  *
@@ -12,6 +14,10 @@ namespace OCA\X2Mail\Service;
  */
 class DomainConfigService
 {
+	public function __construct(
+		private IConfig $config,
+	) {}
+
 	private const SSL_NONE = 0;
 	private const SSL_SSL = 1;
 	private const SSL_TLS = 2;
@@ -45,7 +51,7 @@ class DomainConfigService
 	 */
 	public function getDataPath(): string
 	{
-		return \rtrim(\trim(\OC::$server->getSystemConfig()->getValue('datadirectory', '')), '\\/') . '/appdata_x2mail';
+		return \rtrim(\trim($this->config->getSystemValue('datadirectory', '')), '\\/') . '/appdata_x2mail';
 	}
 
 	/**

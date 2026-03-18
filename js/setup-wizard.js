@@ -53,8 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	// ─── OIDC field visibility ──────────────────────────
 
 	function updateOidcVisibility() {
-		const authType = el('wiz-auth-type').value;
-		const isOAuth = authType === 'oauthbearer' || authType === 'xoauth2';
+		const isOAuth = el('wiz-auth-type').value === 'oauthbearer';
 		el('wiz-oidc-provider').style.display = isOAuth ? '' : 'none';
 		el('wiz-oidc-label').style.display = isOAuth ? '' : 'none';
 	}
@@ -72,7 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		el('wiz-smtp-port').value = cfg?.smtp_port || 25;
 		el('wiz-smtp-ssl').value = normSsl(cfg?.smtp_ssl);
 		el('wiz-smtp-auth').checked = !!cfg?.smtp_auth;
-		el('wiz-auth-type').value = cfg?.auth_type || 'plain';
+		const authType = cfg?.auth_type || 'plain';
+		el('wiz-auth-type').value = (authType === 'xoauth2') ? 'oauthbearer' : authType;
 		el('wiz-sieve').checked = !!cfg?.sieve;
 		updateOidcVisibility();
 
@@ -123,7 +123,10 @@ document.addEventListener('DOMContentLoaded', () => {
 			credentials: 'same-origin',
 			headers: { 'requesttoken': OC.requestToken },
 		})
-		.then(r => r.json())
+		.then(r => {
+			if (!r.ok) throw new Error('HTTP ' + r.status);
+			return r.json();
+		})
 		.then(data => {
 			wizardData = data;
 
@@ -151,6 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		})
 		.catch(err => {
 			console.error('Setup wizard: failed to load config', err);
+			setStatus(t('x2mail', 'Failed to load configuration: {error}').replace('{error}', err.message), 'err');
 		});
 	}
 
