@@ -6,30 +6,45 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-03-18
+
 ### Added
-- Initial project scaffold
-- `occ x2mail:setup` — IMAP/SMTP/OIDC domain configuration
-- `occ x2mail:status` — show configured domains and OIDC state
-- `DomainConfigService` — programmatic SM domain config management
-- Native `user_oidc` support (TokenBridgeListener + LoginBridgeListener)
-- Native `oidc_login` support (AccessTokenUpdatedListener)
-- `TokenRefreshMiddleware` — auto-refresh via user_oidc TokenService
-- NC Unified Search integration
-- SM Core v2.38.2 (light fork)
-- Setup Wizard web UI in admin settings
+- Setup Wizard web UI in admin settings with preflight checks
+- `make sign` / `make validate` / `make release` build targets for NC App Store
 - `scripts/deploy.sh` — build + deploy to NC Docker (FPM restart included)
+- `scripts/apply-sm-patches.sh` — reproducible SM Core patch script
+- `SM_VERSION` file for version pinning (v2.38.2)
+- App Store metadata: author, repository, bugs, screenshots in info.xml
+
+### Security
+- Fix XSS via unescaped iframe src in templates/index.php
+- Fix arbitrary file require via custom_config_file in InstallStep (realpath validation)
+- Replace all `$_POST`/`$_GET`/`$_SERVER` direct access with `$this->request->getParam()`
+- Add `hash_equals()` for admin panel key comparison (timing-safe)
+- Add port range validation to `saveSetup()`
+- Validate `app_path` to prevent protocol injection
 
 ### Fixed
-- NC 33 / PHP 8.4 compatibility: PHP 8 attributes replace deprecated annotations
-- Deprecated `\OC::$server->getSystemConfig()` replaced with `IConfig::getSystemValue()`
-- DI autowiring replaces manual `$c->query()` controller registration
+- PHP 8.4: Remove deprecated `E_STRICT` constant from SM Logger
+- PHP 8.4: Fix undefined array key "secure" in SM ConnectSettings
+- PHP 8.4: Fix 32 implicit nullable parameters in SM PGP/GPG and Sabre VObject
+- Chrome 117+: Fix invalid RegExp v-flag in folder create pattern
+- NC 33: Replace 28 deprecated `\OC::$server` calls with `\OCP\Server::get()` or constructor DI
+- NC 33: Replace 2 deprecated `\OC_User::isAdminUser()` with `IGroupManager::isAdmin()`
+- NC 33: Replace 3 deprecated `getSystemConfig()` with `IConfig::getSystemValue()`
+- NC 33: PHP 8 attributes replace deprecated PHPDoc annotations
+- NC 33: DI autowiring replaces manual `$c->query()` controller registration
 - Setup Wizard: API error feedback shown in UI instead of silent console.error
-- Preflight check box contrast improved for light and dark themes
-- Delete Domain button visible in both themes
+- Preflight check box and Delete Domain button contrast for light and dark themes
 
 ### Changed
-- Auth type selection unified: `oauthbearer` and `xoauth2` merged into single SSO option
+- SM Core pinned at v2.38.2 with PHP 8.4 + browser compat patch set
+- Auth type selection unified: OAUTHBEARER and XOAUTH2 merged into single SSO option
+- SSO mode: hide Logout, Add Account, and redundant folder settings icon
+- SSO mode: hide toggleLeftPanel button in settings view
 - InstallStep removes SM default domains (gmail.com, hotmail.com, etc.) on install
+- Licence updated to AGPL-3.0-or-later (SPDX format)
+- GitHub URLs corrected to NK-IT-CLOUD/x2mail
 
 ## [0.1.0] — 2026-03-18
 
