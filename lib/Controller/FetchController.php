@@ -33,7 +33,7 @@ class FetchController extends Controller {
 					'Message' => $this->l->t('Upgraded successfully')
 				]);
 			}
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 			$error .= ': ' . $e->getMessage();
 		}
 		return new JSONResponse([
@@ -89,7 +89,7 @@ class FetchController extends Controller {
 				'status' => 'success',
 				'Message' => $this->l->t('Saved successfully')
 			]);
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 			return new JSONResponse([
 				'status' => 'error',
 				'Message' => $e->getMessage()
@@ -131,7 +131,7 @@ class FetchController extends Controller {
 				'Message' => $this->l->t('Saved successfully'),
 				'Email' => $sEmail
 			]);
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 			// Logout as the credentials might have changed, as exception could be in one attribute
 			SnappyMailHelper::loadApp();
 			\RainLoop\Api::Actions()->DoLogout();
