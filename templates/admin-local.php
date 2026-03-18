@@ -1,5 +1,5 @@
 <div class="section">
-	<form class="snappymail" action="admin.php" method="post">
+	<form class="snappymail" action="setAdmin" method="post">
 		<input type="hidden" name="requesttoken" value="<?php echo $_['requesttoken'] ?>" id="requesttoken">
 		<fieldset class="personalblock">
 			<h2><?php echo($l->t('X2Mail Webmail')); ?></h2>
