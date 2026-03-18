@@ -92,6 +92,20 @@ class DomainConfigService
 	}
 
 	/**
+	 * Delete a domain config file.
+	 */
+	public function deleteDomainConfig(string $domain): void
+	{
+		$file = $this->getDomainsPath() . '/' . $domain . '.json';
+		if (!\file_exists($file)) {
+			throw new \RuntimeException("Domain config not found: {$domain}");
+		}
+		if (!\unlink($file)) {
+			throw new \RuntimeException("Failed to delete domain config: {$domain}");
+		}
+	}
+
+	/**
 	 * List configured domains.
 	 */
 	public function listDomains(): array

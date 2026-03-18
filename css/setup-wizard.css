@@ -1,0 +1,119 @@
+#x2mail-wizard {
+	margin-bottom: 20px;
+}
+
+#x2mail-wizard .wizard-grid {
+	display: grid;
+	grid-template-columns: 140px 1fr;
+	gap: 6px 12px;
+	align-items: center;
+	max-width: 500px;
+}
+
+#x2mail-wizard .wizard-grid label {
+	text-align: right;
+	font-weight: 500;
+}
+
+#x2mail-wizard .wizard-grid input[type="text"],
+#x2mail-wizard .wizard-grid input[type="number"],
+#x2mail-wizard .wizard-grid select {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+#x2mail-wizard .wizard-grid .checkbox-row {
+	grid-column: 2;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+#x2mail-wizard h3 {
+	margin-top: 16px;
+	margin-bottom: 8px;
+}
+
+/* Domain tabs */
+#x2mail-wizard .domain-selector {
+	margin-bottom: 12px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+#x2mail-wizard .domain-selector button {
+	min-width: auto;
+	padding: 4px 10px;
+	font-size: 13px;
+}
+
+#x2mail-wizard .domain-selector button.active {
+	font-weight: bold;
+	background: var(--color-primary-element, #0082c9);
+	color: var(--color-primary-element-text, #fff);
+	border-radius: 4px;
+}
+
+/* Preflight results */
+#x2mail-wizard .preflight-results {
+	margin: 8px 0;
+	padding: 8px 12px;
+	border-radius: 6px;
+	font-family: monospace;
+	font-size: 13px;
+	max-width: 500px;
+}
+
+#x2mail-wizard .preflight-results.running {
+	background: var(--color-background-dark, #f0f0f0);
+	color: var(--color-text-maxcontrast, #888);
+}
+
+#x2mail-wizard .preflight-results.success {
+	background: color-mix(in srgb, var(--color-success, #46ba61) 10%, transparent);
+	border: 1px solid var(--color-success, #46ba61);
+}
+
+#x2mail-wizard .preflight-results.error {
+	background: color-mix(in srgb, var(--color-error, #e9322d) 10%, transparent);
+	border: 1px solid var(--color-error, #e9322d);
+}
+
+#x2mail-wizard .check-line {
+	margin: 2px 0;
+}
+
+#x2mail-wizard .check-ok {
+	color: var(--color-success, #46ba61);
+}
+
+#x2mail-wizard .check-fail {
+	color: var(--color-error, #e9322d);
+}
+
+#x2mail-wizard .check-warn {
+	color: var(--color-warning, #eca700);
+}
+
+/* Actions row */
+#x2mail-wizard .wizard-actions {
+	margin-top: 12px;
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+#x2mail-wizard .wizard-actions .status-msg {
+	font-size: 13px;
+	margin-left: 8px;
+}
+
+#x2mail-wizard .wizard-actions .status-msg.ok {
+	color: var(--color-success, #46ba61);
+}
+
+#x2mail-wizard .wizard-actions .status-msg.err {
+	color: var(--color-error, #e9322d);
+}

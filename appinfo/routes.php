@@ -36,6 +36,26 @@ return [
 			'name' => 'fetch#upgrade',
 			'url' => '/fetch/upgrade',
 			'verb' => 'POST'
+		],
+		[
+			'name' => 'setup#getConfig',
+			'url' => '/setup/config',
+			'verb' => 'GET'
+		],
+		[
+			'name' => 'setup#preflightCheck',
+			'url' => '/setup/preflight',
+			'verb' => 'POST'
+		],
+		[
+			'name' => 'setup#saveSetup',
+			'url' => '/setup/save',
+			'verb' => 'POST'
+		],
+		[
+			'name' => 'setup#deleteDomain',
+			'url' => '/setup/delete',
+			'verb' => 'POST'
 		]
 	]
 ];

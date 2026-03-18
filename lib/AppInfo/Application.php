@@ -5,6 +5,8 @@ namespace OCA\X2Mail\AppInfo;
 use OCA\X2Mail\Util\SnappyMailHelper;
 use OCA\X2Mail\Controller\FetchController;
 use OCA\X2Mail\Controller\PageController;
+use OCA\X2Mail\Controller\SetupController;
+use OCA\X2Mail\Service\DomainConfigService;
 use OCA\X2Mail\Dashboard\UnreadMailWidget;
 use OCA\X2Mail\Search\Provider;
 use OCA\X2Mail\Listeners\AccessTokenUpdatedListener;
@@ -53,6 +55,18 @@ class Application extends App implements IBootstrap
 					$c->getServer()->getAppManager(),
 					$c->query('ServerContainer')->getConfig(),
 					$c->query(IL10N::class)
+				);
+			}
+		);
+
+		$context->registerService(
+			'SetupController', function($c) {
+				return new SetupController(
+					$c->query('AppName'),
+					$c->query('Request'),
+					$c->query('ServerContainer')->getConfig(),
+					$c->getServer()->getAppManager(),
+					$c->query(DomainConfigService::class)
 				);
 			}
 		);

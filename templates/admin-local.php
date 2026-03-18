@@ -1,8 +1,12 @@
+<?php /** @var \OCP\IL10N $l */ ?>
+
+<?php require __DIR__ . '/setup-wizard.php'; ?>
+
 <div class="section">
 	<form class="snappymail" action="setAdmin" method="post">
 		<input type="hidden" name="requesttoken" value="<?php echo $_['requesttoken'] ?>" id="requesttoken">
 		<fieldset class="personalblock">
-			<h2><?php echo($l->t('X2Mail')); ?></h2>
+			<h2><?php echo($l->t('X2Mail Settings')); ?></h2>
 			<br />
 			<?php if ($_['snappymail-admin-panel-link']) { ?>
 			<p>

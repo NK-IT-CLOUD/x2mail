@@ -30,8 +30,9 @@ class AdminSettings implements ISettings
 			$parameters[$k] = $v;
 		}
 		$parameters['x2mail-debug-log'] = $this->config->getAppValue('x2mail', 'debug_log', '0') === '1';
-		$uid = \OC::$server->getUserSession()->getUser()->getUID();
-		if (\OC_User::isAdminUser($uid)) {
+		$user = \OC::$server->getUserSession()->getUser();
+		$uid = $user ? $user->getUID() : '';
+		if ($uid && \OC_User::isAdminUser($uid)) {
 			SnappyMailHelper::loadApp();
 			$parameters['snappymail-admin-panel-link'] =
 				\OC::$server->getURLGenerator()->linkToRoute('x2mail.page.index')
@@ -43,7 +44,9 @@ class AdminSettings implements ISettings
 		$sPassword = '';
 		if (\is_file($passfile)) {
 			$sPassword = \file_get_contents($passfile);
-			$parameters['snappymail-admin-panel-link'] .= '#/security';
+			if (isset($parameters['snappymail-admin-panel-link'])) {
+				$parameters['snappymail-admin-panel-link'] .= '#/security';
+			}
 		}
 		$parameters['snappymail-admin-password'] = $sPassword;
 
@@ -69,6 +72,8 @@ class AdminSettings implements ISettings
 		$parameters['snappymail-nc-lang'] = !$oConfig->Get('webmail', 'allow_languages_on_settings', true);
 
 		\OCP\Util::addScript('x2mail', 'snappymail');
+		\OCP\Util::addScript('x2mail', 'setup-wizard');
+		\OCP\Util::addStyle('x2mail', 'setup-wizard');
 		return new TemplateResponse('x2mail', 'admin-local', $parameters);
 	}
 
