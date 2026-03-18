@@ -35,7 +35,7 @@ class LoginBridgeListener implements IEventListener {
 
 		if ($this->session->get('is_oidc')) {
 			$this->session->set('snappymail-passphrase', 'oidc_token_bridge');
-			$this->logger->debug('X2Mail: LoginBridge uid=' . $uid . ' is_oidc=true');
+			$this->logger->info('X2Mail: LoginBridge uid=' . $uid . ' is_oidc=true');
 		}
 	}
 }

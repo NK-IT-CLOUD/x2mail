@@ -45,6 +45,6 @@ class TokenBridgeListener implements IEventListener {
 			$this->session->set('snappymail-nc-uid', $uid);
 		}
 
-		$this->logger->debug('X2Mail: stored OIDC token, uid=' . ($uid ?? 'pending'));
+		$this->logger->info('X2Mail: stored OIDC token, uid=' . ($uid ?? 'pending'));
 	}
 }

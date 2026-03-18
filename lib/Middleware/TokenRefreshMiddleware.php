@@ -37,11 +37,11 @@ class TokenRefreshMiddleware extends Middleware {
 				$current = $this->session->get('oidc_access_token');
 				if ($freshToken !== $current) {
 					$this->session->set('oidc_access_token', $freshToken);
-					$this->logger->debug('X2Mail: refreshed OIDC access token');
+					$this->logger->info('X2Mail: refreshed OIDC access token');
 				}
 			}
 		} catch (\Throwable $e) {
-			$this->logger->debug('X2Mail: token refresh skipped: ' . $e->getMessage());
+			$this->logger->warning('X2Mail: token refresh skipped: ' . $e->getMessage());
 		}
 	}
 }
