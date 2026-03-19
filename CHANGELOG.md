@@ -6,6 +6,13 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
 ## [Unreleased]
 
+## [0.4.4] — 2026-03-19
+
+### Fixed
+- Skip SM bootstrap for app-password/token logins (bots, DAV clients, API)
+- Graceful degradation when app/index.php is temporarily unreadable
+- Guard against APP_DATA_FOLDER_PATH redefinition on retry after partial bootstrap
+
 ## [0.4.3] — 2026-03-19
 
 ### Fixed
