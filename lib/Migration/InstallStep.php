@@ -50,15 +50,33 @@ class InstallStep implements IRepairStep
 			$bSave = true;
 		}
 
-		if (!\is_dir(APP_PLUGINS_PATH . 'nextcloud')) {
-			$output->info('Install extension: nextcloud');
-			\SnappyMail\Repository::installPackage('plugin', 'nextcloud');
-			$oConfig->Set('plugins', 'enable', true);
-			$aList = \SnappyMail\Repository::getEnabledPackagesNames();
-			$aList[] = 'nextcloud';
-			$oConfig->Set('plugins', 'enabled_list', \implode(',', \array_unique($aList)));
-			$oConfig->Set('webmail', 'theme', 'NextcloudV25+');
-			$bSave = true;
+		// Sync bundled nextcloud plugin to SM data directory on every install/upgrade
+		$bundledPlugin = $app_dir . '/snappymail/v/current/app/plugins/nextcloud';
+		$installedPlugin = APP_PLUGINS_PATH . 'nextcloud';
+		if (\is_dir($bundledPlugin)) {
+			if (!\is_dir($installedPlugin)) {
+				\mkdir($installedPlugin, 0755, true);
+				$oConfig->Set('plugins', 'enable', true);
+				$aList = \SnappyMail\Repository::getEnabledPackagesNames();
+				$aList[] = 'nextcloud';
+				$oConfig->Set('plugins', 'enabled_list', \implode(',', \array_unique($aList)));
+				$oConfig->Set('webmail', 'theme', 'NextcloudV25+');
+				$bSave = true;
+			}
+			// Always sync plugin files from bundled version
+			$output->info('Sync bundled nextcloud plugin');
+			foreach (new \RecursiveIteratorIterator(
+				new \RecursiveDirectoryIterator($bundledPlugin, \FilesystemIterator::SKIP_DOTS),
+				\RecursiveIteratorIterator::SELF_FIRST
+			) as $item) {
+				$relPath = \substr($item->getPathname(), \strlen($bundledPlugin));
+				$dest = $installedPlugin . $relPath;
+				if ($item->isDir()) {
+					!\is_dir($dest) && \mkdir($dest, 0755, true);
+				} else {
+					\copy($item->getPathname(), $dest);
+				}
+			}
 		}
 
 		$sPassword = $oConfig->Get('security', 'admin_password');
