@@ -6,6 +6,14 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
 ## [Unreleased]
 
+## [0.4.3] — 2026-03-19
+
+### Fixed
+- Setup and InstallStep now set title and loading_description to "X2Mail"
+- Restored original minified app.min.js — no more broken JS from unminified overwrites
+- Regenerated compressed .gz/.br static files to match modified JS/CSS
+- Reverted PageController mailto handling to upstream SM ServiceMailto flow
+
 ## [0.4.2] — 2026-03-19
 
 ### Fixed
