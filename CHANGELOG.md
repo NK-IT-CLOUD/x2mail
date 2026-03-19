@@ -6,6 +6,21 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-03-19
+
+### Added
+- **Nextcloud-native Contacts integration**: read, create, edit, and delete contacts directly in Nextcloud Contacts — no CardDAV sync, no separate database
+- Autocomplete suggestions in To/Cc/Bcc fields now pull from Nextcloud Contacts
+- `occ x2mail:setup` now enables contacts automatically
+
+### Changed
+- Contacts provider replaced: PdoAddressBook/SQLite → NextcloudAddressBook via NC IManager API
+- Separate suggestions driver removed (unified into AddressBook provider)
+
+### Fixed
+- Dovecot OAuth2 docs link updated to 2.4+ documentation
+- Added Dovecot 2.4+ version requirement to README
+
 ## [0.3.1] — 2026-03-18
 
 ### Fixed
