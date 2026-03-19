@@ -148,9 +148,7 @@ class NextcloudAddressBook implements AddressBookInterface
 
 		// IManager::search doesn't support offset natively, fetch all and slice.
 		// Cap at 10000 as safety bound for large address books.
-		$allResults = $this->filterUserContacts(
-			$cm->search($sSearch, ['FN', 'EMAIL', 'NICKNAME', 'TEL'], ['limit' => 10000])
-		);
+		$allResults = $cm->search($sSearch, ['FN', 'EMAIL', 'NICKNAME', 'TEL'], ['limit' => 10000]);
 
 		$iResultCount = \count($allResults);
 		$sliced = \array_slice($allResults, $iOffset, $iLimit);
@@ -173,9 +171,7 @@ class NextcloudAddressBook implements AddressBookInterface
 			return null;
 		}
 
-		$results = $this->filterUserContacts(
-			$cm->search($sEmail, ['EMAIL'], ['strict_search' => true])
-		);
+		$results = $cm->search($sEmail, ['EMAIL'], ['strict_search' => true]);
 
 		if ($results) {
 			return $this->ncContactToContact(\reset($results));
@@ -194,15 +190,11 @@ class NextcloudAddressBook implements AddressBookInterface
 		// Try UID search first — NC IManager doesn't support numeric id search directly.
 		// SnappyMail stores UID as IdContactStr; the UI may pass either UID or numeric id.
 		$searchValue = (string) $mID;
-		$results = $this->filterUserContacts(
-			$cm->search($searchValue, ['UID'], ['strict_search' => true])
-		);
+		$results = $cm->search($searchValue, ['UID'], ['strict_search' => true]);
 
 		if (!$results && !$bIsStrID) {
 			// Fallback: search all and filter by NC row id (capped for safety)
-			$allResults = $this->filterUserContacts(
-				$cm->search('', ['FN'], ['limit' => 10000])
-			);
+			$allResults = $cm->search('', ['FN'], ['limit' => 10000]);
 			$results = \array_filter($allResults, fn($c) => isset($c['id']) && $c['id'] == $mID);
 		}
 
@@ -220,9 +212,7 @@ class NextcloudAddressBook implements AddressBookInterface
 			return [];
 		}
 
-		$results = $this->filterUserContacts(
-			$cm->search($sSearch, ['FN', 'NICKNAME', 'EMAIL'], ['limit' => $iLimit])
-		);
+		$results = $cm->search($sSearch, ['FN', 'NICKNAME', 'EMAIL'], ['limit' => $iLimit]);
 
 		$suggestions = [];
 		foreach ($results as $contact) {
@@ -363,7 +353,11 @@ class NextcloudAddressBook implements AddressBookInterface
 		$contact->id = (string) ($ncContact['id'] ?? '');
 		$contact->IdContactStr = (string) $ncContact['UID'];
 		$contact->setVCard($vCard);
-		$contact->ReadOnly = false;
+
+		// System addressbook contacts are read-only
+		$bookKey = $ncContact['addressbook-key'] ?? '';
+		$userKeys = $this->getUserBookKeys();
+		$contact->ReadOnly = $userKeys && !\in_array($bookKey, $userKeys);
 
 		return $contact;
 	}
