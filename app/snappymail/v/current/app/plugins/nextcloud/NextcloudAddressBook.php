@@ -382,12 +382,22 @@ class NextcloudAddressBook implements AddressBookInterface
 		$fn = $ncContact['FN'] ?? '';
 		$vCard->FN = $fn;
 
-		// SnappyMail displays the N (structured name) property, not FN
-		// Split FN into first/last name as best guess
-		$parts = \explode(' ', $fn, 2);
-		$sFirst = $parts[0] ?? '';
-		$sLast = $parts[1] ?? '';
-		$vCard->N = [$sLast, $sFirst, '', '', ''];
+		// SnappyMail displays the N (structured name) property, not FN.
+		// NC returns N as semicolon-separated string: "Last;First;Middle;Prefix;Suffix"
+		if (!empty($ncContact['N'])) {
+			$nParts = \explode(';', (string) $ncContact['N']);
+			$vCard->N = [
+				$nParts[0] ?? '',  // surName
+				$nParts[1] ?? '',  // givenName
+				$nParts[2] ?? '',  // middleName
+				$nParts[3] ?? '',  // namePrefix
+				$nParts[4] ?? '',  // nameSuffix
+			];
+		} else {
+			// Fallback: split FN into first/last
+			$parts = \explode(' ', $fn, 2);
+			$vCard->N = [$parts[1] ?? '', $parts[0] ?? '', '', '', ''];
+		}
 
 		if (!empty($ncContact['EMAIL'])) {
 			$emails = \is_array($ncContact['EMAIL']) ? $ncContact['EMAIL'] : [$ncContact['EMAIL']];
