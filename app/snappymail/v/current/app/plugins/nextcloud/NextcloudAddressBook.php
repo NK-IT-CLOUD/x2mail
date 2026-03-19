@@ -382,22 +382,27 @@ class NextcloudAddressBook implements AddressBookInterface
 		$fn = $ncContact['FN'] ?? '';
 		$vCard->FN = $fn;
 
-		// SnappyMail displays the N (structured name) property, not FN.
-		// NC returns N as semicolon-separated string: "Last;First;Middle;Prefix;Suffix"
+		// SnappyMail displays the N (structured name) property.
+		// NC returns N as semicolon-separated: "Last;First;Middle;Prefix;Suffix"
+		$sLast = '';
+		$sFirst = '';
+		$sMiddle = '';
+		$sPrefix = '';
+		$sSuffix = '';
 		if (!empty($ncContact['N'])) {
 			$nParts = \explode(';', (string) $ncContact['N']);
-			$vCard->N = [
-				$nParts[0] ?? '',  // surName
-				$nParts[1] ?? '',  // givenName
-				$nParts[2] ?? '',  // middleName
-				$nParts[3] ?? '',  // namePrefix
-				$nParts[4] ?? '',  // nameSuffix
-			];
-		} else {
-			// Fallback: split FN into first/last
-			$parts = \explode(' ', $fn, 2);
-			$vCard->N = [$parts[1] ?? '', $parts[0] ?? '', '', '', ''];
+			$sLast = $nParts[0] ?? '';
+			$sFirst = $nParts[1] ?? '';
+			$sMiddle = $nParts[2] ?? '';
+			$sPrefix = $nParts[3] ?? '';
+			$sSuffix = $nParts[4] ?? '';
 		}
+		// If only surName set (e.g. system contacts "alice;;;;"), use FN as givenName
+		if (!$sFirst && !$sMiddle) {
+			$sFirst = $fn;
+			$sLast = '';
+		}
+		$vCard->N = [$sLast, $sFirst, $sMiddle, $sPrefix, $sSuffix];
 
 		if (!empty($ncContact['EMAIL'])) {
 			$emails = \is_array($ncContact['EMAIL']) ? $ncContact['EMAIL'] : [$ncContact['EMAIL']];
