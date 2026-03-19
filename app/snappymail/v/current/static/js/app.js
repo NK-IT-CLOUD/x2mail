@@ -15470,23 +15470,15 @@ body > * {
 		}
 
 		registerMailto() {
-			const url = `${location.protocol}//${location.host}${location.pathname}?mailto&to=%s`;
 			try {
-				navigator.registerProtocolHandler('mailto', url);
-				const isChromium = !!window.chrome;
-				const isFirefox = navigator.userAgent.includes('Firefox');
-				if (isFirefox) {
-					alert('Registriert! Firefox: Einstellungen → Allgemein → Anwendungen → mailto prüfen.');
-				} else if (isChromium) {
-					alert('Schau in die Adressleiste — dort erscheint ein Handler-Icon (⬡).\nKlicke darauf und wähle "Zulassen".\n\nFalls nicht sichtbar:\n' +
-						(navigator.userAgent.includes('Edg') ? 'edge://settings/content/handlers' : 'chrome://settings/handlers'));
-				} else {
-					alert('Handler registriert. Prüfe deine Browser-Einstellungen falls mailto-Links nicht funktionieren.');
-				}
+				navigator.registerProtocolHandler(
+					'mailto',
+					`${location.protocol}//${location.host}${location.pathname}?mailto&to=%s`
+				);
 			} catch (e) {
-				console.error('registerProtocolHandler failed:', e);
-				alert('Registrierung fehlgeschlagen: ' + (e.message || 'HTTPS erforderlich'));
+				console.error('registerProtocolHandler:', e);
 			}
+			this.mailto(0);
 		}
 	}
 
