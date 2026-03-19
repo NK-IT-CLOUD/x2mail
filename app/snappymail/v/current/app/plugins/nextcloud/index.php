@@ -347,38 +347,16 @@ class NextcloudPlugin extends \RainLoop\Plugins\AbstractPlugin
 	public function MainFabrica(string $sName, &$mResult)
 	{
 		if (static::isLoggedIn()) {
-			if ('suggestions' === $sName && $this->Config()->Get('plugin', 'suggestions', true)) {
-				if (!\is_array($mResult)) {
-					$mResult = array();
-				}
-				include_once __DIR__ . '/NextcloudContactsSuggestions.php';
-				$mResult[] = new NextcloudContactsSuggestions(
-					$this->Config()->Get('plugin', 'ignoreSystemAddressbook', true)
-				);
+			if ('address-book' === $sName) {
+				include_once __DIR__ . '/NextcloudAddressBook.php';
+				$mResult = new \NextcloudAddressBook();
 			}
-/*
-			if ($this->Config()->Get('plugin', 'storage', false) && ('storage' === $sName || 'storage-local' === $sName)) {
-				require_once __DIR__ . '/storage.php';
-				$oDriver = new \NextcloudStorage(APP_PRIVATE_DATA.'storage', $sName === 'storage-local');
-			}
-*/
 		}
 	}
 
 	protected function configMapping() : array
 	{
 		return array(
-			\RainLoop\Plugins\Property::NewInstance('suggestions')->SetLabel('Suggestions')
-				->SetType(\RainLoop\Enumerations\PluginPropertyType::BOOL)
-				->SetDefaultValue(true),
-			\RainLoop\Plugins\Property::NewInstance('ignoreSystemAddressbook')->SetLabel('Ignore system addressbook')
-				->SetType(\RainLoop\Enumerations\PluginPropertyType::BOOL)
-				->SetDefaultValue(true),
-/*
-			\RainLoop\Plugins\Property::NewInstance('storage')->SetLabel('Use Nextcloud user ID in config storage path')
-				->SetType(\RainLoop\Enumerations\PluginPropertyType::BOOL)
-				->SetDefaultValue(false)
-*/
 			\RainLoop\Plugins\Property::NewInstance('calendar')->SetLabel('Enable "Put ICS in calendar"')
 				->SetType(\RainLoop\Enumerations\PluginPropertyType::BOOL)
 				->SetDefaultValue(false)
