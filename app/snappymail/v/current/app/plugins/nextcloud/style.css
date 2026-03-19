@@ -20,5 +20,5 @@
    Default: #V-PopupsContacts .b-view-content :not(.e-checkbox)>span { display:none }
    Override must match or exceed that specificity */
 #V-PopupsContacts .b-view-content.read-only :not(.e-checkbox)>span {
-	display: inline-block;
+	display: inline-block !important;
 }
