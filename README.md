@@ -40,13 +40,14 @@ occ user_oidc:provider YourProvider \
 
 Your IMAP server must support token-based authentication. X2Mail sends the OIDC access token as IMAP credentials — the IMAP server must validate it against your OIDC provider.
 
-**Dovecot example** (most common):
+**Dovecot example** (most common, requires **Dovecot 2.4+**):
 - Enable `auth-oauth2` mechanism
 - Configure `passdb` with `oauth2` driver
 - Set up token introspection endpoint pointing to your OIDC provider
-- Dovecot docs: https://doc.dovecot.org/configuration_manual/authentication/oauth2/
+- Dovecot docs: https://doc.dovecot.org/2.4.2/core/config/auth/databases/oauth2.html
 
 **What Dovecot needs:**
+- **Dovecot 2.4 or later** (OAuth2 passdb was reworked in 2.4.0)
 - OAUTHBEARER and/or XOAUTH2 SASL mechanisms enabled
 - Token introspection: Dovecot must be able to call your OIDC provider's introspection endpoint to validate tokens
 - A service account or client credentials for the introspection call
