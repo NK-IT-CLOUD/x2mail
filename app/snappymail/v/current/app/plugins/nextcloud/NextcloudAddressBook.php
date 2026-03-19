@@ -96,7 +96,13 @@ class NextcloudAddressBook implements AddressBookInterface
 		}
 
 		if ($result) {
-			$oContact->id = (string) ($result['id'] ?? $result['UID'] ?? $oContact->IdContactStr);
+			$rid = $result['id'] ?? '';
+			if ($rid && \is_numeric($rid)) {
+				$oContact->id = (string) $rid;
+			} else {
+				$uid = $result['UID'] ?? $oContact->IdContactStr;
+				$oContact->id = (string) \abs(\crc32((string) $uid));
+			}
 			return true;
 		}
 
@@ -350,9 +356,15 @@ class NextcloudAddressBook implements AddressBookInterface
 		}
 
 		$contact = new Contact();
-		// Use NC id if available, fall back to UID
+		// SM expects numeric id (JS typeCasts to number).
+		// Use NC id if numeric, otherwise generate stable int from UID hash.
 		$ncId = $ncContact['id'] ?? '';
-		$contact->id = (string) ($ncId ?: $ncContact['UID']);
+		if ($ncId && \is_numeric($ncId)) {
+			$contact->id = (string) $ncId;
+		} else {
+			// CRC32 gives a stable 32-bit int from the UID string
+			$contact->id = (string) \abs(\crc32((string) $ncContact['UID']));
+		}
 		$contact->IdContactStr = (string) $ncContact['UID'];
 		$contact->setVCard($vCard);
 
