@@ -9,7 +9,9 @@ class NextcloudAddressBook implements AddressBookInterface
 	use \MailSo\Log\Inherit;
 
 	private ?\OCP\Contacts\IManager $cm = null;
+	private ?object $cardDavBackend = null;
 	private string $addressBookKey = '';
+	private int $addressBookId = 0;
 	private string $sEmail = '';
 	private ?array $userBookKeys = null;
 
@@ -66,72 +68,76 @@ class NextcloudAddressBook implements AddressBookInterface
 
 	public function ContactSave(Contact $oContact): bool
 	{
-		$cm = $this->getManager();
-		if (!$cm) {
-			return false;
-		}
-
-		$addressBookKey = $this->getDefaultAddressBookKey();
-		if (!$addressBookKey) {
-			return false;
-		}
-
 		$vCard = $oContact->vCard;
 		if (!$vCard) {
 			return false;
 		}
 
-		$properties = $this->vCardToProperties($vCard);
-
-		// If contact has an existing NC id, include it for update
-		if ($oContact->id && \is_numeric($oContact->id)) {
-			$properties['id'] = (int) $oContact->id;
+		$backend = $this->getCardDavBackend();
+		$bookId = $this->getDefaultAddressBookId();
+		if (!$backend || !$bookId) {
+			return false;
 		}
 
+		// Ensure UID exists
+		if (empty((string) $vCard->UID)) {
+			$vCard->UID = \SnappyMail\UUID::generate();
+		}
+
+		$vCard->REV = \gmdate('Ymd\\THis\\Z');
+		$vCard->PRODID = 'SnappyMail-' . APP_VERSION;
+		$cardData = $vCard->serialize();
+		$uri = (string) $vCard->UID . '.vcf';
+
 		try {
-			$result = $cm->createOrUpdate($properties, $addressBookKey);
+			// Check if card already exists (update) or is new (create)
+			$existing = $backend->getCard($bookId, $uri);
+			if ($existing) {
+				$backend->updateCard($bookId, $uri, $cardData);
+			} else {
+				$backend->createCard($bookId, $uri, $cardData);
+			}
 		} catch (\Throwable $e) {
 			$this->logException($e);
 			return false;
 		}
 
-		if ($result) {
-			$rid = $result['id'] ?? '';
-			if ($rid && \is_numeric($rid)) {
-				$oContact->id = (string) $rid;
-			} else {
-				$uid = $result['UID'] ?? $oContact->IdContactStr;
-				$oContact->id = (string) \abs(\crc32((string) $uid));
-			}
-			return true;
-		}
-
-		return false;
+		$oContact->id = (string) \abs(\crc32((string) $vCard->UID));
+		$oContact->IdContactStr = (string) $vCard->UID;
+		return true;
 	}
 
 	public function DeleteContacts(array $aContactIds): bool
 	{
-		$cm = $this->getManager();
-		if (!$cm) {
+		$backend = $this->getCardDavBackend();
+		$bookId = $this->getDefaultAddressBookId();
+		if (!$backend || !$bookId) {
 			return false;
 		}
 
-		$addressBookKey = $this->getDefaultAddressBookKey();
-		if (!$addressBookKey) {
-			return false;
-		}
-
-		// NC IManager::delete() expects the contact id as passed by the backend.
-		// The framework may pass numeric IDs (intval'd by DoContactsDelete).
-		// NC's CardDAV backend accepts both numeric row IDs and URI strings.
+		// IDs are crc32 hashes of UIDs. We need to find the matching URI.
+		// Get all cards and match by crc32(UID).
 		$ok = true;
-		foreach ($aContactIds as $id) {
-			try {
-				if (!$cm->delete($id, $addressBookKey)) {
-					$ok = false;
+		$cards = $backend->getCards($bookId);
+		foreach ($aContactIds as $targetId) {
+			$found = false;
+			foreach ($cards as $card) {
+				$uid = '';
+				if (\preg_match('/^UID:(.+)$/mi', $card['carddata'] ?? '', $m)) {
+					$uid = \trim($m[1]);
 				}
-			} catch (\Throwable $e) {
-				$this->logException($e);
+				if ($uid && \abs(\crc32($uid)) == $targetId) {
+					try {
+						$backend->deleteCard($bookId, $card['uri']);
+						$found = true;
+					} catch (\Throwable $e) {
+						$this->logException($e);
+						$ok = false;
+					}
+					break;
+				}
+			}
+			if (!$found) {
 				$ok = false;
 			}
 		}
@@ -264,6 +270,55 @@ class NextcloudAddressBook implements AddressBookInterface
 	}
 
 	// --- Private helpers ---
+
+	private function getCardDavBackend(): ?object
+	{
+		if (null === $this->cardDavBackend) {
+			try {
+				$this->cardDavBackend = \OCP\Server::get(\OCA\DAV\CardDAV\CardDavBackend::class);
+			} catch (\Throwable $e) {
+				$this->logException($e);
+			}
+		}
+		return $this->cardDavBackend;
+	}
+
+	private function getDefaultAddressBookId(): int
+	{
+		if ($this->addressBookId) {
+			return $this->addressBookId;
+		}
+
+		$backend = $this->getCardDavBackend();
+		if (!$backend) {
+			return 0;
+		}
+
+		try {
+			$user = \OCP\Server::get(\OCP\IUserSession::class)->getUser();
+			if (!$user) {
+				return 0;
+			}
+			$principal = 'principals/users/' . $user->getUID();
+			$books = $backend->getAddressBooksForUser($principal);
+			foreach ($books as $book) {
+				if ($book['uri'] === 'contacts') {
+					$this->addressBookId = (int) $book['id'];
+					return $this->addressBookId;
+				}
+			}
+			// Fallback: first non-system book
+			foreach ($books as $book) {
+				if (($book['{DAV:}resourcetype']->is('{urn:ietf:params:xml:ns:carddav}addressbook') ?? true)) {
+					$this->addressBookId = (int) $book['id'];
+					return $this->addressBookId;
+				}
+			}
+		} catch (\Throwable $e) {
+			$this->logException($e);
+		}
+		return 0;
+	}
 
 	private function getManager(): ?\OCP\Contacts\IManager
 	{
