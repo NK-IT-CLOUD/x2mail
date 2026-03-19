@@ -262,6 +262,8 @@ class Setup extends Base
 				$oConfig = \RainLoop\Api::Config();
 				$appPath = \rtrim($this->appManager->getAppWebPath(self::APP_ID), '/') . '/app/';
 				$oConfig->Set('webmail', 'app_path', $appPath);
+				$oConfig->Set('webmail', 'title', 'X2Mail');
+				$oConfig->Set('webmail', 'loading_description', 'X2Mail');
 				$oConfig->Set('login', 'default_domain', $domain);
 
 				// Enable contacts — NextcloudAddressBook reads/writes NC Contacts directly
