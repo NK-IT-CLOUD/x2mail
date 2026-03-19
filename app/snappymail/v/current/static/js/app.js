@@ -15470,14 +15470,14 @@ body > * {
 		}
 
 		registerMailto() {
-			console.log(`mailto = ${location.protocol}//${location.host}${location.pathname}?mailto`);
-			navigator.registerProtocolHandler(
-				'mailto',
-				`${location.protocol}//${location.host}${location.pathname}?mailto&to=%s`,
-				(SettingsGet('title') || 'SnappyMail')
-			);
-			alert(i18n('GLOBAL/DONE'));
-			this.mailto(0);
+			const url = `${location.protocol}//${location.host}${location.pathname}?mailto&to=%s`;
+			try {
+				navigator.registerProtocolHandler('mailto', url);
+				this.mailto(0);
+			} catch (e) {
+				console.error('registerProtocolHandler failed:', e);
+				alert(e.message || 'Registration failed. HTTPS required.');
+			}
 		}
 	}
 
