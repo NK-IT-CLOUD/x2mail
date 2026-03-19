@@ -95,8 +95,8 @@ class NextcloudAddressBook implements AddressBookInterface
 			return false;
 		}
 
-		if ($result && !empty($result['id'])) {
-			$oContact->id = (string) $result['id'];
+		if ($result) {
+			$oContact->id = (string) ($result['id'] ?? $result['UID'] ?? $oContact->IdContactStr);
 			return true;
 		}
 
@@ -350,7 +350,9 @@ class NextcloudAddressBook implements AddressBookInterface
 		}
 
 		$contact = new Contact();
-		$contact->id = (string) ($ncContact['id'] ?? '');
+		// Use NC id if available, fall back to UID
+		$ncId = $ncContact['id'] ?? '';
+		$contact->id = (string) ($ncId ?: $ncContact['UID']);
 		$contact->IdContactStr = (string) $ncContact['UID'];
 		$contact->setVCard($vCard);
 
@@ -464,7 +466,22 @@ class NextcloudAddressBook implements AddressBookInterface
 	{
 		$props = [];
 		$props['UID'] = (string) ($vCard->UID ?? \SnappyMail\UUID::generate());
-		$props['FN'] = (string) ($vCard->FN ?? '');
+
+		// Build FN from N parts if available, otherwise use existing FN
+		if ($vCard->N) {
+			$nParts = $vCard->N->getParts();
+			$sLast = $nParts[0] ?? '';
+			$sFirst = $nParts[1] ?? '';
+			$sMiddle = $nParts[2] ?? '';
+			$sPrefix = $nParts[3] ?? '';
+			$sSuffix = $nParts[4] ?? '';
+			$props['N'] = \implode(';', [$sLast, $sFirst, $sMiddle, $sPrefix, $sSuffix]);
+			// Rebuild FN from parts
+			$props['FN'] = \trim(\implode(' ', \array_filter([$sPrefix, $sFirst, $sMiddle, $sLast, $sSuffix])));
+		}
+		if (empty($props['FN'])) {
+			$props['FN'] = (string) ($vCard->FN ?? '');
+		}
 
 		if ($vCard->EMAIL) {
 			$emails = [];
