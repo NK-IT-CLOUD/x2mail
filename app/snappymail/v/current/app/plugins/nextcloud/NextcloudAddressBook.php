@@ -379,7 +379,15 @@ class NextcloudAddressBook implements AddressBookInterface
 		// Build vCard from NC property arrays
 		$vCard = new VCard();
 		$vCard->UID = $ncContact['UID'] ?? \SnappyMail\UUID::generate();
-		$vCard->FN = $ncContact['FN'] ?? '';
+		$fn = $ncContact['FN'] ?? '';
+		$vCard->FN = $fn;
+
+		// SnappyMail displays the N (structured name) property, not FN
+		// Split FN into first/last name as best guess
+		$parts = \explode(' ', $fn, 2);
+		$sFirst = $parts[0] ?? '';
+		$sLast = $parts[1] ?? '';
+		$vCard->N = [$sLast, $sFirst, '', '', ''];
 
 		if (!empty($ncContact['EMAIL'])) {
 			$emails = \is_array($ncContact['EMAIL']) ? $ncContact['EMAIL'] : [$ncContact['EMAIL']];
