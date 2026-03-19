@@ -6,6 +6,16 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-03-19
+
+### Fixed
+- Bundled nextcloud plugin now syncs to SM data directory on every app enable/upgrade
+- Contacts from all address books (including system/users) are now visible, system contacts marked read-only
+- Contacts without email address are hidden from the contacts list
+- `IManager::delete()` type handling fixed for NC CardDAV backend compatibility
+- Search queries capped at 10,000 results for safety in large address books
+- Double-slash in `app_path` when `overwritewebroot = /` prevented
+
 ## [0.4.0] — 2026-03-19
 
 ### Added
