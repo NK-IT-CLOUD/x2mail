@@ -263,6 +263,10 @@ class Setup extends Base
 				$appPath = $this->appManager->getAppWebPath(self::APP_ID) . '/app/';
 				$oConfig->Set('webmail', 'app_path', $appPath);
 				$oConfig->Set('login', 'default_domain', $domain);
+
+				// Enable contacts — NextcloudAddressBook reads/writes NC Contacts directly
+				$oConfig->Set('contacts', 'enable', true);
+
 				$oConfig->Save();
 				$output->writeln("  SM app_path: <comment>{$appPath}</comment>");
 			} catch (\Throwable $e) {
