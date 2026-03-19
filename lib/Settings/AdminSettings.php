@@ -69,7 +69,7 @@ class AdminSettings implements ISettings
 
 		$app_path = $oConfig->Get('webmail', 'app_path');
 		if (!$app_path) {
-			$app_path = $this->appManager->getAppWebPath('x2mail') . '/app/';
+			$app_path = \rtrim($this->appManager->getAppWebPath('x2mail'), '/') . '/app/';
 			$oConfig->Set('webmail', 'app_path', $app_path);
 			$oConfig->Set('webmail', 'theme', 'NextcloudV25+');
 			$oConfig->Save();

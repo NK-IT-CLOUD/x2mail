@@ -44,7 +44,8 @@ class InstallStep implements IRepairStep
 
 		if (!$oConfig->Get('webmail', 'app_path')) {
 			$output->info('Set config [webmail]app_path');
-			$oConfig->Set('webmail', 'app_path', \OCP\Server::get(\OCP\App\IAppManager::class)->getAppWebPath('x2mail') . '/app/');
+			$appWebPath = \OCP\Server::get(\OCP\App\IAppManager::class)->getAppWebPath('x2mail');
+			$oConfig->Set('webmail', 'app_path', \rtrim($appWebPath, '/') . '/app/');
 			$oConfig->Set('webmail', 'allow_languages_on_settings', false);
 			$oConfig->Set('login', 'allow_languages_on_login', false);
 			$bSave = true;
