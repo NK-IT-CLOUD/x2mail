@@ -115,10 +115,13 @@ class NextcloudAddressBook implements AddressBookInterface
 			return false;
 		}
 
+		// NC IManager::delete() expects the contact id as passed by the backend.
+		// The framework may pass numeric IDs (intval'd by DoContactsDelete).
+		// NC's CardDAV backend accepts both numeric row IDs and URI strings.
 		$ok = true;
 		foreach ($aContactIds as $id) {
 			try {
-				if (!$cm->delete((int) $id, $addressBookKey)) {
+				if (!$cm->delete($id, $addressBookKey)) {
 					$ok = false;
 				}
 			} catch (\Throwable $e) {
@@ -143,9 +146,10 @@ class NextcloudAddressBook implements AddressBookInterface
 			return [];
 		}
 
-		// IManager::search doesn't support offset natively, fetch all and slice
+		// IManager::search doesn't support offset natively, fetch all and slice.
+		// Cap at 10000 as safety bound for large address books.
 		$allResults = $this->filterUserContacts(
-			$cm->search($sSearch, ['FN', 'EMAIL', 'NICKNAME', 'TEL'], [])
+			$cm->search($sSearch, ['FN', 'EMAIL', 'NICKNAME', 'TEL'], ['limit' => 10000])
 		);
 
 		$iResultCount = \count($allResults);
@@ -195,9 +199,9 @@ class NextcloudAddressBook implements AddressBookInterface
 		);
 
 		if (!$results && !$bIsStrID) {
-			// Fallback: search all and filter by NC row id
+			// Fallback: search all and filter by NC row id (capped for safety)
 			$allResults = $this->filterUserContacts(
-				$cm->search('', ['FN'])
+				$cm->search('', ['FN'], ['limit' => 10000])
 			);
 			$results = \array_filter($allResults, fn($c) => isset($c['id']) && $c['id'] == $mID);
 		}
@@ -301,13 +305,13 @@ class NextcloudAddressBook implements AddressBookInterface
 
 	/**
 	 * Filter search results to user-owned address books only (in-memory, no singleton mutation).
-	 * If no user-owned books exist, returns all results as fallback.
+	 * If no user-owned books exist, returns empty to avoid leaking system/global contacts.
 	 */
 	private function filterUserContacts(array $results): array
 	{
 		$keys = $this->getUserBookKeys();
 		if (!$keys) {
-			return $results;
+			return [];
 		}
 		return \array_values(
 			\array_filter($results, fn($c) => \in_array($c['addressbook-key'] ?? '', $keys))
