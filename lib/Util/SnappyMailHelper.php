@@ -42,10 +42,18 @@ class SnappyMailHelper
 		$_ENV['SNAPPYMAIL_INCLUDE_AS_API'] = true;
 
 		// Set data path BEFORE loading SM core — otherwise SM falls back to app/data/
-		\define('APP_DATA_FOLDER_PATH', \rtrim(\trim(\OCP\Server::get(IConfig::class)->getSystemValue('datadirectory', '')), '\\/').'/appdata_x2mail/');
+		if (!\defined('APP_DATA_FOLDER_PATH')) {
+			\define('APP_DATA_FOLDER_PATH', \rtrim(\trim(\OCP\Server::get(IConfig::class)->getSystemValue('datadirectory', '')), '\\/').'/appdata_x2mail/');
+		}
 
 		$app_dir = \dirname(\dirname(__DIR__)) . '/app';
-		require_once $app_dir . '/index.php';
+		$index = $app_dir . '/index.php';
+		if (!\is_readable($index)) {
+			\OCP\Server::get(\Psr\Log\LoggerInterface::class)
+				->warning('X2Mail: app/index.php not readable, skipping SM bootstrap');
+			return;
+		}
+		require_once $index;
 	}
 
 	public static function startApp(bool $handle = false)
@@ -191,12 +199,18 @@ class SnappyMailHelper
 	public static function encodePassword(string $sPassword, string $sSalt) : string
 	{
 		static::loadApp();
+		if (!\class_exists('SnappyMail\\Crypt', false)) {
+			return '';
+		}
 		return \SnappyMail\Crypt::EncryptUrlSafe($sPassword, $sSalt);
 	}
 
 	public static function decodePassword(string $sPassword, string $sSalt) : ?\SnappyMail\SensitiveString
 	{
 		static::loadApp();
+		if (!\class_exists('SnappyMail\\Crypt', false)) {
+			return null;
+		}
 		$result = \SnappyMail\Crypt::DecryptUrlSafe($sPassword, $sSalt);
 		return $result ? new \SnappyMail\SensitiveString($result) : null;
 	}

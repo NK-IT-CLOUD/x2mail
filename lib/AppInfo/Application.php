@@ -76,6 +76,11 @@ class Application extends App implements IBootstrap
 		$session = $context->getServerContainer()->get(ISession::class);
 		$dispatcher = $context->getServerContainer()->get(\OCP\EventDispatcher\IEventDispatcher::class);
 		$dispatcher->addListener(PostLoginEvent::class, function (PostLoginEvent $Event) use ($session) {
+			// Skip SM bootstrap for app-password/token logins (bots, DAV clients, API)
+			// — they can't use the password for IMAP anyway
+			if ($Event->isTokenLogin()) {
+				return;
+			}
 			$sUID = $Event->getUser()->getUID();
 			$session->set('snappymail-nc-uid', $sUID);
 			$session->set('snappymail-passphrase', SnappyMailHelper::encodePassword($Event->getPassword(), $sUID));
