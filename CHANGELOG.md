@@ -6,6 +6,17 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
 ## [Unreleased]
 
+## [0.4.2] — 2026-03-19
+
+### Fixed
+- Contact detail view now shows name and email for read-only (system) contacts
+- Contact CRUD uses CardDAV backend directly — proper vCard N property support
+- Numeric contact IDs for SnappyMail JS compatibility
+- Contact tab restructured to match business tab layout (label + span + input)
+- German labels corrected: "Vorname:" / "Nachname:" (singular + colon)
+- Read-only contact spans visible via CSS specificity fix
+- Empty name fields (middle name, prefix, suffix) hidden for read-only contacts
+
 ## [0.4.1] — 2026-03-19
 
 ### Fixed
