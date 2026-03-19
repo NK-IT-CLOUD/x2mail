@@ -23,23 +23,13 @@ class PageController extends Controller
 	public function index()
 	{
 		$bAdmin = false;
-		$mailtoAddress = '';
 		$queryString = $this->request->server['QUERY_STRING'] ?? '';
 		if ($queryString !== '') {
-			// Handle ?mailto&to=mailto:user@example.com — extract email, render page with compose trigger
-			if (\str_starts_with($queryString, 'mailto')) {
-				$sTo = \trim($_GET['to'] ?? '');
-				if ($sTo && \preg_match('/^mailto:/i', $sTo)) {
-					$mailtoAddress = $sTo;
-				}
-				// Don't call Service::Handle() — render the page directly with mailto param
-			} else {
-				SnappyMailHelper::loadApp();
-				$adminKey = \RainLoop\Api::Config()->Get('security', 'admin_panel_key', 'admin');
-				$bAdmin = \hash_equals($adminKey, $queryString);
-				if (!$bAdmin) {
-					return SnappyMailHelper::startApp(true);
-				}
+			SnappyMailHelper::loadApp();
+			$adminKey = \RainLoop\Api::Config()->Get('security', 'admin_panel_key', 'admin');
+			$bAdmin = \hash_equals($adminKey, $queryString);
+			if (!$bAdmin) {
+				return SnappyMailHelper::startApp(true);
 			}
 		}
 
@@ -92,18 +82,6 @@ class PageController extends Controller
 		];
 
 		\OCP\Util::addHeader('link', ['type'=>'text/css','rel'=>'stylesheet','href'=>\RainLoop\Utils::WebStaticPath('css/'.($bAdmin?'admin':'app').$sAppCssMin.'.css')], '');
-
-		// If mailto address was passed, set the SM cookie directly so AppData picks it up
-		if ($mailtoAddress) {
-			\SnappyMail\Cookies::set(
-				\RainLoop\Actions::AUTH_MAILTO_TOKEN_KEY,
-				\RainLoop\Utils::EncodeKeyValuesQ([
-					'Time' => \microtime(true),
-					'MailTo' => 'MailTo',
-					'To' => $mailtoAddress
-				])
-			);
-		}
 
 		$response = new TemplateResponse('x2mail', 'index_embed', $params);
 
