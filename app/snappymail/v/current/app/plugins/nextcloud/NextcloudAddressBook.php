@@ -340,7 +340,7 @@ class NextcloudAddressBook implements AddressBookInterface
 
 	private function ncContactToContact(array $ncContact): ?Contact
 	{
-		if (empty($ncContact['UID'])) {
+		if (empty($ncContact['UID']) || empty($ncContact['EMAIL'])) {
 			return null;
 		}
 
