@@ -89,45 +89,25 @@
 					data-i18n="CONTACTS/TAB_CONTACT"></label>
 				<div class="form-horizontal tab-content" role="tabpanel" aria-hidden="false">
 					<div class="control-group">
-						<label class="fontastic iconsize24">👤</label>
-						<div>
-							<div class="property-line" data-i18n="[title]CONTACTS/FIRST_NAME">
-								<span data-bind="text: givenName"></span>
-								<input type="text"
-									autocomplete="off" autocorrect="off" autocapitalize="off"
-									data-bind="textInput: givenName" data-i18n="[placeholder]CONTACTS/FIRST_NAME">
-							</div>
-							<div class="property-line" data-i18n="[title]CONTACTS/LAST_NAME">
-								<span data-bind="text: surName"></span>
-								<input type="text"
-									autocomplete="off" autocorrect="off" autocapitalize="off"
-									data-bind="textInput: surName" data-i18n="[placeholder]CONTACTS/LAST_NAME">
-							</div>
-							<div class="property-line" data-i18n="[title]CONTACTS/MIDDLE_NAME">
-								<span data-bind="text: middleName"></span>
-								<input type="text"
-									autocomplete="off" autocorrect="off" autocapitalize="off"
-									data-bind="textInput: middleName" data-i18n="[placeholder]CONTACTS/MIDDLE_NAME">
-							</div>
-							<div class="property-line" data-i18n="[title]CONTACTS/NAME_PREFIX">
-								<span data-bind="text: namePrefix"></span>
-								<input type="text"
-									autocomplete="off" autocorrect="off" autocapitalize="off"
-									data-bind="textInput: namePrefix" data-i18n="[placeholder]CONTACTS/NAME_PREFIX">
-							</div>
-							<div class="property-line" data-i18n="[title]CONTACTS/NAME_SUFFIX">
-								<span data-bind="text: nameSuffix"></span>
-								<input type="text"
-									autocomplete="off" autocorrect="off" autocapitalize="off"
-									data-bind="textInput: nameSuffix" data-i18n="[placeholder]CONTACTS/NAME_SUFFIX">
-							</div>
-							<div class="property-line" data-bind="visible: null != nickname()" data-i18n="[title]CONTACTS/ADD_MENU_NICKNAME">
-								<span data-bind="text: nickname"></span>
-								<input type="text"
-									autocomplete="off" autocorrect="off" autocapitalize="off"
-									data-bind="textInput: nickname" data-i18n="[placeholder]CONTACTS/NICK_NAME">
-							</div>
-						</div>
+						<label data-i18n="CONTACTS/FIRST_NAME"></label>
+						<span data-bind="text: givenName"></span>
+						<input type="text"
+							autocomplete="off" autocorrect="off" autocapitalize="off"
+							data-bind="textInput: givenName" data-i18n="[placeholder]CONTACTS/FIRST_NAME">
+					</div>
+					<div class="control-group">
+						<label data-i18n="CONTACTS/LAST_NAME"></label>
+						<span data-bind="text: surName"></span>
+						<input type="text"
+							autocomplete="off" autocorrect="off" autocapitalize="off"
+							data-bind="textInput: surName" data-i18n="[placeholder]CONTACTS/LAST_NAME">
+					</div>
+					<div class="control-group" data-bind="visible: null != nickname()">
+						<label data-i18n="CONTACTS/ADD_MENU_NICKNAME"></label>
+						<span data-bind="text: nickname"></span>
+						<input type="text"
+							autocomplete="off" autocorrect="off" autocapitalize="off"
+							data-bind="textInput: nickname" data-i18n="[placeholder]CONTACTS/NICK_NAME">
 					</div>
 					<div class="control-group">
 						<label class="fontastic iconsize24" data-i18n="[title]GLOBAL/EMAIL">@</label>
