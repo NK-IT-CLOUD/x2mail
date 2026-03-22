@@ -45,6 +45,12 @@ jobs:
       - name: Validate tarball
         run: make validate
 
+      # Phase 5: Static Analysis
+      - name: PHPStan
+        run: |
+          composer install --no-interaction --quiet
+          vendor/bin/phpstan analyse --no-progress
+
       # Phase 7: Deploy (main only)
       - name: Deploy to Nextcloud
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
