@@ -3,8 +3,12 @@ parameters:
     paths:
         - lib
         - appinfo
+    bootstrapFiles:
+        - vendor/autoload.php
     scanDirectories:
+        - vendor/nextcloud/ocp
         - app/snappymail/v/current/app/libraries
+        - stubs
     ignoreErrors: []
 
 includes:
