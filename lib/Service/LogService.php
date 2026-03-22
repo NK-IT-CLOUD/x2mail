@@ -96,7 +96,12 @@ class LogService {
 		}
 		$line .= "\n";
 
-		@\file_put_contents(self::getLogFile(), $line, \FILE_APPEND | \LOCK_EX);
+		$logFile = self::getLogFile();
+		$isNew = !\file_exists($logFile);
+		@\file_put_contents($logFile, $line, \FILE_APPEND | \LOCK_EX);
+		if ($isNew) {
+			@\chmod($logFile, 0600);
+		}
 	}
 
 	/**

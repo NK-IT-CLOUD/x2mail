@@ -71,7 +71,7 @@ class FetchController extends Controller {
 			$appPath = $this->request->getParam('snappymail-app_path', '');
 			if ($appPath !== '') {
 				// Validate app_path: must start with / and must not contain protocol
-				if (\str_starts_with($appPath, '/') && !\str_contains($appPath, '://')) {
+				if (\str_starts_with($appPath, '/') && !\str_contains($appPath, '://') && !\str_contains($appPath, '..')) {
 					$oConfig->Set('webmail', 'app_path', $appPath);
 				}
 			}
@@ -107,6 +107,14 @@ class FetchController extends Controller {
 			$password = $this->request->getParam('snappymail-password');
 			$email = $this->request->getParam('snappymail-email');
 			if ($appname === 'x2mail' && $password !== null && $email !== null) {
+				if ($email !== '' && !\filter_var($email, FILTER_VALIDATE_EMAIL)) {
+					return new JSONResponse([
+						'status' => 'error',
+						'Message' => $this->l->t('Invalid email address'),
+						'Email' => ''
+					]);
+				}
+
 				$sUser = $this->userId;
 
 				$sEmail = $email;

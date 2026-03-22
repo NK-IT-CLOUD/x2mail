@@ -115,6 +115,9 @@ class NextcloudPlugin extends \RainLoop\Plugins\AbstractPlugin
 			'tempName' => ''
 		];
 		$sFile = $this->jsonParam('file', '');
+		if (\str_contains($sFile, '..') || \str_contains($sFile, "\0")) {
+			return $this->jsonResponse(__FUNCTION__, $aResult);
+		}
 		$oFiles = \OCP\Files::getStorage('files');
 		if ($oFiles && $oFiles->is_file($sFile) && $fp = $oFiles->fopen($sFile, 'rb')) {
 			$oActions = \RainLoop\Api::Actions();
@@ -143,6 +146,9 @@ class NextcloudPlugin extends \RainLoop\Plugins\AbstractPlugin
 			'filename' => '',
 			'success' => false
 		];
+		if (\str_contains($sSaveFolder, '..') || \str_contains($sSaveFolder, "\0")) {
+			return $this->jsonResponse(__FUNCTION__, $aResult);
+		}
 		if ($sSaveFolder && !empty($aValues['folder']) && !empty($aValues['uid'])) {
 			$oActions = \RainLoop\Api::Actions();
 			$oMailClient = $oActions->MailClient();
@@ -183,6 +189,9 @@ class NextcloudPlugin extends \RainLoop\Plugins\AbstractPlugin
 			$oFiles = \OCP\Files::getStorage('files');
 			if ($oFiles && \method_exists($oFiles, 'file_put_contents')) {
 				$sSaveFolder = \ltrim($this->jsonParam('NcFolder', ''), '/');
+				if (\str_contains($sSaveFolder, '..') || \str_contains($sSaveFolder, "\0")) {
+					return;
+				}
 				$sSaveFolder = $sSaveFolder ?: 'Attachments';
 				$oFiles->is_dir($sSaveFolder) || $oFiles->mkdir($sSaveFolder);
 				$data->result = true;
@@ -288,6 +297,8 @@ class NextcloudPlugin extends \RainLoop\Plugins\AbstractPlugin
 							'Url' => $aResult['ContactsSync']['Url']
 						)
 					);
+					// Re-mask password — $aResult is sent to the browser as JSON
+					$aResult['ContactsSync']['Password'] = '********';
 				}
 			}
 		}

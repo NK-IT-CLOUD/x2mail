@@ -92,13 +92,16 @@ class SnappyMailHelper
 						) {
 							$oActions->SetSignMeToken($oAccount);
 						}
-					} catch (\Throwable $e) {
-						// Login failure, reset password to prevent more attempts
-						if (!$isOIDC) {
+					} catch (\RainLoop\Exceptions\ClientException $e) {
+						// Only clear credentials on auth failure, not on connection errors
+						// (temporary IMAP outage should not wipe stored passwords)
+						if (!$isOIDC && $e->getCode() !== \RainLoop\Notifications::ConnectionError) {
 							$sUID = \OCP\Server::get(IUserSession::class)->getUser()->getUID();
 							\OCP\Server::get(ISession::class)->set('snappymail-passphrase', '');
 							\OCP\Server::get(IConfig::class)->setUserValue($sUID, 'x2mail', 'passphrase', '');
 						}
+					} catch (\Throwable $e) {
+						// Non-login errors (e.g. DI failures) — don't touch credentials
 					}
 				}
 			}

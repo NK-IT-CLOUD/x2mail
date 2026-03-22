@@ -105,6 +105,14 @@ class SetupController extends Controller
 			return new JSONResponse(['error' => 'Invalid SMTP port'], 400);
 		}
 
+		// Validate hostname format — prevent injection of special characters
+		if ($imapHost !== '' && !\preg_match('/\A[a-zA-Z0-9.\-]+\z/', $imapHost)) {
+			return new JSONResponse(['error' => 'Invalid IMAP hostname'], 400);
+		}
+		if ($smtpHost !== '' && !\preg_match('/\A[a-zA-Z0-9.\-]+\z/', $smtpHost)) {
+			return new JSONResponse(['error' => 'Invalid SMTP hostname'], 400);
+		}
+
 		$results = [];
 
 		// IMAP check
@@ -273,7 +281,7 @@ class SetupController extends Controller
 			$errstr = '';
 			$fp = @\stream_socket_client($prefix . $host . ':' . $port, $errno, $errstr, 10);
 			if (!$fp) {
-				$result['error'] = $errstr ?: "Connection failed (errno={$errno})";
+				$result['error'] = 'Connection failed';
 				return $result;
 			}
 
@@ -316,7 +324,7 @@ class SetupController extends Controller
 			\fwrite($fp, "A002 LOGOUT\r\n");
 			\fclose($fp);
 		} catch (\Throwable $e) {
-			$result['error'] = $e->getMessage();
+			$result['error'] = 'Connection failed';
 		}
 
 		return $result;
@@ -342,7 +350,7 @@ class SetupController extends Controller
 			$errstr = '';
 			$fp = @\stream_socket_client($prefix . $host . ':' . $port, $errno, $errstr, 10);
 			if (!$fp) {
-				$result['error'] = $errstr ?: "Connection failed (errno={$errno})";
+				$result['error'] = 'Connection failed';
 				return $result;
 			}
 
@@ -354,7 +362,7 @@ class SetupController extends Controller
 			$result['connected'] = true;
 			$result['banner'] = $banner;
 		} catch (\Throwable $e) {
-			$result['error'] = $e->getMessage();
+			$result['error'] = 'Connection failed';
 		}
 
 		return $result;
