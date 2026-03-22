@@ -7,25 +7,16 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 ## [Unreleased]
 
 ### Added
-- **Gitea CI/CD pipeline** — automated lint, build, validate, deploy on every push to main
-- **Release pipeline** — tag push triggers: sign, GitHub clean orphan, GitHub Release, NC App Store publish
-- **PHPStan Level 7** — static analysis with zero errors, blocks new type/logic bugs in CI
-- Composer dev-dependencies: phpstan, nextcloud/ocp stubs, symfony/console
-- Stubs for internal NC classes (`OC\Core\Command\Base`, `OC\Security\CSP\ContentSecurityPolicyNonceManager`) and SM runtime constants
-
-### Changed
-- `release.sh` rewritten: Gitea-first (tag + push), CI handles GitHub + NC Store automatically
-- Git remotes: Gitea is now primary (`origin`), GitHub is distribution mirror (`github`, clean orphan)
-- `.gitignore`: scripts tracked in Gitea (needed for CI deploy), `scripts/.env` excluded
+- **PHPStan Level 7 static analysis** — catches type errors, undefined methods, wrong argument types at build time
+- CI pipeline with automated lint, build, validate, and deploy
 
 ### Fixed
 - Removed 3 unused injected properties (`FetchController::$appManager`, `Provider::$l10n`, `AdminSection::$l`)
-- Removed 4 redundant `is_callable()`/`method_exists()` checks (always true)
-- Fixed SM API calls: `bUseSortIfSupported` → `bUseSort`, `MailClient::IsLoggined()` → `ImapClient()->IsLoggined()`
-- Added type guards for `file_get_contents()` return values (`string|false`)
-- Fixed `static::` → `self::` for private method `getLoginCredentials()`
-- Added missing return type declarations on 7 methods
-- Added PHPDoc type annotations across 20 files
+- Removed redundant runtime checks (`is_callable`, `method_exists`) that always evaluate to true
+- Fixed SnappyMail API calls: `bUseSortIfSupported` → `bUseSort`, `MailClient::IsLoggined()` → `ImapClient()->IsLoggined()`
+- Added type guards for `file_get_contents()` return values
+- Fixed private method access pattern in `SnappyMailHelper`
+- Added missing return type declarations and PHPDoc type annotations across 20 files
 
 ## [0.4.4] — 2026-03-19
 
