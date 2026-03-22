@@ -6,8 +6,6 @@ namespace OCA\X2Mail\Search;
 
 use OCA\X2Mail\AppInfo\Application;
 use OCA\X2Mail\Util\SnappyMailHelper;
-use OCP\IDateTimeFormatter;
-use OCP\IL10N;
 use OCP\IURLGenerator;
 use OCP\IUser;
 use OCP\Search\IProvider;
@@ -20,15 +18,11 @@ use OCP\Search\SearchResultEntry;
  */
 class Provider implements IProvider
 {
-	/** @var IL10N */
-	private $l10n;
-
 	/** @var IURLGenerator */
 	private $urlGenerator;
 
-	public function __construct(IL10N $l10n, IURLGenerator $urlGenerator)
+	public function __construct(IURLGenerator $urlGenerator)
 	{
-		$this->l10n = $l10n;
 		$this->urlGenerator = $urlGenerator;
 	}
 
@@ -42,6 +36,7 @@ class Provider implements IProvider
 		return 'X2Mail';
 	}
 
+	/** @param array<string, string> $routeParameters */
 	public function getOrder(string $route, array $routeParameters): int
 	{
 		if (0 === \strpos($route, Application::APP_ID . '.')) {
@@ -70,12 +65,12 @@ class Provider implements IProvider
 			$oParams->sSearch = $query->getTerm();
 			$oParams->oCacher = ($oConfig->Get('cache', 'enable', true) && $oConfig->Get('cache', 'server_uids', false))
 				? $oActions->Cacher($oAccount) : null;
-			$oParams->bUseSortIfSupported = !!$oConfig->Get('labs', 'use_imap_sort', true);
+			$oParams->bUseSort = !!$oConfig->Get('labs', 'use_imap_sort', true);
 			$oParams->iOffset = $iCursor;
 			$oParams->iLimit = $iLimit;
 
 			$oMailClient = $oActions->MailClient();
-			if (!$oMailClient->IsLoggined()) {
+			if (!$oMailClient->ImapClient()->IsLoggined()) {
 				$oAccount->ImapConnectAndLogin($oActions->Plugins(), $oMailClient->ImapClient(), $oConfig);
 			}
 

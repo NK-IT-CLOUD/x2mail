@@ -18,6 +18,7 @@ class UnreadMailWidget implements IAPIWidget, IIconWidget
 	protected IL10N $l10n;
 	protected IURLGenerator $urlGenerator;
 	protected IInitialState $initialState;
+	protected ?string $userId;
 
 	public function __construct(IL10N $l10n, IURLGenerator $urlGenerator,
 		IInitialState $initialState,
@@ -75,11 +76,11 @@ class UnreadMailWidget implements IAPIWidget, IIconWidget
 			$oParams->sSearch = 'unseen';
 			$oParams->oCacher = ($oConfig->Get('cache', 'enable', true) && $oConfig->Get('cache', 'server_uids', false))
 				? $oActions->Cacher($oAccount) : null;
-			$oParams->bUseSortIfSupported = !!$oConfig->Get('labs', 'use_imap_sort', true);
+			$oParams->bUseSort = !!$oConfig->Get('labs', 'use_imap_sort', true);
 			$oParams->iLimit = $limit;
 
 			$oMailClient = $oActions->MailClient();
-			if (!$oMailClient->IsLoggined()) {
+			if (!$oMailClient->ImapClient()->IsLoggined()) {
 				$oAccount->ImapConnectAndLogin($oActions->Plugins(), $oMailClient->ImapClient(), $oConfig);
 			}
 

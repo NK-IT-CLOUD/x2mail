@@ -14,6 +14,7 @@ use OCP\User\Events\UserLoggedInEvent;
  * Set snappymail-nc-uid on UserLoggedInEvent.
  * Also sets snappymail-passphrase for OIDC sessions.
  */
+/** @implements IEventListener<Event> */
 class LoginBridgeListener implements IEventListener {
 	public function __construct(
 		private ISession $session,
@@ -24,12 +25,7 @@ class LoginBridgeListener implements IEventListener {
 			return;
 		}
 
-		$user = $event->getUser();
-		if ($user === null) {
-			return;
-		}
-
-		$uid = $user->getUID();
+		$uid = $event->getUser()->getUID();
 		$this->session->set('snappymail-nc-uid', $uid);
 
 		if ($this->session->get('is_oidc')) {

@@ -4,7 +4,6 @@ namespace OCA\X2Mail\Controller;
 
 use OCA\X2Mail\Util\SnappyMailHelper;
 
-use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\JSONResponse;
@@ -14,15 +13,13 @@ use OCP\IRequest;
 
 class FetchController extends Controller {
 	private IConfig $config;
-	private IAppManager $appManager;
 	private IL10N $l;
 
 	private ?string $userId;
 
-	public function __construct(string $appName, IRequest $request, IAppManager $appManager, IConfig $config, IL10N $l, ?string $userId) {
+	public function __construct(string $appName, IRequest $request, IConfig $config, IL10N $l, ?string $userId) {
 		parent::__construct($appName, $request);
 		$this->config = $config;
-		$this->appManager = $appManager;
 		$this->l = $l;
 		$this->userId = $userId;
 	}

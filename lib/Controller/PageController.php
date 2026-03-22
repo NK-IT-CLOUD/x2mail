@@ -18,6 +18,7 @@ class PageController extends Controller
 		parent::__construct($appName, $request);
 	}
 
+	/** @return TemplateResponse|void */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function index()
@@ -29,7 +30,8 @@ class PageController extends Controller
 			$adminKey = \RainLoop\Api::Config()->Get('security', 'admin_panel_key', 'admin');
 			$bAdmin = \hash_equals($adminKey, $queryString);
 			if (!$bAdmin) {
-				return SnappyMailHelper::startApp(true);
+				SnappyMailHelper::startApp(true);
+				return;
 			}
 		}
 
@@ -92,26 +94,26 @@ class PageController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function appGet()
+	public function appGet(): void
 	{
-		return SnappyMailHelper::startApp(true);
+		SnappyMailHelper::startApp(true);
 	}
 
 	// NoCSRFRequired: SnappyMail's internal AJAX does not carry Nextcloud CSRF
 	// tokens; it uses its own CSRF protection within the SM session.
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function appPost()
+	public function appPost(): void
 	{
-		return SnappyMailHelper::startApp(true);
+		SnappyMailHelper::startApp(true);
 	}
 
 	// NoCSRFRequired: SnappyMail's internal AJAX does not carry Nextcloud CSRF
 	// tokens; it uses its own CSRF protection within the SM session.
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function indexPost()
+	public function indexPost(): void
 	{
-		return SnappyMailHelper::startApp(true);
+		SnappyMailHelper::startApp(true);
 	}
 }

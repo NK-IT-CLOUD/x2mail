@@ -10,6 +10,7 @@ use OCP\EventDispatcher\IEventListener;
 use OCP\ISession;
 use OCP\IUserSession;
 
+/** @implements IEventListener<Event> */
 class AccessTokenUpdatedListener implements IEventListener {
 	private IUserSession $userSession;
 	private ISession $session;
@@ -34,6 +35,9 @@ class AccessTokenUpdatedListener implements IEventListener {
 			return;
 		}
 		if (!$this->appManager->isEnabledForUser(self::X2MAIL_APP_ID) || !$this->appManager->isEnabledForUser(self::OIDC_LOGIN_APP_ID)) {
+			return;
+		}
+		if (!method_exists($event, 'getAccessToken')) {
 			return;
 		}
 		$accessToken = $event->getAccessToken();

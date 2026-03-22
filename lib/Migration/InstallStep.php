@@ -16,13 +16,13 @@ class InstallStep implements IRepairStep
 		return 'Setup X2Mail';
 	}
 
-	public function run(IOutput $output) {
+	public function run(IOutput $output): void {
 
 		$output->info('clearstatcache');
 		\clearstatcache();
 		\clearstatcache(true);
 		$output->info('opcache_reset');
-		\is_callable('opcache_reset') && \opcache_reset();
+		\opcache_reset();
 
 		$output->info('Load App');
 		\OCA\X2Mail\Util\SnappyMailHelper::loadApp();

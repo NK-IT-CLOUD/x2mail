@@ -56,7 +56,7 @@ class SnappyMailHelper
 		require_once $index;
 	}
 
-	public static function startApp(bool $handle = false)
+	public static function startApp(bool $handle = false): void
 	{
 		static::loadApp();
 
@@ -74,19 +74,20 @@ class SnappyMailHelper
 				&& !$oActions->IsAdminLoggined(false)
 				) {
 					$sRand = \MailSo\Base\Utils::Sha1Rand();
-					if ($oActions->Cacher(null, true)->Set(\RainLoop\KeyPathHelper::SessionAdminKey($sRand), \time())) {
+					if ($oActions->Cacher(null, true)->Set(\RainLoop\KeyPathHelper::SessionAdminKey($sRand), (string) \time())) {
 						$sToken = \RainLoop\Utils::EncodeKeyValuesQ(array('token', $sRand));
 						\SnappyMail\Cookies::set('smadmin', $sToken);
 					}
 				}
 			} else {
 				$doLogin = !$oActions->getMainAccountFromToken(false);
-				$aCredentials = static::getLoginCredentials();
+				$aCredentials = self::getLoginCredentials();
 				if ($doLogin && $aCredentials[1] && $aCredentials[2]) {
 					$isOIDC = \str_starts_with($aCredentials[2], 'oidc_login|');
 					try {
 						$oAccount = $oActions->LoginProcess($aCredentials[1], new \SnappyMail\SensitiveString($aCredentials[2]));
-						if (!$isOIDC && $oAccount
+						if (!$isOIDC
+						 && $oAccount instanceof \RainLoop\Model\MainAccount
 						 && $oConfig->Get('login', 'sign_me_auto', \RainLoop\Enumerations\SignMeType::DefaultOff) === \RainLoop\Enumerations\SignMeType::DefaultOn
 						) {
 							$oActions->SetSignMeToken($oAccount);
@@ -137,6 +138,7 @@ class SnappyMailHelper
 		return false;
 	}
 
+	/** @return array{string, string, string|\SnappyMail\SensitiveString|null} */
 	private static function getLoginCredentials() : array
 	{
 		$sUID = \OCP\Server::get(IUserSession::class)->getUser()->getUID();

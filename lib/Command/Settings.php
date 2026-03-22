@@ -21,7 +21,7 @@ class Settings extends Base
 		$this->config = $config;
 	}
 
-	protected function configure() {
+	protected function configure(): void {
 		$this
 			->setName('x2mail:settings')
 			->setDescription('Set user mail credentials for auto-login')
@@ -55,12 +55,7 @@ class Settings extends Base
 
 		$sPass = $input->getArgument('pass');
 		if (empty($sPass)) {
-			if (\is_callable('readline')) {
-				$sPass = \readline("password: ");
-			} else {
-				echo "password: ";
-				$sPass = \stream_get_line(STDIN, 1024, PHP_EOL);
-			}
+			$sPass = \readline("password: ");
 		}
 		$sPass = ($sEmail && $sPass) ? SnappyMailHelper::encodePassword($sPass, \md5($sEmail)) : '';
 		$this->config->setUserValue($uid, 'x2mail', 'passphrase', $sPass);

@@ -24,7 +24,7 @@ class Setup extends Base
 		parent::__construct();
 	}
 
-	protected function configure() {
+	protected function configure(): void {
 		$this
 			->setName('x2mail:setup')
 			->setDescription('Configure X2Mail mail server connection and authentication')
@@ -104,17 +104,14 @@ class Setup extends Base
 				return 1;
 			}
 
-			// Detect which provider to use
+			// Detect which provider to use — fallback to other if preferred not installed
+			// (at least one is installed, guaranteed by the check above)
 			if ($oidcProvider === 'user_oidc' && !$userOidcInstalled) {
-				if ($oidcLoginInstalled) {
-					$oidcProvider = 'oidc_login';
-					$output->writeln('  <comment>  user_oidc not found, using oidc_login instead</comment>');
-				}
+				$oidcProvider = 'oidc_login';
+				$output->writeln('  <comment>  user_oidc not found, using oidc_login instead</comment>');
 			} elseif ($oidcProvider === 'oidc_login' && !$oidcLoginInstalled) {
-				if ($userOidcInstalled) {
-					$oidcProvider = 'user_oidc';
-					$output->writeln('  <comment>  oidc_login not found, using user_oidc instead</comment>');
-				}
+				$oidcProvider = 'user_oidc';
+				$output->writeln('  <comment>  oidc_login not found, using user_oidc instead</comment>');
 			}
 
 			$output->writeln("  <info>  OK: {$oidcProvider} installed</info>");
@@ -307,6 +304,8 @@ class Setup extends Base
 
 	/**
 	 * Test IMAP connection and read capabilities.
+	 *
+	 * @return array<string, mixed>
 	 */
 	private function checkImap(string $host, int $port, string $ssl): array {
 		$result = ['connected' => false, 'capabilities' => [], 'error' => ''];
@@ -376,6 +375,8 @@ class Setup extends Base
 
 	/**
 	 * Test SMTP connection.
+	 *
+	 * @return array<string, mixed>
 	 */
 	private function checkSmtp(string $host, int $port, string $ssl): array {
 		$result = ['connected' => false, 'banner' => '', 'error' => ''];

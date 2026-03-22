@@ -17,10 +17,7 @@ class ContentSecurityPolicy extends \OCP\AppFramework\Http\ContentSecurityPolicy
 		$this->allowedScriptDomains = \array_unique(\array_merge($this->allowedScriptDomains, $CSP->get('script-src')));
 		$this->allowedScriptDomains = \array_diff($this->allowedScriptDomains, ["'unsafe-inline'", "'unsafe-eval'"]);
 
-		// Nextcloud only sets 'strict-dynamic' when browserSupportsCspV3() ?
-		\method_exists($this, 'useStrictDynamic')
-			? $this->useStrictDynamic(true) // NC24+
-			: $this->addAllowedScriptDomain("'strict-dynamic'");
+		$this->useStrictDynamic(true);
 
 		$this->allowedImageDomains = \array_unique(\array_merge($this->allowedImageDomains, $CSP->get('img-src')));
 
@@ -32,13 +29,13 @@ class ContentSecurityPolicy extends \OCP\AppFramework\Http\ContentSecurityPolicy
 		$this->reportTo = \array_unique(\array_merge($this->reportTo, $CSP->report_to));
 	}
 
-	public function getSnappyMailNonce() {
+	public function getSnappyMailNonce(): string {
 		static $sNonce;
 		if (!$sNonce) {
 			// No public OCP API for nonce access — using internal class
 			$cspManager = \OCP\Server::get(\OC\Security\CSP\ContentSecurityPolicyNonceManager::class);
 			$sNonce = $cspManager->getNonce() ?: \SnappyMail\UUID::generate();
-			if (\method_exists($cspManager, 'browserSupportsCspV3') && !$cspManager->browserSupportsCspV3()) {
+			if (!$cspManager->browserSupportsCspV3()) {
 				$this->addAllowedScriptDomain("'nonce-{$sNonce}'");
 			}
 		}
