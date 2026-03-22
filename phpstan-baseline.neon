@@ -31,32 +31,14 @@ parameters:
 			path: lib/Command/Setup.php
 
 		-
-			message: '#^Constant APP_VERSION not found\.$#'
-			identifier: constant.notFound
-			count: 1
-			path: lib/Command/Status.php
-
-		-
 			message: '#^Call to function method_exists\(\) with \$this\(OCA\\X2Mail\\ContentSecurityPolicy\) and ''useStrictDynamic'' will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
 			count: 1
 			path: lib/ContentSecurityPolicy.php
 
 		-
-			message: '#^Call to method browserSupportsCspV3\(\) on an unknown class OC\\Security\\CSP\\ContentSecurityPolicyNonceManager\.$#'
-			identifier: class.notFound
-			count: 1
-			path: lib/ContentSecurityPolicy.php
-
-		-
-			message: '#^Call to method getNonce\(\) on an unknown class OC\\Security\\CSP\\ContentSecurityPolicyNonceManager\.$#'
-			identifier: class.notFound
-			count: 1
-			path: lib/ContentSecurityPolicy.php
-
-		-
-			message: '#^Class OC\\Security\\CSP\\ContentSecurityPolicyNonceManager not found\.$#'
-			identifier: class.notFound
+			message: '#^Call to function method_exists\(\) with OC\\Security\\CSP\\ContentSecurityPolicyNonceManager and ''browserSupportsCspV3'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
 			count: 1
 			path: lib/ContentSecurityPolicy.php
 
@@ -89,12 +71,6 @@ parameters:
 			identifier: property.onlyWritten
 			count: 1
 			path: lib/Controller/FetchController.php
-
-		-
-			message: '#^Constant APP_VERSION_ROOT_PATH not found\.$#'
-			identifier: constant.notFound
-			count: 2
-			path: lib/Controller/PageController.php
 
 		-
 			message: '#^Method OCA\\X2Mail\\Controller\\PageController\:\:appGet\(\) has no return type specified\.$#'
@@ -214,24 +190,6 @@ parameters:
 			message: '#^Call to function is_callable\(\) with ''opcache_reset'' will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
 			count: 1
-			path: lib/Migration/InstallStep.php
-
-		-
-			message: '#^Constant APP_PLUGINS_PATH not found\.$#'
-			identifier: constant.notFound
-			count: 1
-			path: lib/Migration/InstallStep.php
-
-		-
-			message: '#^Constant APP_PRIVATE_DATA not found\.$#'
-			identifier: constant.notFound
-			count: 1
-			path: lib/Migration/InstallStep.php
-
-		-
-			message: '#^Constant APP_VERSION_ROOT_PATH not found\.$#'
-			identifier: constant.notFound
-			count: 4
 			path: lib/Migration/InstallStep.php
 
 		-
@@ -355,12 +313,6 @@ parameters:
 			path: lib/Settings/AdminSection.php
 
 		-
-			message: '#^Constant APP_PRIVATE_DATA not found\.$#'
-			identifier: constant.notFound
-			count: 1
-			path: lib/Settings/AdminSettings.php
-
-		-
 			message: '#^Method OCA\\X2Mail\\Settings\\AdminSettings\:\:getForm\(\) return type with generic class OCP\\AppFramework\\Http\\TemplateResponse does not specify its types\: S, H$#'
 			identifier: missingType.generics
 			count: 1
@@ -381,12 +333,6 @@ parameters:
 		-
 			message: '#^Class OCA\\X2Mail\\Util\\SnappyMailResponse extends generic class OCP\\AppFramework\\Http\\Response but does not specify its types\: S, H$#'
 			identifier: missingType.generics
-			count: 1
-			path: lib/Util/SnappyMailHelper.php
-
-		-
-			message: '#^Constant SNAPPYMAIL_LIBRARIES_PATH not found\.$#'
-			identifier: constant.notFound
 			count: 1
 			path: lib/Util/SnappyMailHelper.php
 

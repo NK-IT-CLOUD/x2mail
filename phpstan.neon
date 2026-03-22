@@ -5,6 +5,7 @@ parameters:
         - appinfo
     bootstrapFiles:
         - vendor/autoload.php
+        - stubs/sm-constants.php
     scanDirectories:
         - vendor/nextcloud/ocp
         - app/snappymail/v/current/app/libraries
