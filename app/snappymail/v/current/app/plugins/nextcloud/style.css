@@ -1,0 +1,24 @@
+#V-PopupsNextcloudFiles li:hover {
+	background-color: var(--color-background-hover);
+}
+#V-PopupsNextcloudFiles li {
+	clear: right;
+	line-height: 2.5em;
+}
+#V-PopupsNextcloudFiles li input,
+#V-PopupsNextcloudFiles li button {
+	cursor: pointer;
+	float: right;
+	margin: 0 0 0 0.5em;
+}
+
+#rl-app .squire-wysiwyg a {
+	text-decoration: underline;
+}
+
+/* Fix: read-only contact spans hidden by higher-specificity default rule
+   Default: #V-PopupsContacts .b-view-content :not(.e-checkbox)>span { display:none }
+   Override must match or exceed that specificity */
+#V-PopupsContacts .b-view-content.read-only :not(.e-checkbox)>span {
+	display: inline-block !important;
+}

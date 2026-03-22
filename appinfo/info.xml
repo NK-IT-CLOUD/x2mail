@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>x2mail</id>
+	<name>X2Mail</name>
+	<summary>Webmail with native XOAUTH2/OAUTHBEARER SSO support</summary>
+	<version>0.4.4</version>
+	<licence>AGPL-3.0-or-later</licence>
+	<author homepage="https://github.com/NK-IT-CLOUD/x2mail">NK-IT Dev</author>
+	<website>https://github.com/NK-IT-CLOUD/x2mail</website>
+	<repository type="git">https://github.com/NK-IT-CLOUD/x2mail</repository>
+	<bugs>https://github.com/NK-IT-CLOUD/x2mail/issues</bugs>
+	<screenshot>https://raw.githubusercontent.com/NK-IT-CLOUD/x2mail/main/img/screenshot-inbox.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/NK-IT-CLOUD/x2mail/main/img/screenshot-wizard.png</screenshot>
+	<description><![CDATA[**X2Mail** — Webmail for Nextcloud with zero-login SSO. Log into Nextcloud via Keycloak or any OIDC provider, open Email — done. No extra passwords.
+
+### How it works
+Your OIDC access token is passed directly to the IMAP server via OAUTHBEARER/XOAUTH2. Tokens refresh automatically in the background — no session drops.
+
+### Features
+- **SSO via OAUTHBEARER/XOAUTH2** — Keycloak, Authentik, any OIDC provider
+- **Automatic token refresh** — seamless sessions via user_oidc TokenService
+- **Setup Wizard** — admin UI with preflight checks (IMAP, SMTP, OIDC)
+- **Dark mode** and responsive design
+- **Sieve filtering** support
+- **Nextcloud integration** — Contacts, Files, Calendar, Unified Search
+- **OpenPGP and S/MIME** encryption
+- **CLI tools** — `occ x2mail:setup`, `occ x2mail:status`
+
+### Requirements
+- Nextcloud 33, PHP 8.4+
+- IMAP server with OAUTHBEARER support (Dovecot recommended)
+- OIDC provider (Keycloak, Authentik, etc.)
+- `user_oidc` app (recommended) or `oidc_login`
+
+Powered by SnappyMail engine (forked, security-audited, PHP 8.4 compatible).
+	]]></description>
+	<namespace>X2Mail</namespace>
+	<category>integration</category>
+	<category>office</category>
+	<dependencies>
+		<php min-version="8.4" min-int-size="64" />
+		<lib>mbstring</lib>
+		<lib>zlib</lib>
+		<nextcloud min-version="33" max-version="33" />
+	</dependencies>
+	<settings>
+		<admin>OCA\X2Mail\Settings\AdminSettings</admin>
+		<admin-section>OCA\X2Mail\Settings\AdminSection</admin-section>
+		<personal>OCA\X2Mail\Settings\PersonalSettings</personal>
+	</settings>
+	<navigations>
+		<navigation>
+			<name>Email</name>
+			<route>x2mail.page.index</route>
+			<icon>logo-white-64x64.png</icon>
+			<order>4</order>
+		</navigation>
+	</navigations>
+	<repair-steps>
+		<install>
+			<step>OCA\X2Mail\Migration\InstallStep</step>
+		</install>
+		<post-migration>
+			<step>OCA\X2Mail\Migration\InstallStep</step>
+		</post-migration>
+	</repair-steps>
+	<commands>
+		<command>OCA\X2Mail\Command\Setup</command>
+		<command>OCA\X2Mail\Command\Status</command>
+		<command>OCA\X2Mail\Command\Settings</command>
+	</commands>
+</info>
