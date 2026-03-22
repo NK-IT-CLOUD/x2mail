@@ -1,0 +1,11 @@
+parameters:
+    level: 7
+    paths:
+        - lib
+        - appinfo
+    scanDirectories:
+        - app/snappymail/v/current/app/libraries
+    ignoreErrors: []
+
+includes:
+    - phpstan-baseline.neon
