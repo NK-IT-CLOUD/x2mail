@@ -49,7 +49,7 @@ class AdminSettings implements ISettings
 		$passfile = APP_PRIVATE_DATA . 'admin_password.txt';
 		$sPassword = '';
 		if (\is_file($passfile)) {
-			$sPassword = \file_get_contents($passfile);
+			$sPassword = \file_get_contents($passfile) ?: '';
 			if (isset($parameters['snappymail-admin-panel-link'])) {
 				$parameters['snappymail-admin-panel-link'] .= '#/security';
 			}
