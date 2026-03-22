@@ -44,16 +44,18 @@ jobs:
             echo "NOTE: Signing key not found, skipping signature"
           fi
 
-      # GitHub Orphan Push
-      - name: Push to GitHub (clean orphan)
+      # GitHub Incremental Push
+      - name: Push to GitHub (incremental)
         run: |
           TAG="v${VERSION}"
           GH_FILES=".gitignore README.md LICENSE CHANGELOG.md appinfo/ css/ img/ js/ l10n/ lib/ templates/ app/"
-          git checkout --orphan gh-release-tmp
-          git rm -rf --cached .
-          git add ${GH_FILES}
-          git commit -m "x2mail ${TAG}"
           git remote add github git@github-x2mail:NK-IT-CLOUD/x2mail.git || true
+          git fetch github main || true
+          git checkout -B gh-release-tmp github/main 2>/dev/null || git checkout --orphan gh-release-tmp
+          git rm -rf .
+          git checkout "${GITHUB_REF_NAME}" -- ${GH_FILES}
+          git add -A
+          git commit -m "x2mail ${TAG}" --allow-empty
           git push github gh-release-tmp:main --force
           git tag -f "${TAG}"
           git push github "${TAG}" --force

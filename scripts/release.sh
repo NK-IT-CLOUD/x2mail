@@ -104,16 +104,18 @@ if [ "$GITHUB_ONLY" = true ]; then
     fi
     make validate
 
-    echo "Orphan push to GitHub..."
-    git checkout --orphan gh-release-tmp
-    git reset HEAD -- .
-    git add ${GH_FILES}
-    git commit -m "${APP_NAME} ${TAG}"
+    echo "Incremental push to GitHub..."
+    git fetch github main || true
+    git checkout -B gh-release-tmp github/main 2>/dev/null || git checkout --orphan gh-release-tmp
+    git rm -rf .
+    git checkout main -- ${GH_FILES}
+    git add -A
+    git commit -m "${APP_NAME} ${TAG}" --allow-empty
     git push github gh-release-tmp:main --force
-    git checkout -f main
-    git branch -D gh-release-tmp
     git tag -f "${TAG}"
     git push github "${TAG}" --force
+    git checkout -f main
+    git branch -D gh-release-tmp
 
     echo "Creating GitHub release..."
     CHANGELOG_SECTION=$(sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | head -n -1 | tail -n +2)
