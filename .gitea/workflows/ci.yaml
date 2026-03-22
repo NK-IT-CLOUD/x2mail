@@ -1,0 +1,65 @@
+name: X2Mail CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: linux_amd64
+    steps:
+      - uses: actions/checkout@v4
+
+      # Phase 1: Lint
+      - name: PHP Lint
+        run: |
+          ERRORS=0
+          while IFS= read -r f; do
+            if ! php -l "$f" 2>&1 | grep -q "No syntax errors"; then
+              ERRORS=$((ERRORS+1))
+            fi
+          done < <(find lib/ templates/ appinfo/ -name '*.php')
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "FAIL: $ERRORS PHP files with syntax errors"
+            exit 1
+          fi
+          echo "PHP lint OK"
+
+      # Phase 2: Validate
+      - name: Version consistency
+        run: |
+          V_XML=$(grep -oP '<version>\K[^<]+' appinfo/info.xml)
+          if ! grep -q "## \[${V_XML}\]" CHANGELOG.md; then
+            echo "FAIL: CHANGELOG.md has no entry for [${V_XML}]"
+            echo "  info.xml version: ${V_XML}"
+            exit 1
+          fi
+          echo "Version check OK: ${V_XML}"
+
+      # Phase 3: Build
+      - name: Build tarball
+        run: make build
+
+      # Phase 4: Test
+      - name: Validate tarball
+        run: make validate
+
+      # Phase 7: Deploy (main only)
+      - name: Deploy to Nextcloud
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: scripts/deploy.sh --skip-build
+
+      - name: Verify deployment
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          VERSION=$(grep -oP '<version>\K[^<]+' appinfo/info.xml)
+          SSH_OPTS="-o StrictHostKeyChecking=accept-new"
+          STATUS=$(ssh $SSH_OPTS ct-nextcloud "docker exec -u www-data nextcloud php occ app:list 2>/dev/null" | grep -A0 'x2mail' || true)
+          if echo "$STATUS" | grep -q "$VERSION"; then
+            echo "OK: x2mail ${VERSION} deployed and active"
+          else
+            echo "WARNING: Could not verify x2mail ${VERSION}"
+            echo "$STATUS"
+            exit 1
+          fi
