@@ -4,4 +4,6 @@ build/
 appinfo/signature.json
 vendor/
 docs/
-scripts/
+scripts/.env
+.claude/
+.remember/
