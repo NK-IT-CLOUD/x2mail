@@ -6,6 +6,8 @@ class RainLoop
 {
 	/**
 	 * Imports data from RainLoop
+	 *
+	 * @return list<string>
 	 */
 	public static function import() : array
 	{

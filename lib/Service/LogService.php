@@ -53,23 +53,28 @@ class LogService {
 		return self::$logFile;
 	}
 
+	/** @param array<string, mixed> $context */
 	public static function debug(string $message, array $context = []): void {
 		self::write('DEBUG', $message, $context);
 	}
 
+	/** @param array<string, mixed> $context */
 	public static function info(string $message, array $context = []): void {
 		self::write('INFO', $message, $context);
 	}
 
+	/** @param array<string, mixed> $context */
 	public static function warning(string $message, array $context = []): void {
 		self::write('WARN', $message, $context);
 	}
 
+	/** @param array<string, mixed> $context */
 	public static function error(string $message, array $context = []): void {
 		// Errors always log, even if debug_log is off
 		self::write('ERROR', $message, $context, true);
 	}
 
+	/** @param array<string, mixed> $context */
 	private static function write(string $level, string $message, array $context = [], bool $force = false): void {
 		if (!$force && !self::isEnabled()) {
 			return;
@@ -103,6 +108,9 @@ class LogService {
 			return '(no log file)';
 		}
 		$content = \file_get_contents($file);
+		if ($content === false) {
+			return '(read error)';
+		}
 		$allLines = \explode("\n", \rtrim($content));
 		$slice = \array_slice($allLines, -$lines);
 		return \implode("\n", $slice);

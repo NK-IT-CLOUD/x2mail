@@ -253,6 +253,7 @@ class SetupController extends Controller
 		}
 	}
 
+	/** @return array<string, mixed> */
 	private function checkImap(string $host, int $port, string $ssl): array
 	{
 		$result = ['connected' => false, 'capabilities' => [], 'error' => ''];
@@ -321,6 +322,7 @@ class SetupController extends Controller
 		return $result;
 	}
 
+	/** @return array<string, mixed> */
 	private function checkSmtp(string $host, int $port, string $ssl): array
 	{
 		$result = ['connected' => false, 'banner' => '', 'error' => ''];

@@ -64,6 +64,8 @@ class DomainConfigService
 
 	/**
 	 * Write a domain config JSON file.
+	 *
+	 * @param array<string, mixed> $config
 	 */
 	public function writeDomainConfig(string $domain, array $config): void
 	{
@@ -84,6 +86,8 @@ class DomainConfigService
 
 	/**
 	 * Read a domain config JSON file.
+	 *
+	 * @return array<string, mixed>|null
 	 */
 	public function readDomainConfig(string $domain): ?array
 	{
@@ -93,6 +97,9 @@ class DomainConfigService
 		}
 
 		$content = \file_get_contents($file);
+		if ($content === false) {
+			return null;
+		}
 		$data = \json_decode($content, true);
 		return \is_array($data) ? $data : null;
 	}
@@ -113,6 +120,8 @@ class DomainConfigService
 
 	/**
 	 * List configured domains.
+	 *
+	 * @return list<string>
 	 */
 	public function listDomains(): array
 	{
@@ -133,6 +142,8 @@ class DomainConfigService
 
 	/**
 	 * SM SSL config object template.
+	 *
+	 * @return array<string, bool|int>
 	 */
 	private static function sslConfig(): array {
 		return [
@@ -148,6 +159,8 @@ class DomainConfigService
 	/**
 	 * Build a complete SM domain config from setup parameters.
 	 * Uses the full SM format with all required keys.
+	 *
+	 * @return array<string, mixed>
 	 */
 	public function buildDomainConfig(
 		string $imapHost,

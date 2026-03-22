@@ -10,7 +10,12 @@ parameters:
         - vendor/nextcloud/ocp
         - app/snappymail/v/current/app/libraries
         - stubs
-    ignoreErrors: []
-
-includes:
-    - phpstan-baseline.neon
+    stubFiles:
+        - stubs/MailSo/Mail/MessageListParams.php
+    ignoreErrors:
+        # Nextcloud Response classes (JSONResponse, TemplateResponse, Response)
+        # use non-covariant generics that cannot be correctly annotated when
+        # methods return multiple status codes. This is a framework limitation.
+        -
+            identifier: missingType.generics
+            path: lib/

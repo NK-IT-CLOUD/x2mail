@@ -28,6 +28,7 @@ class Application extends App implements IBootstrap
 {
 	public const APP_ID = 'x2mail';
 
+	/** @param array<string, mixed> $urlParams */
 	public function __construct(array $urlParams = [])
 	{
 		parent::__construct(self::APP_ID, $urlParams);

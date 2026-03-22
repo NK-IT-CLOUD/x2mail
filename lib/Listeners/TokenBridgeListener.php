@@ -15,6 +15,7 @@ use OCP\IUserSession;
  *
  * IMPORTANT: Do NOT import any OCA\UserOIDC classes here.
  */
+/** @implements IEventListener<Event> */
 class TokenBridgeListener implements IEventListener {
 	public function __construct(
 		private IUserSession $userSession,
