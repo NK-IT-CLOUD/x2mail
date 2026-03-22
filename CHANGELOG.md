@@ -4,6 +4,18 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.4.6] — 2026-03-22
+
+### Security
+- Fix ContactsSync password leaked to browser in AppData JSON response
+- Fix path traversal via unvalidated domain in DomainConfigService
+- Fix SM plugin file/folder paths without directory traversal check
+- Fix Setup Wizard missing hostname validation and error message redaction
+- Fix `app_path` missing `..` traversal check in admin settings
+- Fix IMAP connection failure permanently wiping stored credentials
+- Add email format validation to personal settings
+- Restrict log file permissions to 0600 on creation
+
 ## [0.4.5] — 2026-03-22
 
 ### Added

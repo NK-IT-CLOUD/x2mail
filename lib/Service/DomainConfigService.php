@@ -18,6 +18,18 @@ class DomainConfigService
 		private IConfig $config,
 	) {}
 
+	/**
+	 * Validate domain name to prevent path traversal.
+	 *
+	 * @throws \InvalidArgumentException if domain contains invalid characters
+	 */
+	private function validateDomain(string $domain): void
+	{
+		if ($domain === '' || !\preg_match('/\A[a-zA-Z0-9.\-]+\z/', $domain)) {
+			throw new \InvalidArgumentException("Invalid domain name: {$domain}");
+		}
+	}
+
 	private const SSL_NONE = 0;
 	private const SSL_SSL = 1;
 	private const SSL_TLS = 2;
@@ -69,6 +81,7 @@ class DomainConfigService
 	 */
 	public function writeDomainConfig(string $domain, array $config): void
 	{
+		$this->validateDomain($domain);
 		$domainsPath = $this->getDomainsPath();
 		if (!\is_dir($domainsPath)) {
 			\mkdir($domainsPath, 0755, true);
@@ -91,6 +104,7 @@ class DomainConfigService
 	 */
 	public function readDomainConfig(string $domain): ?array
 	{
+		$this->validateDomain($domain);
 		$file = $this->getDomainsPath() . '/' . $domain . '.json';
 		if (!\file_exists($file)) {
 			return null;
@@ -109,6 +123,7 @@ class DomainConfigService
 	 */
 	public function deleteDomainConfig(string $domain): void
 	{
+		$this->validateDomain($domain);
 		$file = $this->getDomainsPath() . '/' . $domain . '.json';
 		if (!\file_exists($file)) {
 			throw new \RuntimeException("Domain config not found: {$domain}");
