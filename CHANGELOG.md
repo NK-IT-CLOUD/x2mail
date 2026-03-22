@@ -4,7 +4,7 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
-## [Unreleased]
+## [0.4.5] — 2026-03-22
 
 ### Added
 - **PHPStan Level 7 static analysis** — catches type errors, undefined methods, wrong argument types at build time

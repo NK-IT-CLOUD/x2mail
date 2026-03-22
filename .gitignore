@@ -7,3 +7,4 @@ docs/
 scripts/.env
 .claude/
 .remember/
+scripts/CLAUDE.md
