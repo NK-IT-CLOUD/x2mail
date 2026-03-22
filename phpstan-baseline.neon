@@ -7,100 +7,10 @@ parameters:
 			path: lib/AppInfo/Application.php
 
 		-
-			message: '#^Access to constant OPTIONAL on an unknown class Symfony\\Component\\Console\\Input\\InputArgument\.$#'
-			identifier: class.notFound
-			count: 1
-			path: lib/Command/Settings.php
-
-		-
-			message: '#^Access to constant REQUIRED on an unknown class Symfony\\Component\\Console\\Input\\InputArgument\.$#'
-			identifier: class.notFound
-			count: 2
-			path: lib/Command/Settings.php
-
-		-
-			message: '#^Call to an undefined method OCA\\X2Mail\\Command\\Settings\:\:setName\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: lib/Command/Settings.php
-
-		-
-			message: '#^Call to an undefined static method OC\\Core\\Command\\Base\:\:__construct\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 1
-			path: lib/Command/Settings.php
-
-		-
 			message: '#^Call to function is_callable\(\) with ''readline'' will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
 			count: 1
 			path: lib/Command/Settings.php
-
-		-
-			message: '#^Call to method getArgument\(\) on an unknown class Symfony\\Component\\Console\\Input\\InputInterface\.$#'
-			identifier: class.notFound
-			count: 3
-			path: lib/Command/Settings.php
-
-		-
-			message: '#^Call to method writeln\(\) on an unknown class Symfony\\Component\\Console\\Output\\OutputInterface\.$#'
-			identifier: class.notFound
-			count: 1
-			path: lib/Command/Settings.php
-
-		-
-			message: '#^Method OCA\\X2Mail\\Command\\Settings\:\:configure\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: lib/Command/Settings.php
-
-		-
-			message: '#^Parameter \$input of method OCA\\X2Mail\\Command\\Settings\:\:execute\(\) has invalid type Symfony\\Component\\Console\\Input\\InputInterface\.$#'
-			identifier: class.notFound
-			count: 1
-			path: lib/Command/Settings.php
-
-		-
-			message: '#^Parameter \$output of method OCA\\X2Mail\\Command\\Settings\:\:execute\(\) has invalid type Symfony\\Component\\Console\\Output\\OutputInterface\.$#'
-			identifier: class.notFound
-			count: 1
-			path: lib/Command/Settings.php
-
-		-
-			message: '#^Access to constant VALUE_NONE on an unknown class Symfony\\Component\\Console\\Input\\InputOption\.$#'
-			identifier: class.notFound
-			count: 3
-			path: lib/Command/Setup.php
-
-		-
-			message: '#^Access to constant VALUE_REQUIRED on an unknown class Symfony\\Component\\Console\\Input\\InputOption\.$#'
-			identifier: class.notFound
-			count: 9
-			path: lib/Command/Setup.php
-
-		-
-			message: '#^Call to an undefined method OCA\\X2Mail\\Command\\Setup\:\:setName\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: lib/Command/Setup.php
-
-		-
-			message: '#^Call to an undefined static method OC\\Core\\Command\\Base\:\:__construct\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 1
-			path: lib/Command/Setup.php
-
-		-
-			message: '#^Call to method getOption\(\) on an unknown class Symfony\\Component\\Console\\Input\\InputInterface\.$#'
-			identifier: class.notFound
-			count: 12
-			path: lib/Command/Setup.php
-
-		-
-			message: '#^Call to method writeln\(\) on an unknown class Symfony\\Component\\Console\\Output\\OutputInterface\.$#'
-			identifier: class.notFound
-			count: 66
-			path: lib/Command/Setup.php
 
 		-
 			message: '#^If condition is always true\.$#'
@@ -121,62 +31,8 @@ parameters:
 			path: lib/Command/Setup.php
 
 		-
-			message: '#^Method OCA\\X2Mail\\Command\\Setup\:\:configure\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: lib/Command/Setup.php
-
-		-
-			message: '#^Parameter \$input of method OCA\\X2Mail\\Command\\Setup\:\:execute\(\) has invalid type Symfony\\Component\\Console\\Input\\InputInterface\.$#'
-			identifier: class.notFound
-			count: 1
-			path: lib/Command/Setup.php
-
-		-
-			message: '#^Parameter \$output of method OCA\\X2Mail\\Command\\Setup\:\:execute\(\) has invalid type Symfony\\Component\\Console\\Output\\OutputInterface\.$#'
-			identifier: class.notFound
-			count: 1
-			path: lib/Command/Setup.php
-
-		-
-			message: '#^Call to an undefined method OCA\\X2Mail\\Command\\Status\:\:setName\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: lib/Command/Status.php
-
-		-
-			message: '#^Call to an undefined static method OC\\Core\\Command\\Base\:\:__construct\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 1
-			path: lib/Command/Status.php
-
-		-
-			message: '#^Call to method writeln\(\) on an unknown class Symfony\\Component\\Console\\Output\\OutputInterface\.$#'
-			identifier: class.notFound
-			count: 32
-			path: lib/Command/Status.php
-
-		-
 			message: '#^Constant APP_VERSION not found\.$#'
 			identifier: constant.notFound
-			count: 1
-			path: lib/Command/Status.php
-
-		-
-			message: '#^Method OCA\\X2Mail\\Command\\Status\:\:configure\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: lib/Command/Status.php
-
-		-
-			message: '#^Parameter \$input of method OCA\\X2Mail\\Command\\Status\:\:execute\(\) has invalid type Symfony\\Component\\Console\\Input\\InputInterface\.$#'
-			identifier: class.notFound
-			count: 1
-			path: lib/Command/Status.php
-
-		-
-			message: '#^Parameter \$output of method OCA\\X2Mail\\Command\\Status\:\:execute\(\) has invalid type Symfony\\Component\\Console\\Output\\OutputInterface\.$#'
-			identifier: class.notFound
 			count: 1
 			path: lib/Command/Status.php
 
