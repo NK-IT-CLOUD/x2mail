@@ -143,7 +143,8 @@ echo "Created tag ${TAG}"
 echo ""
 
 echo "--- Push to Gitea ---"
-git push origin main --tags
+git push origin main
+git push origin "${TAG}"
 echo ""
 
 echo "=== Release ${VERSION} pushed ==="

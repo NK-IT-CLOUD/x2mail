@@ -53,7 +53,7 @@ jobs:
           git rm -rf --cached .
           git add ${GH_FILES}
           git commit -m "x2mail ${TAG}"
-          git remote add github git@github.com:NK-IT-CLOUD/x2mail.git || true
+          git remote add github git@github-x2mail:NK-IT-CLOUD/x2mail.git || true
           git push github gh-release-tmp:main --force
           git tag -f "${TAG}"
           git push github "${TAG}" --force
