@@ -1,0 +1,10 @@
+app/data/
+build/
+*.tar.gz
+appinfo/signature.json
+vendor/
+docs/
+scripts/.env
+.claude/
+.remember/
+scripts/CLAUDE.md

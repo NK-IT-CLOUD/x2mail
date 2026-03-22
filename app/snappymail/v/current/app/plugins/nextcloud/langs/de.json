@@ -1,0 +1,22 @@
+{
+	"CONTACTS": {
+		"FIRST_NAME": "Vorname:",
+		"LAST_NAME": "Nachname:",
+		"LABEL_ORGANIZATION": "Organisation:",
+		"LABEL_DEPARTMENT": "Abteilung:",
+		"LABEL_TITLE": "Position:",
+		"ADD_MENU_NICKNAME": "Spitzname:"
+	},
+	"NEXTCLOUD": {
+		"SAVE_ATTACHMENTS": "Speichern Sie in Nextcloud",
+		"SAVE_EML": "Als .eml in Nextcloud speichern",
+		"SAVE_ICS": "Kalender eintragen",
+		"SELECT_FOLDER": "Ordner auswählen",
+		"SELECT_FILES": "Datei(en) auswählen",
+		"ATTACH_FILES": "Nextcloud-Dateien anhängen",
+		"SELECT_CALENDAR": "Kalender auswählen",
+		"FILE_ATTACH": "anfügen",
+		"FILE_INTERNAL": "intern",
+		"FILE_PUBLIC": "öffentlich"
+	}
+}
