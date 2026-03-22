@@ -1,0 +1,111 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: linux_amd64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version
+        run: |
+          VERSION=$(grep -oP '<version>\K[^<]+' appinfo/info.xml)
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      # Phase 2: Validate
+      - name: Version consistency
+        run: |
+          V_XML=$(grep -oP '<version>\K[^<]+' appinfo/info.xml)
+          if ! grep -q "## \[${V_XML}\]" CHANGELOG.md; then
+            echo "FAIL: CHANGELOG.md has no entry for [${V_XML}]"
+            exit 1
+          fi
+          echo "Version check OK: ${V_XML}"
+
+      # Phase 3+4: Build + Validate
+      - name: Build tarball
+        run: make build
+
+      - name: Validate tarball
+        run: make validate
+
+      # Sign (if key available)
+      - name: Sign tarball
+        run: |
+          CERT_DIR="/var/lib/act_runner/.nextcloud/certificates"
+          if [ -f "${CERT_DIR}/x2mail.key" ]; then
+            openssl dgst -sha512 -sign "${CERT_DIR}/x2mail.key" \
+              "build/x2mail-${VERSION}.tar.gz" | openssl base64 -A \
+              > "build/x2mail-${VERSION}.tar.gz.sig"
+            echo "Signed: build/x2mail-${VERSION}.tar.gz.sig"
+          else
+            echo "NOTE: Signing key not found, skipping signature"
+          fi
+
+      # GitHub Orphan Push
+      - name: Push to GitHub (clean orphan)
+        run: |
+          TAG="v${VERSION}"
+          GH_FILES=".gitignore README.md LICENSE CHANGELOG.md appinfo/ css/ img/ js/ l10n/ lib/ templates/ app/"
+          git checkout --orphan gh-release-tmp
+          git reset HEAD -- .
+          git add ${GH_FILES}
+          git commit -m "x2mail ${TAG}"
+          git remote add github git@github.com:NK-IT-CLOUD/x2mail.git || true
+          git push github gh-release-tmp:main --force
+          git tag -f "${TAG}"
+          git push github "${TAG}" --force
+          git checkout -f "${GITHUB_REF_NAME}" || git checkout -f main
+          git branch -D gh-release-tmp
+
+      # GitHub Release
+      - name: Create GitHub release
+        env:
+          GH_TOKEN_FILE: /var/lib/act_runner/.github-token
+        run: |
+          TAG="v${VERSION}"
+          TARBALL="build/x2mail-${VERSION}.tar.gz"
+          export GH_TOKEN=$(cat ${GH_TOKEN_FILE})
+          CHANGELOG_SECTION=$(sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | head -n -1 | tail -n +2)
+          SIG_FILE="build/x2mail-${VERSION}.tar.gz.sig"
+          ASSETS="${TARBALL}"
+          if [ -f "${SIG_FILE}" ]; then
+            ASSETS="${TARBALL} ${SIG_FILE}"
+          fi
+          if gh release view "${TAG}" --repo NK-IT-CLOUD/x2mail &>/dev/null; then
+            gh release upload "${TAG}" ${ASSETS} --repo NK-IT-CLOUD/x2mail --clobber
+          else
+            gh release create "${TAG}" ${ASSETS} \
+              --repo NK-IT-CLOUD/x2mail \
+              --title "${TAG}" \
+              --notes "${CHANGELOG_SECTION}"
+          fi
+
+      # NC App Store (if cert available)
+      - name: Publish to NC App Store
+        run: |
+          CERT_DIR="/var/lib/act_runner/.nextcloud/certificates"
+          SIG_FILE="build/x2mail-${VERSION}.tar.gz.sig"
+          TOKEN_FILE="/var/lib/act_runner/.nc-store-token"
+          if [ ! -f "${CERT_DIR}/x2mail.crt" ] || [ ! -f "${SIG_FILE}" ] || [ ! -f "${TOKEN_FILE}" ]; then
+            echo "NC App Store: SKIPPED (cert, signature, or token missing)"
+            exit 0
+          fi
+          NC_STORE_TOKEN=$(cat "${TOKEN_FILE}")
+          DOWNLOAD_URL="https://github.com/NK-IT-CLOUD/x2mail/releases/download/v${VERSION}/x2mail-${VERSION}.tar.gz"
+          SIGNATURE=$(cat "${SIG_FILE}")
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://apps.nextcloud.com/api/v1/apps/releases" \
+            -H "Authorization: Token ${NC_STORE_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"download\":\"${DOWNLOAD_URL}\",\"signature\":\"${SIGNATURE}\",\"nightly\":false}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+            echo "OK: Published to NC App Store (HTTP ${HTTP_CODE})"
+          else
+            echo "WARNING: NC App Store returned HTTP ${HTTP_CODE}"
+            echo "$RESPONSE" | head -n -1
+            echo "Manual upload needed at https://apps.nextcloud.com/developer/apps/releases/new"
+          fi
