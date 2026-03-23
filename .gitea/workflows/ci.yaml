@@ -61,11 +61,21 @@ jobs:
         run: |
           VERSION=$(grep -oP '<version>\K[^<]+' appinfo/info.xml)
           SSH_OPTS="-o StrictHostKeyChecking=accept-new"
+          # App version check
           STATUS=$(ssh $SSH_OPTS ct-nextcloud "docker exec -u www-data nextcloud php occ app:list 2>/dev/null" | grep -A0 'x2mail' || true)
           if echo "$STATUS" | grep -q "$VERSION"; then
             echo "OK: x2mail ${VERSION} deployed and active"
           else
-            echo "WARNING: Could not verify x2mail ${VERSION}"
+            echo "FAIL: Could not verify x2mail ${VERSION}"
             echo "$STATUS"
+            exit 1
+          fi
+          # HTTP smoke test — NC must respond
+          sleep 3
+          HTTP_CODE=$(ssh $SSH_OPTS ct-nextcloud "curl -so /dev/null -w '%{http_code}' http://127.0.0.1:8080/ 2>/dev/null" || echo "000")
+          if [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "303" ]; then
+            echo "OK: Nextcloud HTTP ${HTTP_CODE}"
+          else
+            echo "FAIL: Nextcloud returned HTTP ${HTTP_CODE} after deploy!"
             exit 1
           fi
