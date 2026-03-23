@@ -4,6 +4,11 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.4.8] — 2026-03-23
+
+### Fixed
+- Fix unreadable error messages in Compose view (dark red text on dark background in NC dark theme)
+
 ## [0.4.7] — 2026-03-23
 
 ### Fixed
