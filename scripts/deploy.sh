@@ -82,9 +82,13 @@ echo "==> OCC upgrade (safe, applies pending migrations) ..."
 ssh "$NC_HOST" "docker exec -u www-data ${NC_CONTAINER} php occ upgrade" 2>&1 | tail -3
 
 echo ""
+echo "==> Clearing SnappyMail cache (CSS/templates are cached server-side) ..."
+ssh "$NC_HOST" "docker exec ${NC_CONTAINER} find /var/www/html/data/appdata_x2mail/_data_/_default_/cache/ -type f ! -name 'CACHEDIR.TAG' -delete 2>/dev/null || true"
+
+echo ""
 echo "==> Restarting containers (clear OPcache, keep network consistent) ..."
 ssh "$NC_HOST" "cd /opt/nextcloud && docker compose restart"
 sleep 5
 
 echo ""
-echo "Done."
+echo "Done. Hard-refresh browser (Ctrl+Shift+R) to pick up CSS changes."
