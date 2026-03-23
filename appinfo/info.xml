@@ -3,7 +3,7 @@
 	<id>x2mail</id>
 	<name>X2Mail</name>
 	<summary>Webmail with native XOAUTH2/OAUTHBEARER SSO support</summary>
-	<version>0.4.6</version>
+	<version>0.4.7</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author homepage="https://github.com/NK-IT-CLOUD/x2mail">NK-IT Dev</author>
 	<website>https://github.com/NK-IT-CLOUD/x2mail</website>
