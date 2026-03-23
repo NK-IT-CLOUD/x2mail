@@ -257,7 +257,7 @@ class Setup extends Base
 			try {
 				\OCA\X2Mail\Util\SnappyMailHelper::loadApp();
 				$oConfig = \RainLoop\Api::Config();
-				$appPath = \rtrim($this->appManager->getAppWebPath(self::APP_ID), '/') . '/app/';
+				$appPath = \preg_replace('#(?<!:)/+#', '/', \rtrim($this->appManager->getAppWebPath(self::APP_ID), '/') . '/app/');
 				$oConfig->Set('webmail', 'app_path', $appPath);
 				$oConfig->Set('webmail', 'title', 'X2Mail');
 				$oConfig->Set('webmail', 'loading_description', 'X2Mail');

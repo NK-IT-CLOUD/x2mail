@@ -4,6 +4,11 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.4.7] — 2026-03-23
+
+### Fixed
+- Fix double-slash in `app_path` when `overwritewebroot=/` (normalize `getAppWebPath()` output in InstallStep, Setup, AdminSettings, FetchController)
+
 ## [0.4.6] — 2026-03-22
 
 ### Security

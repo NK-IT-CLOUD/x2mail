@@ -72,7 +72,7 @@ class FetchController extends Controller {
 			if ($appPath !== '') {
 				// Validate app_path: must start with / and must not contain protocol
 				if (\str_starts_with($appPath, '/') && !\str_contains($appPath, '://') && !\str_contains($appPath, '..')) {
-					$oConfig->Set('webmail', 'app_path', $appPath);
+					$oConfig->Set('webmail', 'app_path', \preg_replace('#/+#', '/', $appPath));
 				}
 			}
 			$ncLang = $this->request->getParam('snappymail-nc-lang');
