@@ -8,6 +8,7 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
 ### Fixed
 - Fix unreadable error messages in Compose view (dark red text on dark background in NC dark theme)
+- Position compose error tooltip inline in toolbar row instead of overlapping fields
 
 ## [0.4.7] — 2026-03-23
 

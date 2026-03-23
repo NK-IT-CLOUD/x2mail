@@ -287,6 +287,20 @@
 	font-weight: 700;
 }
 
+/* Compose header: error tooltip inline next to buttons instead of overlapping fields */
+#rl-app #V-PopupsCompose header [data-rainloopErrorTip]::before {
+	position: relative;
+	display: inline-block;
+	top: unset;
+	left: unset;
+	margin-left: 8px;
+	vertical-align: middle;
+	white-space: nowrap;
+	max-width: 60vw;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 /* #endregion */
 
 /* #region alert */
