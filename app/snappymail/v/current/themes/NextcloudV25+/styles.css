@@ -281,24 +281,12 @@
 }
 
 #rl-app [data-rainloopErrorTip]::before {
-	background-color: rgba(var(--nc-color-error-rgb), 0.1);
-	border-color: var(--nc-color-error);
-	color: var(--nc-color-main-text);
-	font-weight: 700;
-}
-
-/* Compose header: error tooltip inline next to buttons instead of overlapping fields */
-#rl-app #V-PopupsCompose header [data-rainloopErrorTip]::before {
-	position: relative;
-	display: inline-block;
-	top: unset;
-	left: unset;
-	margin-left: 8px;
-	vertical-align: middle;
-	white-space: nowrap;
-	max-width: 60vw;
-	overflow: hidden;
-	text-overflow: ellipsis;
+	background-color: #c92a2a;
+	border-color: #c92a2a;
+	color: #fff;
+	font-weight: 600;
+	padding: 6px 10px;
+	z-index: 2001;
 }
 
 /* #endregion */
@@ -426,18 +414,18 @@
 
 #rl-app .btn.btn-danger,
 #rl-app button.btn-danger {
-	color: var(--nc-color-primary-element-text);
-	background-color: var(--nc-color-error);
-	border-color: var(--nc-color-error) !important;
+	color: #fff;
+	background-color: #c92a2a;
+	border-color: #c92a2a !important;
 }
 
 #rl-app .btn.btn-danger:hover,
 #rl-app .btn.btn-danger:focus,
 #rl-app button.btn-danger:hover,
 #rl-app button.btn-danger:focus {
-	color: var(--nc-color-primary-element-text);
-	background-color: var(--nc-color-error-hover);
-	border-color: var(--nc-color-error-hover) !important;
+	color: #fff;
+	background-color: #e03131;
+	border-color: #e03131 !important;
 }
 
 #rl-app .btn.btn-success,
