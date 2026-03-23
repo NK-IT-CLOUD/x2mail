@@ -281,8 +281,8 @@
 }
 
 #rl-app [data-rainloopErrorTip]::before {
-	background-color: var(--nc-color-error);
-	border-color: var(--nc-color-error);
+	background-color: #c92a2a;
+	border-color: #c92a2a;
 	color: #fff;
 	font-weight: 600;
 	padding: 6px 10px;
@@ -414,18 +414,18 @@
 
 #rl-app .btn.btn-danger,
 #rl-app button.btn-danger {
-	color: var(--nc-color-primary-element-text);
-	background-color: var(--nc-color-error);
-	border-color: var(--nc-color-error) !important;
+	color: #fff;
+	background-color: #c92a2a;
+	border-color: #c92a2a !important;
 }
 
 #rl-app .btn.btn-danger:hover,
 #rl-app .btn.btn-danger:focus,
 #rl-app button.btn-danger:hover,
 #rl-app button.btn-danger:focus {
-	color: var(--nc-color-primary-element-text);
-	background-color: var(--nc-color-error-hover);
-	border-color: var(--nc-color-error-hover) !important;
+	color: #fff;
+	background-color: #e03131;
+	border-color: #e03131 !important;
 }
 
 #rl-app .btn.btn-success,
