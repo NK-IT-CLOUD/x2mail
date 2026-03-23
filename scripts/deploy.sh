@@ -82,9 +82,9 @@ echo "==> OCC upgrade (safe, applies pending migrations) ..."
 ssh "$NC_HOST" "docker exec -u www-data ${NC_CONTAINER} php occ upgrade" 2>&1 | tail -3
 
 echo ""
-echo "==> Restarting PHP-FPM (clear OPcache) ..."
-ssh "$NC_HOST" "docker restart ${NC_CONTAINER}"
-sleep 3
+echo "==> Restarting containers (clear OPcache, keep network consistent) ..."
+ssh "$NC_HOST" "cd /opt/nextcloud && docker compose restart"
+sleep 5
 
 echo ""
 echo "Done."
