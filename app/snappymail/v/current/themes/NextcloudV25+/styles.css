@@ -281,8 +281,24 @@
 }
 
 #rl-app [data-rainloopErrorTip]::before {
-	color: var(--nc-color-error);
+	background-color: rgba(var(--nc-color-error-rgb), 0.1);
+	border-color: var(--nc-color-error);
+	color: var(--nc-color-main-text);
 	font-weight: 700;
+}
+
+/* Compose header: error tooltip inline next to buttons instead of overlapping fields */
+#rl-app #V-PopupsCompose header [data-rainloopErrorTip]::before {
+	position: relative;
+	display: inline-block;
+	top: unset;
+	left: unset;
+	margin-left: 8px;
+	vertical-align: middle;
+	white-space: nowrap;
+	max-width: 60vw;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 /* #endregion */
@@ -2280,8 +2296,9 @@ html.rl-mobile #rl-app #V-AdminPane>.b-toolbar {
 	background: unset;
 }
 
-#rl-app #V-PopupsCompose .b-header .error-to {
-	color: var(--nc-color-error);
+#rl-app #V-PopupsCompose .b-header .error-to,
+#rl-app #V-PopupsCompose .b-header .error-desc {
+	color: var(--nc-color-main-text);
 }
 
 #rl-app #V-PopupsCompose .pull-right>.btn,
