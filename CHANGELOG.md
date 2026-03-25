@@ -4,6 +4,23 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.5.2] — 2026-03-25
+
+### Added
+- Dashboard widget for unread mail (`IAPIWidgetV2`, auto-reload every 120s)
+- Complete German translations for all UI strings
+
+### Changed
+- Migrate 47 deprecated `IConfig` calls to `IAppConfig`/`IUserConfig` (NC33 public API)
+- Replace private `OC\Core\Command\Base` with `Symfony\Component\Console\Command\Command`
+- Template escaping: `p()` for values, `print_unescaped()` for engine content
+- Replace "SnappyMail" with "X2Mail" in admin panel UI
+
+### Fixed
+- Null-guard for `$this->userId` in FetchController personal settings
+- Add `declare(strict_types=1)` to Settings command
+- Dashboard widget icon uses NC URL generator instead of internal SM path
+
 ## [0.5.1] — 2026-03-25
 
 ### Fixed

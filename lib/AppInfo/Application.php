@@ -62,8 +62,7 @@ class Application extends App implements IBootstrap
 		// Register middleware for token refresh
 		$context->registerMiddleware(TokenRefreshMiddleware::class);
 
-		// TODO: Not working yet, needs a Vue UI
-//		$context->registerDashboardWidget(UnreadMailWidget::class);
+		$context->registerDashboardWidget(UnreadMailWidget::class);
 	}
 
 	public function boot(IBootContext $context): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\X2Mail\Service;
 
+use OCP\IAppConfig;
 use OCP\IConfig;
 
 /**
@@ -20,8 +21,8 @@ class LogService {
 	public static function isEnabled(): bool {
 		if (self::$enabled === null) {
 			try {
-				$config = \OCP\Server::get(IConfig::class);
-				self::$enabled = $config->getAppValue(self::APP_ID, 'debug_log', '0') === '1';
+				$appConfig = \OCP\Server::get(IAppConfig::class);
+				self::$enabled = $appConfig->getValueString(self::APP_ID, 'debug_log', '0') === '1';
 			} catch (\Throwable $e) {
 				self::$enabled = false;
 			}
@@ -30,14 +31,14 @@ class LogService {
 	}
 
 	public static function enable(): void {
-		$config = \OCP\Server::get(IConfig::class);
-		$config->setAppValue(self::APP_ID, 'debug_log', '1');
+		$appConfig = \OCP\Server::get(IAppConfig::class);
+		$appConfig->setValueString(self::APP_ID, 'debug_log', '1');
 		self::$enabled = true;
 	}
 
 	public static function disable(): void {
-		$config = \OCP\Server::get(IConfig::class);
-		$config->setAppValue(self::APP_ID, 'debug_log', '0');
+		$appConfig = \OCP\Server::get(IAppConfig::class);
+		$appConfig->setValueString(self::APP_ID, 'debug_log', '0');
 		self::$enabled = false;
 	}
 

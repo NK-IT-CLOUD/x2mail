@@ -9,12 +9,12 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\TemplateResponse;
-use OCP\IConfig;
+use OCP\IAppConfig;
 use OCP\IRequest;
 
 class PageController extends Controller
 {
-	public function __construct(string $appName, IRequest $request, private IConfig $config) {
+	public function __construct(string $appName, IRequest $request, private IAppConfig $appConfig) {
 		parent::__construct($appName, $request);
 	}
 
@@ -35,7 +35,7 @@ class PageController extends Controller
 			}
 		}
 
-		if (!$bAdmin && $this->config->getAppValue('x2mail', 'snappymail-no-embed')) {
+		if (!$bAdmin && $this->appConfig->getValueString('x2mail', 'snappymail-no-embed')) {
 			\OCP\Server::get(\OCP\INavigationManager::class)->setActiveEntry('x2mail');
 			\OCP\Util::addScript('x2mail', 'snappymail');
 			\OCP\Util::addStyle('x2mail', 'style');

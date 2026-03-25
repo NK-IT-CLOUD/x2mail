@@ -3,6 +3,7 @@
 namespace OCA\X2Mail\Migration;
 
 use OCA\X2Mail\AppInfo\Application;
+use OCP\IAppConfig;
 use OCP\IConfig;
 use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
@@ -55,7 +56,7 @@ class InstallStep implements IRepairStep
 		}
 
 		// SSO mode: disable manual account/identity management
-		$isOidc = \OCP\Server::get(\OCP\IConfig::class)->getAppValue('x2mail', 'snappymail-autologin-oidc', '0') === '1';
+		$isOidc = \OCP\Server::get(IAppConfig::class)->getValueString('x2mail', 'snappymail-autologin-oidc', '0') === '1';
 		if ($isOidc) {
 			$oConfig->Set('webmail', 'allow_additional_accounts', false);
 			$oConfig->Set('login', 'sign_me_auto', \RainLoop\Enumerations\SignMeType::Unused);
@@ -136,9 +137,7 @@ class InstallStep implements IRepairStep
 
 		// Check for custom initial config file
 		try {
-			/** @var IConfig $ncConfig */
-			$ncConfig = \OCP\Server::get(IConfig::class);
-			$customConfigFile = $ncConfig->getAppValue(Application::APP_ID, 'custom_config_file');
+			$customConfigFile = \OCP\Server::get(IAppConfig::class)->getValueString(Application::APP_ID, 'custom_config_file');
 			if ($customConfigFile) {
 				$output->info("Load custom config: {$customConfigFile}");
 				// Security: restrict to appdata_x2mail/ directory

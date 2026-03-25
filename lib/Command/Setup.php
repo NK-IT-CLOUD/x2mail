@@ -5,19 +5,19 @@ declare(strict_types=1);
 namespace OCA\X2Mail\Command;
 
 use OCA\X2Mail\Service\DomainConfigService;
-use OC\Core\Command\Base;
+use Symfony\Component\Console\Command\Command;
 use OCP\App\IAppManager;
-use OCP\IConfig;
+use OCP\IAppConfig;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class Setup extends Base
+class Setup extends Command
 {
 	private const APP_ID = 'x2mail';
 
 	public function __construct(
-		private IConfig $config,
+		private IAppConfig $appConfig,
 		private DomainConfigService $domainService,
 		private IAppManager $appManager,
 	) {
@@ -118,9 +118,9 @@ class Setup extends Base
 
 			// Check user_oidc has a provider configured
 			if ($oidcProvider === 'user_oidc') {
-				$storeToken = $this->config->getAppValue('user_oidc', 'store_login_token', '0');
+				$storeToken = $this->appConfig->getValueString('user_oidc', 'store_login_token', '0');
 				if ($storeToken !== '1') {
-					$this->config->setAppValue('user_oidc', 'store_login_token', '1');
+					$this->appConfig->setValueString('user_oidc', 'store_login_token', '1');
 					$output->writeln('  <info>  SET: store_login_token=1 (required for token refresh)</info>');
 				} else {
 					$output->writeln('  <info>  OK: store_login_token=1</info>');
@@ -131,8 +131,7 @@ class Setup extends Base
 				// IConfig may not see it due to caching. Use IAppConfig if available.
 				$hasProvider = false;
 				try {
-					$appConfig = \OCP\Server::get(\OCP\IAppConfig::class);
-					$hasProvider = $appConfig->getValueString('user_oidc', 'provider-1-mappingUid', '', lazy: true) !== '';
+					$hasProvider = $this->appConfig->getValueString('user_oidc', 'provider-1-mappingUid', '', lazy: true) !== '';
 				} catch (\Throwable $e) {
 					// Fallback: assume configured if store_login_token is set (admin likely set up everything)
 					$hasProvider = true;
@@ -244,11 +243,11 @@ class Setup extends Base
 		$output->writeln("  Domain config: <comment>{$domain}</comment>");
 
 		// NC app config
-		$this->config->setAppValue(self::APP_ID, 'snappymail-autologin', '1');
+		$this->appConfig->setValueString(self::APP_ID, 'snappymail-autologin', '1');
 		if ($isOAuth) {
-			$this->config->setAppValue(self::APP_ID, 'snappymail-autologin-oidc', '1');
+			$this->appConfig->setValueString(self::APP_ID, 'snappymail-autologin-oidc', '1');
 		} else {
-			$this->config->setAppValue(self::APP_ID, 'snappymail-autologin-oidc', '0');
+			$this->appConfig->setValueString(self::APP_ID, 'snappymail-autologin-oidc', '0');
 		}
 
 		// SM core config (app_path, default_domain)

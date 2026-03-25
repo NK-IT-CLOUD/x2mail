@@ -6,23 +6,23 @@ namespace OCA\X2Mail\Command;
 
 use OCA\X2Mail\Service\DomainConfigService;
 use OCA\X2Mail\Service\LogService;
-use OC\Core\Command\Base;
+use Symfony\Component\Console\Command\Command;
 use OCP\App\IAppManager;
-use OCP\IConfig;
+use OCP\IAppConfig;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class Status extends Base
+class Status extends Command
 {
 	private const APP_ID = 'x2mail';
 
-	protected IConfig $config;
+	protected IAppConfig $appConfig;
 	protected DomainConfigService $domainService;
 	protected IAppManager $appManager;
 
-	public function __construct(IConfig $config, DomainConfigService $domainService, IAppManager $appManager) {
+	public function __construct(IAppConfig $appConfig, DomainConfigService $domainService, IAppManager $appManager) {
 		parent::__construct();
-		$this->config = $config;
+		$this->appConfig = $appConfig;
 		$this->domainService = $domainService;
 		$this->appManager = $appManager;
 	}
@@ -74,7 +74,7 @@ class Status extends Base
 
 		// OIDC status
 		$output->writeln('<comment>OIDC Configuration:</comment>');
-		$oidcEnabled = $this->config->getAppValue(self::APP_ID, 'snappymail-autologin-oidc', '0');
+		$oidcEnabled = $this->appConfig->getValueString(self::APP_ID, 'snappymail-autologin-oidc', '0');
 		$output->writeln('  OIDC auto-login: ' . ($oidcEnabled === '1' ? 'enabled' : 'disabled'));
 
 		$providers = ['user_oidc', 'oidc_login'];
@@ -82,7 +82,7 @@ class Status extends Base
 			$installed = $this->appManager->isEnabledForUser($provider);
 			$output->writeln("  {$provider}: " . ($installed ? 'installed' : 'not installed'));
 			if ($installed && $provider === 'user_oidc') {
-				$storeToken = $this->config->getAppValue('user_oidc', 'store_login_token', '0');
+				$storeToken = $this->appConfig->getValueString('user_oidc', 'store_login_token', '0');
 				$output->writeln("    store_login_token: {$storeToken}");
 			}
 		}
@@ -91,8 +91,8 @@ class Status extends Base
 
 		// Auto-login status
 		$output->writeln('<comment>Auto-login:</comment>');
-		$autologin = $this->config->getAppValue(self::APP_ID, 'snappymail-autologin', '0');
-		$autologinEmail = $this->config->getAppValue(self::APP_ID, 'snappymail-autologin-with-email', '0');
+		$autologin = $this->appConfig->getValueString(self::APP_ID, 'snappymail-autologin', '0');
+		$autologinEmail = $this->appConfig->getValueString(self::APP_ID, 'snappymail-autologin-with-email', '0');
 		$output->writeln('  By username: ' . ($autologin ? 'enabled' : 'disabled'));
 		$output->writeln('  By email: ' . ($autologinEmail ? 'enabled' : 'disabled'));
 

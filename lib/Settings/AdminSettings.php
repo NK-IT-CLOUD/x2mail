@@ -5,7 +5,7 @@ namespace OCA\X2Mail\Settings;
 use OCA\X2Mail\Util\SnappyMailHelper;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Http\TemplateResponse;
-use OCP\IConfig;
+use OCP\IAppConfig;
 use OCP\IGroupManager;
 use OCP\IURLGenerator;
 use OCP\IUserSession;
@@ -14,7 +14,7 @@ use OCP\Settings\ISettings;
 class AdminSettings implements ISettings
 {
 	public function __construct(
-		private IConfig $config,
+		private IAppConfig $appConfig,
 		private IUserSession $userSession,
 		private IURLGenerator $urlGenerator,
 		private IAppManager $appManager,
@@ -32,10 +32,10 @@ class AdminSettings implements ISettings
 		];
 		$parameters = [];
 		foreach ($keys as $k) {
-			$v = $this->config->getAppValue('x2mail', $k);
+			$v = $this->appConfig->getValueString('x2mail', $k);
 			$parameters[$k] = $v;
 		}
-		$parameters['x2mail-debug-log'] = $this->config->getAppValue('x2mail', 'debug_log', '0') === '1';
+		$parameters['x2mail-debug-log'] = $this->appConfig->getValueString('x2mail', 'debug_log', '0') === '1';
 		$user = $this->userSession->getUser();
 		$uid = $user ? $user->getUID() : '';
 		if ($uid && $this->groupManager->isAdmin($uid)) {

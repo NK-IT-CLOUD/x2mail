@@ -1,24 +1,26 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OCA\X2Mail\Command;
 
 use OCA\X2Mail\Util\SnappyMailHelper;
-use OC\Core\Command\Base;
-use OCP\IConfig;
+use Symfony\Component\Console\Command\Command;
+use OCP\Config\IUserConfig;
 use OCP\IUserManager;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class Settings extends Base
+class Settings extends Command
 {
 	protected IUserManager $userManager;
-	protected IConfig $config;
+	protected IUserConfig $userConfig;
 
-	public function __construct(IUserManager $userManager, IConfig $config) {
+	public function __construct(IUserManager $userManager, IUserConfig $userConfig) {
 		parent::__construct();
 		$this->userManager = $userManager;
-		$this->config = $config;
+		$this->userConfig = $userConfig;
 	}
 
 	protected function configure(): void {
@@ -51,14 +53,14 @@ class Settings extends Base
 		}
 
 		$sEmail = $input->getArgument('user');
-		$this->config->setUserValue($uid, 'x2mail', 'snappymail-email', $sEmail);
+		$this->userConfig->setValueString($uid, 'x2mail', 'snappymail-email', $sEmail);
 
 		$sPass = $input->getArgument('pass');
 		if (empty($sPass)) {
 			$sPass = \readline("password: ");
 		}
 		$sPass = ($sEmail && $sPass) ? SnappyMailHelper::encodePassword($sPass, \md5($sEmail)) : '';
-		$this->config->setUserValue($uid, 'x2mail', 'passphrase', $sPass);
+		$this->userConfig->setValueString($uid, 'x2mail', 'passphrase', $sPass);
 		return 0;
 	}
 }

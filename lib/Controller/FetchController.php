@@ -7,19 +7,22 @@ use OCA\X2Mail\Util\SnappyMailHelper;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\JSONResponse;
-use OCP\IConfig;
+use OCP\Config\IUserConfig;
+use OCP\IAppConfig;
 use OCP\IL10N;
 use OCP\IRequest;
 
 class FetchController extends Controller {
-	private IConfig $config;
+	private IAppConfig $appConfig;
+	private IUserConfig $userConfig;
 	private IL10N $l;
 
 	private ?string $userId;
 
-	public function __construct(string $appName, IRequest $request, IConfig $config, IL10N $l, ?string $userId) {
+	public function __construct(string $appName, IRequest $request, IAppConfig $appConfig, IUserConfig $userConfig, IL10N $l, ?string $userId) {
 		parent::__construct($appName, $request);
-		$this->config = $config;
+		$this->appConfig = $appConfig;
+		$this->userConfig = $userConfig;
 		$this->l = $l;
 		$this->userId = $userId;
 	}
@@ -52,12 +55,12 @@ class FetchController extends Controller {
 			if ($appname === 'x2mail') {
 				// OIDC auto-login is the primary auth method
 				$oidcEnabled = $this->request->getParam('snappymail-autologin-oidc') !== null;
-				$this->config->setAppValue('x2mail', 'snappymail-autologin-oidc', $oidcEnabled ? '1' : '0');
+				$this->appConfig->setValueString('x2mail', 'snappymail-autologin-oidc', $oidcEnabled ? '1' : '0');
 				// Auto-login must be on for OIDC to work
-				$this->config->setAppValue('x2mail', 'snappymail-autologin', $oidcEnabled ? '1' : '0');
-				$this->config->setAppValue('x2mail', 'snappymail-no-embed', $this->request->getParam('snappymail-no-embed') !== null ? '1' : '0');
+				$this->appConfig->setValueString('x2mail', 'snappymail-autologin', $oidcEnabled ? '1' : '0');
+				$this->appConfig->setValueString('x2mail', 'snappymail-no-embed', $this->request->getParam('snappymail-no-embed') !== null ? '1' : '0');
 				// X2Mail debug log
-				$this->config->setAppValue('x2mail', 'debug_log', $this->request->getParam('x2mail-debug-log') !== null ? '1' : '0');
+				$this->appConfig->setValueString('x2mail', 'debug_log', $this->request->getParam('x2mail-debug-log') !== null ? '1' : '0');
 			} else {
 				return new JSONResponse([
 					'status' => 'error',
@@ -116,13 +119,16 @@ class FetchController extends Controller {
 				}
 
 				$sUser = $this->userId;
+				if ($sUser === null) {
+					return new JSONResponse(['status' => 'error', 'Message' => 'Not authenticated'], 401);
+				}
 
 				$sEmail = $email;
-				$this->config->setUserValue($sUser, 'x2mail', 'snappymail-email', $sEmail);
+				$this->userConfig->setValueString($sUser, 'x2mail', 'snappymail-email', $sEmail);
 
 				$sPass = $password;
 				if ('******' !== $sPass) {
-					$this->config->setUserValue($sUser, 'x2mail', 'passphrase',
+					$this->userConfig->setValueString($sUser, 'x2mail', 'passphrase',
 						$sPass ? SnappyMailHelper::encodePassword($sPass, \md5($sEmail)) : '');
 				}
 			} else {

@@ -4,19 +4,19 @@
 
 <div class="section">
 	<form class="snappymail" action="setAdmin" method="post">
-		<input type="hidden" name="requesttoken" value="<?php echo $_['requesttoken'] ?>" id="requesttoken">
+		<input type="hidden" name="requesttoken" value="<?php p($_['requesttoken']) ?>" id="requesttoken">
 		<fieldset class="personalblock">
 			<h2><?php echo($l->t('X2Mail Settings')); ?></h2>
 			<br />
 			<?php if ($_['snappymail-admin-panel-link']) { ?>
 			<p>
-				<a href="<?php echo $_['snappymail-admin-panel-link'] ?>" style="text-decoration: underline">
-					<?php echo($l->t('Go to SnappyMail admin panel')); ?>
+				<a href="<?php p($_['snappymail-admin-panel-link']) ?>" style="text-decoration: underline">
+					<?php echo($l->t('Go to X2Mail admin panel')); ?>
 				</a>
 			<?php if ($_['snappymail-admin-password']) { ?>
 				<br/>
 				Username: admin<br/>
-				Temporary password: <?php echo $_['snappymail-admin-password']; ?>
+				Temporary password: <?php p($_['snappymail-admin-password']); ?>
 			<?php } ?>
 			</p>
 			<br />
@@ -51,7 +51,7 @@
 			<p>
 				<input id="snappymail-debug" name="snappymail-debug" type="checkbox" class="checkbox" <?php if ($_['snappymail-debug']) echo 'checked="checked"'; ?>>
 				<label for="snappymail-debug">
-					<?php echo($l->t('Enable SnappyMail debug logging')); ?>
+					<?php echo($l->t('Enable engine debug logging')); ?>
 				</label>
 			</p>
 			<br />
@@ -68,7 +68,7 @@
 				<label for="snappymail-app_path">
 					<?php echo($l->t('app_path')); ?>
 				</label>
-				<input id="snappymail-app_path" name="snappymail-app_path" type="text" <?php echo 'value="'.\htmlspecialchars($_['snappymail-app_path']).'"'; ?> style="width:20em">
+				<input id="snappymail-app_path" name="snappymail-app_path" type="text" value="<?php p($_['snappymail-app_path']); ?>" style="width:20em">
 			</p>
 			<br />
 

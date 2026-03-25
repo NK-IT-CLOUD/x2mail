@@ -9,7 +9,7 @@ use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
-use OCP\IConfig;
+use OCP\IAppConfig;
 use OCP\IRequest;
 
 class SetupController extends Controller
@@ -19,7 +19,7 @@ class SetupController extends Controller
 	public function __construct(
 		string $appName,
 		IRequest $request,
-		private IConfig $config,
+		private IAppConfig $appConfig,
 		private IAppManager $appManager,
 		private DomainConfigService $domainService,
 	) {
@@ -65,7 +65,7 @@ class SetupController extends Controller
 		// OIDC status
 		$userOidcInstalled = $this->appManager->isEnabledForUser('user_oidc');
 		$oidcLoginInstalled = $this->appManager->isEnabledForUser('oidc_login');
-		$oidcAutoLogin = $this->config->getAppValue(self::APP_ID, 'snappymail-autologin-oidc', '0');
+		$oidcAutoLogin = $this->appConfig->getValueString(self::APP_ID, 'snappymail-autologin-oidc', '0');
 
 		$oidcProvider = 'none';
 		if ($userOidcInstalled) {
@@ -151,7 +151,7 @@ class SetupController extends Controller
 			];
 
 			if ($userOidc) {
-				$storeToken = $this->config->getAppValue('user_oidc', 'store_login_token', '0');
+				$storeToken = $this->appConfig->getValueString('user_oidc', 'store_login_token', '0');
 				$oidcResult['store_login_token'] = $storeToken === '1';
 			}
 
@@ -213,12 +213,12 @@ class SetupController extends Controller
 
 			// Set app config for OIDC auto-login
 			$isOAuth = \in_array($authType, ['oauthbearer', 'xoauth2']);
-			$this->config->setAppValue(self::APP_ID, 'snappymail-autologin', '1');
-			$this->config->setAppValue(self::APP_ID, 'snappymail-autologin-oidc', $isOAuth ? '1' : '0');
+			$this->appConfig->setValueString(self::APP_ID, 'snappymail-autologin', '1');
+			$this->appConfig->setValueString(self::APP_ID, 'snappymail-autologin-oidc', $isOAuth ? '1' : '0');
 
 			// Ensure store_login_token is set for user_oidc
 			if ($isOAuth && $this->appManager->isEnabledForUser('user_oidc')) {
-				$this->config->setAppValue('user_oidc', 'store_login_token', '1');
+				$this->appConfig->setValueString('user_oidc', 'store_login_token', '1');
 			}
 
 			// Set SM config for this auth mode

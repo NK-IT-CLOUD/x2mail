@@ -3,6 +3,8 @@
 namespace OCA\X2Mail\Util;
 
 use OCP\App\IAppManager;
+use OCP\Config\IUserConfig;
+use OCP\IAppConfig;
 use OCP\IConfig;
 use OCP\IGroupManager;
 use OCP\ISession;
@@ -98,7 +100,7 @@ class SnappyMailHelper
 						if (!$isOIDC && $e->getCode() !== \RainLoop\Notifications::ConnectionError) {
 							$sUID = \OCP\Server::get(IUserSession::class)->getUser()->getUID();
 							\OCP\Server::get(ISession::class)->set('snappymail-passphrase', '');
-							\OCP\Server::get(IConfig::class)->setUserValue($sUID, 'x2mail', 'passphrase', '');
+							\OCP\Server::get(IUserConfig::class)->setValueString($sUID, 'x2mail', 'passphrase', '');
 						}
 					} catch (\Throwable $e) {
 						// Non-login errors (e.g. DI failures) — don't touch credentials
@@ -119,8 +121,8 @@ class SnappyMailHelper
 	// Check if OpenID Connect (OIDC) is enabled and used for login
 	public static function isOIDCLogin() : bool
 	{
-		$config = \OCP\Server::get(IConfig::class);
-		if ($config->getAppValue('x2mail', 'snappymail-autologin-oidc', '0') !== '0') {
+		$appConfig = \OCP\Server::get(IAppConfig::class);
+		if ($appConfig->getValueString('x2mail', 'snappymail-autologin-oidc', '0') !== '0') {
 			// Check if either OIDC Login app or user_oidc app is enabled
 			$appManager = \OCP\Server::get(IAppManager::class);
 			if ($appManager->isEnabledForUser('oidc_login') || $appManager->isEnabledForUser('user_oidc')) {
@@ -145,14 +147,15 @@ class SnappyMailHelper
 	private static function getLoginCredentials() : array
 	{
 		$sUID = \OCP\Server::get(IUserSession::class)->getUser()->getUID();
-		$config = \OCP\Server::get(IConfig::class);
+		$appConfig = \OCP\Server::get(IAppConfig::class);
+		$userConfig = \OCP\Server::get(IUserConfig::class);
 		$ocSession = \OCP\Server::get(ISession::class);
 
 		// If the user has set credentials for SnappyMail in their personal settings,
 		// this has the first priority.
-		$sEmail = $config->getUserValue($sUID, 'x2mail', 'snappymail-email');
-		$sPassword = $config->getUserValue($sUID, 'x2mail', 'passphrase')
-			?: $config->getUserValue($sUID, 'x2mail', 'snappymail-password');
+		$sEmail = $userConfig->getValueString($sUID, 'x2mail', 'snappymail-email');
+		$sPassword = $userConfig->getValueString($sUID, 'x2mail', 'passphrase')
+			?: $userConfig->getValueString($sUID, 'x2mail', 'snappymail-password');
 		if ($sEmail && $sPassword) {
 			$sPassword = static::decodePassword($sPassword, \md5($sEmail));
 			if ($sPassword) {
@@ -165,17 +168,17 @@ class SnappyMailHelper
 
 			// If OpenID Connect (OIDC) is enabled and used for login, use this.
 			if (static::isOIDCLogin()) {
-				$sEmail = $config->getUserValue($sUID, 'settings', 'email');
+				$sEmail = $userConfig->getValueString($sUID, 'settings', 'email');
 				return [$sUID, $sEmail, "oidc_login|{$sUID}"];
 			}
 
 			$sEmail = '';
 			$sPassword = '';
-			if ($config->getAppValue('x2mail', 'snappymail-autologin', '0') !== '0') {
+			if ($appConfig->getValueString('x2mail', 'snappymail-autologin', '0') !== '0') {
 				$sEmail = $sUID;
 				$sPassword = $ocSession->get('snappymail-passphrase');
-			} else if ($config->getAppValue('x2mail', 'snappymail-autologin-with-email', '0') !== '0') {
-				$sEmail = $config->getUserValue($sUID, 'settings', 'email');
+			} else if ($appConfig->getValueString('x2mail', 'snappymail-autologin-with-email', '0') !== '0') {
+				$sEmail = $userConfig->getValueString($sUID, 'settings', 'email');
 				$sPassword = $ocSession->get('snappymail-passphrase');
 			}
 			if ($sPassword) {

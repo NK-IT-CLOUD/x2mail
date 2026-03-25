@@ -1,33 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OCA\X2Mail\Dashboard;
 
 use OCA\X2Mail\Util\SnappyMailHelper;
 
-use OCP\AppFramework\Services\IInitialState;
-use OCP\Dashboard\IAPIWidget;
+use OCP\Dashboard\IAPIWidgetV2;
 use OCP\Dashboard\IIconWidget;
-use OCP\Dashboard\IOptionWidget;
+use OCP\Dashboard\IReloadableWidget;
 use OCP\Dashboard\Model\WidgetItem;
-use OCP\Dashboard\Model\WidgetOptions;
+use OCP\Dashboard\Model\WidgetItems;
 use OCP\IL10N;
 use OCP\IURLGenerator;
 
-class UnreadMailWidget implements IAPIWidget, IIconWidget
+class UnreadMailWidget implements IAPIWidgetV2, IIconWidget, IReloadableWidget
 {
-	protected IL10N $l10n;
-	protected IURLGenerator $urlGenerator;
-	protected IInitialState $initialState;
-	protected ?string $userId;
-
-	public function __construct(IL10N $l10n, IURLGenerator $urlGenerator,
-		IInitialState $initialState,
-		?string $userId)
-	{
-		$this->l10n = $l10n;
-		$this->urlGenerator = $urlGenerator;
-		$this->initialState = $initialState;
-		$this->userId = $userId;
+	public function __construct(
+		private IL10N $l10n,
+		private IURLGenerator $urlGenerator,
+	) {
 	}
 
 	public function getId(): string
@@ -57,18 +49,18 @@ class UnreadMailWidget implements IAPIWidget, IIconWidget
 
 	public function load(): void
 	{
-		if ($this->userId !== null) {
-			$this->initialState->provideInitialState('dashboard-widget-items', $this->getItems($this->userId));
-		}
 	}
 
-	public function getItems(string $userId, ?string $since = null, int $limit = 7): array
+	public function getItemsV2(string $userId, ?string $since = null, int $limit = 7): WidgetItems
 	{
-		$result = [];
-		SnappyMailHelper::startApp();
-		$oActions = \RainLoop\Api::Actions();
-		$oAccount = $oActions->getAccountFromToken(false);
-		if ($oAccount) {
+		try {
+			SnappyMailHelper::startApp();
+			$oActions = \RainLoop\Api::Actions();
+			$oAccount = $oActions->getAccountFromToken(false);
+			if (!$oAccount) {
+				return new WidgetItems([], $this->l10n->t('Open X2Mail to connect'));
+			}
+
 			$oConfig = $oActions->Config();
 
 			$oParams = new \MailSo\Mail\MessageListParams;
@@ -86,30 +78,36 @@ class UnreadMailWidget implements IAPIWidget, IIconWidget
 
 			$MessageCollection = $oMailClient->MessageList($oParams);
 
+			$items = [];
 			$baseURL = $this->urlGenerator->linkToRoute('x2mail.page.index') . '#';
 
 			foreach ($MessageCollection as $Message) {
-				$result[] = new WidgetItem(
+				$items[] = new WidgetItem(
 					$Message->From()->ToString(),
 					$Message->Subject(),
 					$baseURL . '/mailbox/INBOX/m' . $Message->Uid(),
-					'',
+					$this->urlGenerator->imagePath('x2mail', 'logo-64x64.png'),
 					$Message->ETag('')
 				);
 			}
-		}
 
-		return $result;
+			if (empty($items)) {
+				return new WidgetItems([], '', $this->l10n->t('No unread mail'));
+			}
+
+			return new WidgetItems($items);
+		} catch (\Throwable $e) {
+			return new WidgetItems([], $this->l10n->t('Open X2Mail to connect'));
+		}
+	}
+
+	public function getReloadInterval(): int
+	{
+		return 120;
 	}
 
 	public function getIconUrl(): string
 	{
-		SnappyMailHelper::loadApp();
-		return \RainLoop\Utils::WebStaticPath('images/snappymail-logo.png');
-	}
-
-	public function getWidgetOptions(): WidgetOptions
-	{
-		return new WidgetOptions(true);
+		return $this->urlGenerator->imagePath('x2mail', 'logo-64x64.png');
 	}
 }
