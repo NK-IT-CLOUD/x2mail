@@ -43,7 +43,7 @@ class NextcloudPlugin extends \RainLoop\Plugins\AbstractPlugin
 			$this->addHook('sieve.before-login', 'beforeLogin');
 		} else {
 			\SnappyMail\Log::debug('Nextcloud', 'NOT integrated');
-			// \OC::$server->getConfig()->getAppValue('snappymail', 'snappymail-no-embed');
+			// \OC::$server->getConfig()->getAppValue('x2mail', 'snappymail-no-embed');
 			$this->addHook('main.content-security-policy', 'ContentSecurityPolicy');
 		}
 	}
@@ -238,16 +238,16 @@ class NextcloudPlugin extends \RainLoop\Plugins\AbstractPlugin
 				$sEmail = '';
 				// Only store the user's password in the current session if they have
 				// enabled auto-login using Nextcloud username or email address.
-				if ($config->getAppValue('snappymail', 'snappymail-autologin', false)) {
+				if ($config->getAppValue('x2mail', 'snappymail-autologin', false)) {
 					$sEmail = $sUID;
-				} else if ($config->getAppValue('snappymail', 'snappymail-autologin-with-email', false)) {
+				} else if ($config->getAppValue('x2mail', 'snappymail-autologin-with-email', false)) {
 					$sEmail = $config->getUserValue($sUID, 'settings', 'email', '');
 				} else {
 					\SnappyMail\Log::debug('Nextcloud', 'snappymail-autologin is off');
 				}
 				// If the user has set credentials for SnappyMail in their personal
 				// settings, override everything before and use those instead.
-				$sCustomEmail = $config->getUserValue($sUID, 'snappymail', 'snappymail-email', '');
+				$sCustomEmail = $config->getUserValue($sUID, 'x2mail', 'snappymail-email', '');
 				if ($sCustomEmail) {
 					$sEmail = $sCustomEmail;
 				}
@@ -256,7 +256,7 @@ class NextcloudPlugin extends \RainLoop\Plugins\AbstractPlugin
 //						?: $ocUser->getPrimaryEMailAddress();
 				}
 /*
-				if ($config->getAppValue('snappymail', 'snappymail-autologin-oidc', false)) {
+				if ($config->getAppValue('x2mail', 'snappymail-autologin-oidc', false)) {
 					if (\OC::$server->getSession()->get('is_oidc')) {
 						$sEmail = "{$sUID}@nextcloud";
 						$aResult['DevPassword'] = \OC::$server->getSession()->get('oidc_access_token');
