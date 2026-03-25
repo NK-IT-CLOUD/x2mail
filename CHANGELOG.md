@@ -15,7 +15,6 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
   - NC33 info status color support
   - Light + dark mode with NC33 theme values
   - Updated border-radius, font stack, disabled states to NC33 defaults
-- Original SnappyMail 2.38.2 reference files in `docs/reference/`
 
 ### Fixed
 - Identity popup close button navigated away instead of showing confirm dialog (href="#" in embedded mode)
