@@ -80,13 +80,12 @@ SMTP can use password auth, no auth (trusted network), or XOAUTH2 — configured
 
 ### From Release
 
-```bash
-# Download release
-wget https://github.com/NK-IT-CLOUD/x2mail/releases/download/v0.1.0/x2mail-0.1.0.tar.gz
+Download the latest tarball from [GitHub Releases](https://github.com/NK-IT-CLOUD/x2mail/releases).
 
+```bash
 # Extract to NC custom_apps
 cd /path/to/nextcloud/custom_apps
-tar xzf x2mail-0.1.0.tar.gz
+tar xzf x2mail-*.tar.gz
 
 # Set permissions
 chown -R www-data:www-data x2mail
@@ -214,12 +213,15 @@ Access tokens typically expire after 5 minutes. X2Mail's `TokenRefreshMiddleware
 - **OAUTHBEARER / XOAUTH2** — token-based IMAP authentication
 - **Automatic token refresh** — no session drops after token expiry
 - **Password auth fallback** — works without OIDC too
-- **Dark mode** and responsive design
+- **NC33 theme** — native Nextcloud 33 design with light + dark mode
+- **Setup Wizard** — admin UI with preflight checks (IMAP, SMTP, OIDC connectivity)
 - **Full Sieve filtering** support
 - **Nextcloud integration** — Contacts, Files, Calendar, Unified Search
 - **Multiple identities** — send from different email addresses
 - **OpenPGP and S/MIME** encryption
 - **`occ` commands** — setup, status, settings via command line
+
+Powered by a forked, security-audited SnappyMail engine.
 
 ## Troubleshooting
 
@@ -244,11 +246,11 @@ Access tokens typically expire after 5 minutes. X2Mail's `TokenRefreshMiddleware
 
 ## Requirements
 
-- Nextcloud 33 (tested), other versions untested
+- Nextcloud 33+
 - PHP 8.4+
-- IMAP server (Dovecot recommended)
-- OIDC provider (Keycloak, Authentik, etc.) for SSO mode
-- `user_oidc` or `oidc_login` NC app
+- IMAP server (Dovecot 2.4+ recommended for SSO)
+- For SSO mode: OIDC provider (Keycloak, Authentik, etc.) + `user_oidc` app
+- For password mode: any IMAP server with standard auth
 
 ## Development
 
