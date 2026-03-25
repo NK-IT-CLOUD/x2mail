@@ -76,7 +76,7 @@ class InstallStep implements IRepairStep
 				$aList = \SnappyMail\Repository::getEnabledPackagesNames();
 				$aList[] = 'nextcloud';
 				$oConfig->Set('plugins', 'enabled_list', \implode(',', \array_unique($aList)));
-				$oConfig->Set('webmail', 'theme', 'NextcloudV25+');
+				$oConfig->Set('webmail', 'theme', 'x2mail');
 				$bSave = true;
 			}
 			// Always sync plugin files from bundled version

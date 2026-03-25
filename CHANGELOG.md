@@ -4,6 +4,30 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.5.0] — 2026-03-25
+
+### Added
+- New `x2mail` theme for Nextcloud 33+ design system
+  - 3-tier color mapping: pastel backgrounds, element colors for icons, text colors for readability
+  - Alerts follow NC33 NoteCard pattern (pastel bg + colored left border)
+  - Buttons follow NC33 NcButton pattern (focus-visible box-shadow, transitions)
+  - Inputs with NC33 focus-visible inset box-shadow
+  - NC33 info status color support
+  - Light + dark mode with NC33 theme values
+  - Updated border-radius, font stack, disabled states to NC33 defaults
+- Original SnappyMail 2.38.2 reference files in `docs/reference/`
+
+### Fixed
+- Identity popup close button navigated away instead of showing confirm dialog (href="#" in embedded mode)
+- Error tooltips used aggressive red background instead of NC33 NoteCard pattern
+- Priority-high indicators, attachment errors, virus warnings now use NC33 color system
+- btn-danger/btn-warning hover states were overridden by generic hover rule
+
+### Changed
+- Default theme switched from `NextcloudV25+` to `x2mail` (InstallStep, AdminSettings, RainLoop)
+- Remove 20 unused bundled SnappyMail themes (A, BlackWood, Blurred, etc.)
+- Hide auto-logout setting in SSO/embedded mode (NC manages the session)
+
 ## [0.4.10] — 2026-03-25
 
 ### Fixed

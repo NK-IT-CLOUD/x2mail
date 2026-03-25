@@ -71,7 +71,7 @@ class AdminSettings implements ISettings
 		if (!$app_path) {
 			$app_path = \preg_replace('#(?<!:)/+#', '/', \rtrim($this->appManager->getAppWebPath('x2mail'), '/') . '/app/');
 			$oConfig->Set('webmail', 'app_path', $app_path);
-			$oConfig->Set('webmail', 'theme', 'NextcloudV25+');
+			$oConfig->Set('webmail', 'theme', 'x2mail');
 			$oConfig->Save();
 		}
 		$parameters['snappymail-app_path'] = $oConfig->Get('webmail', 'app_path', false);
