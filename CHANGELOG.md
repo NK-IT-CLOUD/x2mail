@@ -4,6 +4,18 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.5.3] — 2026-03-25
+
+### Added
+- PHPUnit test infrastructure with 18 unit tests (DomainConfigService, TokenRefreshMiddleware)
+- CI: PHPUnit step in Gitea pipeline
+
+### Changed
+- Event listeners moved from `boot()` closures to dedicated `IEventListener` classes (PasswordLogin, Logout, Impersonate)
+
+### Fixed
+- Domain validation: reject `.` and `..` as domain names (found by unit tests)
+
 ## [0.5.2] — 2026-03-25
 
 ### Added

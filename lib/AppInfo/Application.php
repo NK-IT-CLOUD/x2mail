@@ -2,26 +2,23 @@
 
 namespace OCA\X2Mail\AppInfo;
 
-use OCA\X2Mail\Util\SnappyMailHelper;
-use OCA\X2Mail\Controller\FetchController;
-use OCA\X2Mail\Controller\PageController;
-use OCA\X2Mail\Controller\SetupController;
-use OCA\X2Mail\Service\DomainConfigService;
 use OCA\X2Mail\Dashboard\UnreadMailWidget;
-use OCA\X2Mail\Search\Provider;
 use OCA\X2Mail\Listeners\AccessTokenUpdatedListener;
-use OCA\X2Mail\Listeners\TokenBridgeListener;
+use OCA\X2Mail\Listeners\ImpersonateListener;
 use OCA\X2Mail\Listeners\LoginBridgeListener;
+use OCA\X2Mail\Listeners\LogoutListener;
+use OCA\X2Mail\Listeners\PasswordLoginListener;
+use OCA\X2Mail\Listeners\TokenBridgeListener;
 use OCA\X2Mail\Middleware\TokenRefreshMiddleware;
+use OCA\X2Mail\Search\Provider;
 
 use OCP\AppFramework\App;
+use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
-use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\IConfig;
-use OCP\ISession;
-use OCP\User\Events\PostLoginEvent;
 use OCP\User\Events\BeforeUserLoggedOutEvent;
+use OCP\User\Events\PostLoginEvent;
 use OCP\User\Events\UserLoggedInEvent;
 
 class Application extends App implements IBootstrap
@@ -59,6 +56,29 @@ class Application extends App implements IBootstrap
 			LoginBridgeListener::class
 		);
 
+		// PostLoginEvent — store UID + encoded password for IMAP (skips token logins)
+		$context->registerEventListener(
+			PostLoginEvent::class,
+			PasswordLoginListener::class
+		);
+
+		// BeforeUserLoggedOutEvent — SM logout
+		$context->registerEventListener(
+			BeforeUserLoggedOutEvent::class,
+			LogoutListener::class
+		);
+
+		// Impersonate begin/end — clear passphrase + SM logout
+		// Use string class names to avoid hard dependency on the impersonate app
+		$context->registerEventListener(
+			'OCA\\Impersonate\\Events\\BeginImpersonateEvent',
+			ImpersonateListener::class
+		);
+		$context->registerEventListener(
+			'OCA\\Impersonate\\Events\\EndImpersonateEvent',
+			ImpersonateListener::class
+		);
+
 		// Register middleware for token refresh
 		$context->registerMiddleware(TokenRefreshMiddleware::class);
 
@@ -73,37 +93,6 @@ class Application extends App implements IBootstrap
 			return;
 		}
 
-		$session = $context->getServerContainer()->get(ISession::class);
-		$dispatcher = $context->getServerContainer()->get(\OCP\EventDispatcher\IEventDispatcher::class);
-		$dispatcher->addListener(PostLoginEvent::class, function (PostLoginEvent $Event) use ($session) {
-			// Skip SM bootstrap for app-password/token logins (bots, DAV clients, API)
-			// — they can't use the password for IMAP anyway
-			if ($Event->isTokenLogin()) {
-				return;
-			}
-			$sUID = $Event->getUser()->getUID();
-			$session->set('snappymail-nc-uid', $sUID);
-			$session->set('snappymail-passphrase', SnappyMailHelper::encodePassword($Event->getPassword(), $sUID));
-		});
-
-		$dispatcher->addListener(BeforeUserLoggedOutEvent::class, function (BeforeUserLoggedOutEvent $Event) {
-			SnappyMailHelper::loadApp();
-			\RainLoop\Api::Actions()->DoLogout();
-		});
-
-		// https://github.com/nextcloud/impersonate/issues/179
-		$class = 'OCA\Impersonate\Events\BeginImpersonateEvent';
-		if (\class_exists($class)) {
-			$dispatcher->addListener($class, function ($Event) use ($session) {
-				$session->set('snappymail-passphrase', '');
-				SnappyMailHelper::loadApp();
-				\RainLoop\Api::Actions()->Logout(true);
-			});
-			$dispatcher->addListener('OCA\Impersonate\Events\EndImpersonateEvent', function ($Event) use ($session) {
-				$session->set('snappymail-passphrase', '');
-				SnappyMailHelper::loadApp();
-				\RainLoop\Api::Actions()->Logout(true);
-			});
-		}
+		// APP_PRIVATE_DATA setup happens via SnappyMailHelper::loadApp() on demand
 	}
 }

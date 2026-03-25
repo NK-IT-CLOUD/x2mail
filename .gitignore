@@ -3,6 +3,7 @@ build/
 *.tar.gz
 appinfo/signature.json
 vendor/
+.phpunit.cache/
 docs/
 scripts/.env
 .claude/

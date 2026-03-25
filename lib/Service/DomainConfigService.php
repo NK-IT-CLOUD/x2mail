@@ -25,7 +25,7 @@ class DomainConfigService
 	 */
 	private function validateDomain(string $domain): void
 	{
-		if ($domain === '' || !\preg_match('/\A[a-zA-Z0-9.\-]+\z/', $domain)) {
+		if ($domain === '' || $domain === '.' || $domain === '..' || !\preg_match('/\A[a-zA-Z0-9.\-]+\z/', $domain)) {
 			throw new \InvalidArgumentException("Invalid domain name: {$domain}");
 		}
 	}
