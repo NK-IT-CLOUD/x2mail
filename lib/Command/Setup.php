@@ -267,6 +267,8 @@ class Setup extends Base
 					$oConfig->Set('webmail', 'allow_additional_identities', false);
 					$oConfig->Set('webmail', 'popup_identity', false);
 					$oConfig->Set('login', 'sign_me_auto', \RainLoop\Enumerations\SignMeType::Unused);
+					$oConfig->Set('imap', 'show_login_alert', false);
+					$oConfig->Set('defaults', 'autologout', 15);
 				}
 
 				// Enable contacts — NextcloudAddressBook reads/writes NC Contacts directly
