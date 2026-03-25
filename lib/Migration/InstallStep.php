@@ -58,8 +58,6 @@ class InstallStep implements IRepairStep
 		$isOidc = \OCP\Server::get(\OCP\IConfig::class)->getAppValue('x2mail', 'snappymail-autologin-oidc', '0') === '1';
 		if ($isOidc) {
 			$oConfig->Set('webmail', 'allow_additional_accounts', false);
-			$oConfig->Set('webmail', 'allow_additional_identities', false);
-			$oConfig->Set('webmail', 'popup_identity', false);
 			$oConfig->Set('login', 'sign_me_auto', \RainLoop\Enumerations\SignMeType::Unused);
 			$oConfig->Set('imap', 'show_login_alert', false);
 			$oConfig->Set('defaults', 'autologout', 15);

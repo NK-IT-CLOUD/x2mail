@@ -4,6 +4,11 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.5.1] — 2026-03-25
+
+### Fixed
+- SSO setup incorrectly disabled identity management (allow_additional_identities, popup_identity)
+
 ## [0.5.0] — 2026-03-25
 
 ### Added
