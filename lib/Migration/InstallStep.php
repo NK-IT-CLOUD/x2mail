@@ -54,6 +54,16 @@ class InstallStep implements IRepairStep
 			$bSave = true;
 		}
 
+		// SSO mode: disable manual account/identity management
+		$isOidc = \OCP\Server::get(\OCP\IConfig::class)->getAppValue('x2mail', 'snappymail-autologin-oidc', '0') === '1';
+		if ($isOidc) {
+			$oConfig->Set('webmail', 'allow_additional_accounts', false);
+			$oConfig->Set('webmail', 'allow_additional_identities', false);
+			$oConfig->Set('webmail', 'popup_identity', false);
+			$oConfig->Set('login', 'sign_me_auto', \RainLoop\Enumerations\SignMeType::Unused);
+			$bSave = true;
+		}
+
 		// Sync bundled nextcloud plugin to SM data directory on every install/upgrade
 		$bundledPlugin = $app_dir . '/snappymail/v/current/app/plugins/nextcloud';
 		$installedPlugin = APP_PLUGINS_PATH . 'nextcloud';

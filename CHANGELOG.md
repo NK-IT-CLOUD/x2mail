@@ -4,10 +4,11 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
-## [0.4.9] — 2026-03-25
+## [0.4.10] — 2026-03-25
 
 ### Fixed
-- Fix SSO/OIDC broken on fresh installs — SM plugin read autologin config from wrong app namespace (`snappymail` instead of `x2mail`), causing auto-login, OIDC, and personal email settings to be silently ignored
+- SSO: auto-disable "Add account" and "Manage identities" when OIDC is configured (Setup Wizard, CLI, and upgrade)
+- SSO: SM plugin read autologin config from wrong app namespace (`snappymail` → `x2mail`), breaking fresh installs
 
 ## [0.4.8] — 2026-03-23
 

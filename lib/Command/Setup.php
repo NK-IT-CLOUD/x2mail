@@ -262,6 +262,12 @@ class Setup extends Base
 				$oConfig->Set('webmail', 'title', 'X2Mail');
 				$oConfig->Set('webmail', 'loading_description', 'X2Mail');
 				$oConfig->Set('login', 'default_domain', $domain);
+				if ($isOAuth) {
+					$oConfig->Set('webmail', 'allow_additional_accounts', false);
+					$oConfig->Set('webmail', 'allow_additional_identities', false);
+					$oConfig->Set('webmail', 'popup_identity', false);
+					$oConfig->Set('login', 'sign_me_auto', \RainLoop\Enumerations\SignMeType::Unused);
+				}
 
 				// Enable contacts — NextcloudAddressBook reads/writes NC Contacts directly
 				$oConfig->Set('contacts', 'enable', true);

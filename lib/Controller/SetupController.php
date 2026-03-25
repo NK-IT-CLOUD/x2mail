@@ -221,11 +221,17 @@ class SetupController extends Controller
 				$this->config->setAppValue('user_oidc', 'store_login_token', '1');
 			}
 
-			// Set SM default domain
+			// Set SM config for this auth mode
 			try {
 				\OCA\X2Mail\Util\SnappyMailHelper::loadApp();
 				$oConfig = \RainLoop\Api::Config();
 				$oConfig->Set('login', 'default_domain', $domain);
+				if ($isOAuth) {
+					$oConfig->Set('webmail', 'allow_additional_accounts', false);
+					$oConfig->Set('webmail', 'allow_additional_identities', false);
+					$oConfig->Set('webmail', 'popup_identity', false);
+					$oConfig->Set('login', 'sign_me_auto', \RainLoop\Enumerations\SignMeType::Unused);
+				}
 				$oConfig->Save();
 			} catch (\Throwable $e) {
 				// Non-fatal
