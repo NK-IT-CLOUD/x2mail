@@ -33,7 +33,6 @@ Your OIDC access token is passed directly to the IMAP server via OAUTHBEARER/XOA
 - IMAP server (Dovecot 2.4+ recommended for SSO)
 - For SSO: OIDC provider + `user_oidc` app (recommended) or `oidc_login`
 
-Powered by a forked, security-audited SnappyMail engine.
 	]]></description>
 	<namespace>X2Mail</namespace>
 	<category>integration</category>

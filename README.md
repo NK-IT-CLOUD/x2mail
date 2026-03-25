@@ -1,10 +1,10 @@
 # X2Mail — Nextcloud Webmail with Native XOAUTH2
 
-Feature-rich webmail client for Nextcloud with native Single Sign-On support via XOAUTH2 and OAUTHBEARER. Users log into Nextcloud via SSO and get webmail without a second login. Powered by the SnappyMail engine.
+Feature-rich webmail client for Nextcloud with native Single Sign-On support via XOAUTH2 and OAUTHBEARER. Built on a security-audited fork of [SnappyMail 2.38.2](https://github.com/the-djmaze/snappymail). Users log into Nextcloud via SSO and get webmail without a second login.
 
 ## What X2Mail Does
 
-X2Mail bridges your Nextcloud OIDC login to your IMAP server. When a user logs into Nextcloud via Keycloak/SSO, X2Mail takes the OIDC access token and uses it to authenticate against your IMAP server via OAUTHBEARER. No extra passwords, no extra login forms.
+X2Mail bridges your Nextcloud OIDC login to your IMAP server. When a user logs into Nextcloud via Keycloak/SSO, X2Mail takes the OIDC access token and uses it to authenticate against your IMAP server via OAUTHBEARER. No extra passwords, no extra login forms. Also works with traditional password authentication.
 
 ```
 User → Keycloak SSO → Nextcloud (user_oidc)
@@ -99,7 +99,6 @@ occ app:enable x2mail
 ```bash
 git clone https://github.com/NK-IT-CLOUD/x2mail.git
 cd x2mail
-make update-core   # Download SnappyMail engine
 make build         # → build/x2mail-VERSION.tar.gz
 # Then extract to custom_apps as above
 ```
@@ -132,7 +131,7 @@ occ x2mail:setup \
 2. **Configuration:**
    - Writes domain config (IMAP host, SMTP host, auth methods, SSL, Sieve)
    - Sets Nextcloud app config for auto-login
-   - Configures SnappyMail engine paths
+   - Configures internal engine paths
 
 ### Setup with Plain Password Auth
 
@@ -148,7 +147,7 @@ occ x2mail:setup \
   --auth plain
 ```
 
-Users will see the SnappyMail login form and enter their email/password manually.
+Users will see a login form and enter their email/password manually.
 
 ### Check Status
 
@@ -156,7 +155,7 @@ Users will see the SnappyMail login form and enter their email/password manually
 occ x2mail:status
 ```
 
-Shows configured domains, IMAP/SMTP settings, auth methods, OIDC status, and SnappyMail engine version.
+Shows configured domains, IMAP/SMTP settings, auth methods, and OIDC status.
 
 ### Setup Options
 
@@ -184,7 +183,7 @@ Shows configured domains, IMAP/SMTP settings, auth methods, OIDC status, and Sna
 4. X2Mail TokenBridgeListener stores access token in PHP session
 5. X2Mail LoginBridgeListener stores user ID in session
 6. User clicks "Email" in Nextcloud navigation
-7. SnappyMail engine reads token from session
+7. X2Mail reads token from session
 8. IMAP AUTHENTICATE OAUTHBEARER with the access token
 9. IMAP server validates token against Keycloak (introspection)
 10. Mailbox opens — automatic, no extra login
@@ -192,7 +191,7 @@ Shows configured domains, IMAP/SMTP settings, auth methods, OIDC status, and Sna
 
 ### Token Refresh
 
-Access tokens typically expire after 5 minutes. X2Mail's `TokenRefreshMiddleware` runs on every Nextcloud request and automatically refreshes the token via `user_oidc`'s built-in TokenService. The fresh token is written back to the session so SnappyMail always has a valid token.
+Access tokens typically expire after 5 minutes. X2Mail's `TokenRefreshMiddleware` runs on every Nextcloud request and automatically refreshes the token via `user_oidc`'s built-in TokenService. The fresh token is written back to the session so X2Mail always has a valid token.
 
 **Requirement:** `user_oidc` must have `store_login_token=1` (automatically set by `occ x2mail:setup`).
 
@@ -221,8 +220,6 @@ Access tokens typically expire after 5 minutes. X2Mail's `TokenRefreshMiddleware
 - **OpenPGP and S/MIME** encryption
 - **`occ` commands** — setup, status, settings via command line
 
-Powered by a forked, security-audited SnappyMail engine.
-
 ## Troubleshooting
 
 ### "Login form appears instead of mailbox"
@@ -240,7 +237,7 @@ Powered by a forked, security-audited SnappyMail engine.
 
 ### "Static files not loading / JS errors"
 
-- Check that `app_path` in SM config matches the NC custom_apps path
+- Check that `app_path` in config matches the NC custom_apps path
 - Run `occ x2mail:status` to verify app_path
 - Restart PHP-FPM container after deploy to clear OPcache: `docker restart nextcloud`
 
@@ -257,7 +254,6 @@ Powered by a forked, security-audited SnappyMail engine.
 ```bash
 git clone https://github.com/NK-IT-CLOUD/x2mail.git
 cd x2mail
-make update-core    # Download SnappyMail engine
 make build          # Build release tarball
 make clean          # Clean build artifacts
 ```
