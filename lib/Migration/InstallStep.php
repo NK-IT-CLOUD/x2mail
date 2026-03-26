@@ -51,6 +51,7 @@ class InstallStep implements IRepairStep
 			$oConfig->Set('webmail', 'title', 'X2Mail');
 			$oConfig->Set('webmail', 'loading_description', 'X2Mail');
 			$oConfig->Set('webmail', 'theme', 'x2mail');
+			$oConfig->Set('webmail', 'allow_themes', false);
 			$oConfig->Set('webmail', 'allow_languages_on_settings', false);
 			$oConfig->Set('login', 'allow_languages_on_login', false);
 			$bSave = true;
@@ -63,6 +64,7 @@ class InstallStep implements IRepairStep
 			$oConfig->Set('login', 'sign_me_auto', \RainLoop\Enumerations\SignMeType::Unused);
 			$oConfig->Set('imap', 'show_login_alert', false);
 			$oConfig->Set('defaults', 'autologout', 15);
+			$oConfig->Set('defaults', 'contacts_autosave', false);
 			$bSave = true;
 		}
 

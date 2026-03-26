@@ -4,6 +4,12 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.5.6] — 2026-03-26
+
+### Changed
+- SSO defaults: disable contacts autosave
+- Hide theme selector on fresh install (x2mail theme is default)
+
 ## [0.5.5] — 2026-03-26
 
 ### Fixed
