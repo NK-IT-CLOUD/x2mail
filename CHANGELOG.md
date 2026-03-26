@@ -7,17 +7,15 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 ## [0.5.9] — 2026-03-26
 
 ### Added
-- Personal settings section with own sidebar entry and app icon
-- Identity & Signatures link in personal settings (points to SM accounts page)
-- Dynamic branding from application.ini webmail.title
+- Personal settings page with Identity & Signatures management link
+- Own settings section with app icon in Nextcloud sidebar
+- Dynamic page title from admin-configured branding
 
 ### Fixed
-- PSR-12 compliance: 2346 style violations autofixed, CI CodeSniffer enforced (no more || true)
-- CSS leak reset broadened to header, user menu, modals (not just SideMenu)
-- SM admin panel rebranded from "SnappyMail" to "X2Mail"
-- Deploy script: sync SM plugin files to appdata after deploy
-- German translations for personal settings
-- PHP 8.4 CI runner upgrade
+- PSR-12 code style compliance
+- CSS isolation for Nextcloud header and user menu
+- Admin panel branding
+- German translations
 
 ## [0.5.8] — 2026-03-26
 
