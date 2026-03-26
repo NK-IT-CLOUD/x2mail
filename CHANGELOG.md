@@ -4,6 +4,11 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.5.5] — 2026-03-26
+
+### Fixed
+- Default theme set to x2mail on fresh install (was falling back to "Default")
+
 ## [0.5.4] — 2026-03-26
 
 ### Added
