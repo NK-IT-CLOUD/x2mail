@@ -4,6 +4,13 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.5.7] — 2026-03-26
+
+### Fixed
+- SideMenu app compatibility: SnappyMail's global CSS (ul/li margin resets) no longer leaks into Nextcloud UI
+- CSS selector scoping: all embed.css rules prefixed with `#rl-app` to prevent style leakage
+- Boot CSS: strip body/html rules from SnappyMail's inline boot stylesheet
+
 ## [0.5.6] — 2026-03-26
 
 ### Changed

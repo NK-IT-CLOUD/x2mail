@@ -1,15 +1,27 @@
 /*
 This stylesheet is used when SnappyMail runs in embed mode.
 */
-#content.app-snappymail {
+
+/* Fix: SnappyMail's global ul/li resets leak into Nextcloud UI (SideMenu gap) */
+#side-menu-container ul,
+#side-menu-container ol {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+#side-menu-container li {
+	line-height: normal;
+}
+#content.app-x2mail {
 	max-height: 100%;
+	overflow: hidden;
 }
 #content #rl-app {
-	min-width: 100%;
+	width: 100%;
 	min-height: 100%;
 }
 
-.squire-wysiwyg {
+#rl-app .squire-wysiwyg {
 	min-width: 100%;
 	min-height: 100%;
 }
@@ -91,7 +103,7 @@ This stylesheet is used when SnappyMail runs in embed mode.
 	list-style: initial;
 }
 
-body > header ul {
+#rl-app header ul {
 	margin: 0;
 }
 
@@ -99,7 +111,7 @@ body > header ul {
 	color: inherit;
 }
 
-.messageListItem * {
+#rl-app .messageListItem * {
 	cursor: pointer;
 }
 
@@ -117,35 +129,35 @@ body > header ul {
  * https://github.com/the-djmaze/snappymail/issues/96#issuecomment-1279783076
  */
 
-.messageList {
+#rl-app .messageList {
 	margin: 0 5px 0 0;
 }
 
-a.selectable {
+#rl-app a.selectable {
 	margin: 2px;
 	line-height: inherit !important;
 	border-radius: var(--border-radius-pill);
 }
 
-a.selectable::after {
+#rl-app a.selectable::after {
 	display: block;
 	margin: 0 !important;
 	top: 50%;
 	transform: translateY(-50%);
 }
 
-.btn {
+#rl-app .btn {
 	border: initial !important;
 }
 
-.btn-group > .btn {
+#rl-app .btn-group > .btn {
 	border-radius: 0;
 }
-.btn-group > .btn:first-child {
+#rl-app .btn-group > .btn:first-child {
 	border-top-left-radius: var(--border-radius-pill, 3px);
 	border-bottom-left-radius: var(--border-radius-pill, 3px);
 }
-.btn-group > .btn:last-child {
+#rl-app .btn-group > .btn:last-child {
 	border-top-right-radius: var(--border-radius-pill, 3px);
 	border-bottom-right-radius: var(--border-radius-pill, 3px);
 }

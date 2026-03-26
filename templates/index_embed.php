@@ -1,4 +1,6 @@
-<style id="app-boot-css"><?php print_unescaped($_['BaseAppBootCss']); ?></style>
+<style id="app-boot-css"><?php print_unescaped(
+	preg_replace('/(?:^|(?<=[\};]))(?:body|html)[\w#.\-]*(?:\s*,\s*(?:body|html)[\w#.\-]*)*\s*\{[^}]*\}/s', '', $_['BaseAppBootCss'])
+); ?></style>
 <style id="app-theme-style"><?php print_unescaped($_['BaseAppThemeCss']); ?></style>
 <div id="rl-app" data-admin="<?php p($_['Admin']); ?>" spellcheck="false">
 	<div id="rl-loading">
