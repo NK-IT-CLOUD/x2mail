@@ -56,8 +56,15 @@ class UnreadMailWidget implements IAPIWidgetV2, IIconWidget, IReloadableWidget
 		try {
 			SnappyMailHelper::startApp();
 			$oActions = \RainLoop\Api::Actions();
-			$oAccount = $oActions->getAccountFromToken(false);
+			$oAccount = $oActions->getMainAccountFromToken(false);
 			if (!$oAccount) {
+				$oAccount = $oActions->getAccountFromToken(false);
+			}
+			if (!$oAccount) {
+				\OCP\Server::get(\Psr\Log\LoggerInterface::class)->info(
+					'X2Mail widget: no SM session — showing fallback',
+					['app' => 'x2mail']
+				);
 				return new WidgetItems([], $this->l10n->t('Open X2Mail to connect'));
 			}
 
@@ -97,6 +104,10 @@ class UnreadMailWidget implements IAPIWidgetV2, IIconWidget, IReloadableWidget
 
 			return new WidgetItems($items);
 		} catch (\Throwable $e) {
+			\OCP\Server::get(\Psr\Log\LoggerInterface::class)->warning(
+				'X2Mail widget error: ' . $e->getMessage(),
+				['app' => 'x2mail', 'exception' => $e]
+			);
 			return new WidgetItems([], $this->l10n->t('Open X2Mail to connect'));
 		}
 	}

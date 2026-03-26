@@ -4,6 +4,15 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.5.4] — 2026-03-26
+
+### Added
+- First release on Nextcloud App Store
+- Signed with official Nextcloud Code Signing certificate
+
+### Changed
+- Updated screenshots for App Store listing
+
 ## [0.5.3] — 2026-03-25
 
 ### Added
