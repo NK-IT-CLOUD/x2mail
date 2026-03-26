@@ -17,6 +17,14 @@
 		"SELECT_CALENDAR": "Select calendar",
 		"FILE_ATTACH": "attach",
 		"FILE_INTERNAL": "internal",
-		"FILE_PUBLIC": "public"
+		"FILE_PUBLIC": "public",
+		"EVENT_CARD_TITLE": "Calendar Invitation",
+		"EVENT_CARD_CANCELLED": "Cancelled",
+		"EVENT_CARD_SAVE": "Save to Calendar",
+		"EVENT_CARD_SAVED": "Saved to calendar",
+		"EVENT_CARD_ORGANIZER": "Organizer",
+		"EVENT_CARD_WHEN": "When",
+		"EVENT_CARD_WHERE": "Where",
+		"EVENT_CARD_ATTENDEES": "Attendees"
 	}
 }

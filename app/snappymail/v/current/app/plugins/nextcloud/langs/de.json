@@ -17,6 +17,14 @@
 		"SELECT_CALENDAR": "Kalender auswählen",
 		"FILE_ATTACH": "anfügen",
 		"FILE_INTERNAL": "intern",
-		"FILE_PUBLIC": "öffentlich"
+		"FILE_PUBLIC": "öffentlich",
+		"EVENT_CARD_TITLE": "Kalendereinladung",
+		"EVENT_CARD_CANCELLED": "Abgesagt",
+		"EVENT_CARD_SAVE": "In Kalender speichern",
+		"EVENT_CARD_SAVED": "Im Kalender gespeichert",
+		"EVENT_CARD_ORGANIZER": "Organisator",
+		"EVENT_CARD_WHEN": "Wann",
+		"EVENT_CARD_WHERE": "Ort",
+		"EVENT_CARD_ATTENDEES": "Teilnehmer"
 	}
 }

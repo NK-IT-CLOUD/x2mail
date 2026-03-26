@@ -394,6 +394,12 @@ class NextcloudCalendarsPopupView extends rl.pluginPopupView {
 			for (let i = 0; i < responseList.length; ++i) {
 				const e = responseList[i];
 				if (getDavElementByTagName(e, 'resourcetype').getElementsByTagNameNS(nsCalDAV, 'calendar').length) {
+					// Skip read-only calendars (Deck-generated etc.)
+					const privSet = getDavElementByTagName(e, 'current-user-privilege-set');
+					if (privSet && !getDavElementsByTagName(privSet, 'write').length) {
+						continue;
+					}
+
 					const displayNameElement = getElementsInNamespaces(e, 'displayname')[0];
 					const displayName = displayNameElement ? displayNameElement.textContent.trim() : '';
 
@@ -455,14 +461,16 @@ rl.nextcloud = {
 				.replace(/\r?\n/g, '\r\n')
 		})
 		.then(response => {
-			if (201 == response.status) {
-				// Created
-			} else if (204 == response.status) {
-				// Not modified
+			const summary = event.SUMMARY || 'Event';
+			if (201 == response.status || 204 == response.status) {
+				OC().Notification.showTemporary(summary + (201 == response.status ? ' — saved to calendar' : ' — updated'));
 			} else {
-//				response.text().then(text => console.error({status:response.status, body:text}));
+				OC().Notification.showTemporary('Calendar save failed (HTTP ' + response.status + ')');
 				Promise.reject(new Error({ response }));
 			}
+		})
+		.catch(() => {
+			OC().Notification.showTemporary('Calendar save failed');
 		});
 	},
 

@@ -22,3 +22,83 @@
 #V-PopupsContacts .b-view-content.read-only :not(.e-checkbox)>span {
 	display: inline-block !important;
 }
+
+/* ICS Event Card — shown above message body for calendar invitations */
+.sm-nc-event-card {
+	margin: 8px 12px;
+	padding: 12px 16px;
+	border: 1px solid var(--nc-color-border, #ededed);
+	border-left: 4px solid var(--nc-color-element-info, #0077C7);
+	border-radius: var(--nc-border-radius, 3px);
+	background: var(--nc-color-info, #D5F1FA);
+	color: var(--nc-color-main-text, #222);
+	font-size: 14px;
+	line-height: 1.5;
+}
+.sm-nc-event-card--cancelled {
+	border-left-color: var(--nc-color-element-error, #c90000);
+	background: var(--nc-color-error, #FFE7E7);
+}
+.sm-nc-event-card--cancelled .sm-nc-event-card__title {
+	text-decoration: line-through;
+}
+.sm-nc-event-card__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 8px;
+}
+.sm-nc-event-card__title {
+	font-weight: 600;
+	font-size: 15px;
+}
+.sm-nc-event-card__badge {
+	font-size: 11px;
+	padding: 2px 8px;
+	border-radius: var(--nc-border-radius-pill, 100px);
+	background: var(--nc-color-element-error, #c90000);
+	color: #fff;
+}
+.sm-nc-event-card__rows {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 4px 12px;
+	margin-bottom: 10px;
+}
+.sm-nc-event-card__label {
+	font-weight: 700;
+	color: var(--nc-color-main-text, #222);
+	white-space: nowrap;
+}
+.sm-nc-event-card__value {
+	word-break: break-word;
+}
+.sm-nc-event-card__actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.sm-nc-event-card__save {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 16px;
+	border: 0;
+	border-radius: var(--nc-border-radius-pill, 100px);
+	background: var(--nc-color-element-info, #0077C7);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+}
+.sm-nc-event-card__save:hover {
+	filter: brightness(1.1);
+}
+.sm-nc-event-card__save:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
+.sm-nc-event-card__status {
+	font-size: 13px;
+	color: var(--nc-color-element-success, #099f05);
+}

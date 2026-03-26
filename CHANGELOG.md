@@ -4,6 +4,17 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.5.8] — 2026-03-26
+
+### Added
+- ICS Event Card: calendar invitations displayed prominently above message body
+- Event details: date/time, organizer, location, attendees with formatted display
+- One-click "Save to Calendar" button with CalDAV integration
+- Calendar picker filters read-only calendars (Deck-generated etc.)
+- Toast notification on successful calendar save
+- German and English translations for event card UI
+- App Store screenshot for calendar integration
+
 ## [0.5.7] — 2026-03-26
 
 ### Fixed
