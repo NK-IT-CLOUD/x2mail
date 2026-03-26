@@ -14,17 +14,19 @@ use OCP\User\Events\BeforeUserLoggedOutEvent;
  * Trigger SnappyMail logout on Nextcloud logout.
  */
 /** @implements IEventListener<Event> */
-class LogoutListener implements IEventListener {
-	public function handle(Event $event): void {
-		if (!($event instanceof BeforeUserLoggedOutEvent)) {
-			return;
-		}
+class LogoutListener implements IEventListener
+{
+    public function handle(Event $event): void
+    {
+        if (!($event instanceof BeforeUserLoggedOutEvent)) {
+            return;
+        }
 
-		try {
-			SnappyMailHelper::loadApp();
-			\RainLoop\Api::Actions()->DoLogout();
-		} catch (\Throwable $e) {
-			LogService::warning('SM logout failed: ' . $e->getMessage());
-		}
-	}
+        try {
+            SnappyMailHelper::loadApp();
+            \RainLoop\Api::Actions()->DoLogout();
+        } catch (\Throwable $e) {
+            LogService::warning('SM logout failed: ' . $e->getMessage());
+        }
+    }
 }

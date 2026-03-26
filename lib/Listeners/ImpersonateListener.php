@@ -19,27 +19,32 @@ use OCP\ISession;
  * @see https://github.com/nextcloud/impersonate/issues/179
  */
 /** @implements IEventListener<Event> */
-class ImpersonateListener implements IEventListener {
-	public function __construct(
-		private ISession $session,
-	) {}
+class ImpersonateListener implements IEventListener
+{
+    public function __construct(
+        private ISession $session,
+    ) {
+    }
 
-	public function handle(Event $event): void {
-		$class = get_class($event);
-		if ($class !== 'OCA\\Impersonate\\Events\\BeginImpersonateEvent'
-			&& $class !== 'OCA\\Impersonate\\Events\\EndImpersonateEvent') {
-			return;
-		}
+    public function handle(Event $event): void
+    {
+        $class = get_class($event);
+        if (
+            $class !== 'OCA\\Impersonate\\Events\\BeginImpersonateEvent'
+            && $class !== 'OCA\\Impersonate\\Events\\EndImpersonateEvent'
+        ) {
+            return;
+        }
 
-		$this->session->set('snappymail-passphrase', '');
+        $this->session->set('snappymail-passphrase', '');
 
-		try {
-			SnappyMailHelper::loadApp();
-			\RainLoop\Api::Actions()->Logout(true);
-		} catch (\Throwable $e) {
-			LogService::warning('SM impersonate logout failed: ' . $e->getMessage());
-		}
+        try {
+            SnappyMailHelper::loadApp();
+            \RainLoop\Api::Actions()->Logout(true);
+        } catch (\Throwable $e) {
+            LogService::warning('SM impersonate logout failed: ' . $e->getMessage());
+        }
 
-		LogService::debug("Impersonate event: {$class}");
-	}
+        LogService::debug("Impersonate event: {$class}");
+    }
 }

@@ -22,37 +22,40 @@ use OCP\ISession;
  *
  * IMPORTANT: Do NOT import any OCA\UserOIDC classes here.
  */
-class TokenRefreshMiddleware extends Middleware {
-	private bool $synced = false;
+class TokenRefreshMiddleware extends Middleware
+{
+    private bool $synced = false;
 
-	public function __construct(
-		private ISession $session,
-	) {}
+    public function __construct(
+        private ISession $session,
+    ) {
+    }
 
-	public function beforeController($controller, string $methodName): void {
-		if ($this->synced || !$this->session->get('is_oidc')) {
-			return;
-		}
-		$this->synced = true;
+    public function beforeController($controller, string $methodName): void
+    {
+        if ($this->synced || !$this->session->get('is_oidc')) {
+            return;
+        }
+        $this->synced = true;
 
-		try {
-			$tokenService = \OCP\Server::get('OCA\UserOIDC\Service\TokenService');
-			// getToken(true) handles refresh internally — returns fresh token if expired
-			$token = $tokenService->getToken(true);
+        try {
+            $tokenService = \OCP\Server::get('OCA\UserOIDC\Service\TokenService');
+            // getToken(true) handles refresh internally — returns fresh token if expired
+            $token = $tokenService->getToken(true);
 
-			if ($token === null) {
-				return;
-			}
+            if ($token === null) {
+                return;
+            }
 
-			$freshToken = $token->getAccessToken();
-			$current = $this->session->get('oidc_access_token');
+            $freshToken = $token->getAccessToken();
+            $current = $this->session->get('oidc_access_token');
 
-			if ($freshToken !== $current) {
-				$this->session->set('oidc_access_token', $freshToken);
-				LogService::debug('Token synced to session');
-			}
-		} catch (\Throwable $e) {
-			LogService::warning('Token refresh skipped: ' . $e->getMessage());
-		}
-	}
+            if ($freshToken !== $current) {
+                $this->session->set('oidc_access_token', $freshToken);
+                LogService::debug('Token synced to session');
+            }
+        } catch (\Throwable $e) {
+            LogService::warning('Token refresh skipped: ' . $e->getMessage());
+        }
+    }
 }

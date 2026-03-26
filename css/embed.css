@@ -2,14 +2,23 @@
 This stylesheet is used when SnappyMail runs in embed mode.
 */
 
-/* Fix: SnappyMail's global ul/li resets leak into Nextcloud UI (SideMenu gap) */
+/* Fix: SnappyMail's global ul/li resets leak into Nextcloud UI (SideMenu, user menu, etc.) */
+#header ul,
+#header ol,
 #side-menu-container ul,
-#side-menu-container ol {
+#side-menu-container ol,
+.header-menu ul,
+.header-menu ol,
+.modal-container ul,
+.modal-container ol {
 	margin: 0;
 	padding: 0;
 	list-style: none;
 }
-#side-menu-container li {
+#header li,
+#side-menu-container li,
+.header-menu li,
+.modal-container li {
 	line-height: normal;
 }
 #content.app-x2mail {

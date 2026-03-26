@@ -3,7 +3,7 @@
 	<id>x2mail</id>
 	<name>X2Mail</name>
 	<summary>Webmail with native XOAUTH2/OAUTHBEARER SSO support</summary>
-	<version>0.5.8</version>
+	<version>0.5.9</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author homepage="https://github.com/NK-IT-CLOUD/x2mail">NK-IT Dev</author>
 	<website>https://github.com/NK-IT-CLOUD/x2mail</website>
@@ -51,6 +51,7 @@ Your OIDC access token is passed directly to the IMAP server via OAUTHBEARER/XOA
 		<admin>OCA\X2Mail\Settings\AdminSettings</admin>
 		<admin-section>OCA\X2Mail\Settings\AdminSection</admin-section>
 		<personal>OCA\X2Mail\Settings\PersonalSettings</personal>
+		<personal-section>OCA\X2Mail\Settings\PersonalSection</personal-section>
 	</settings>
 	<navigations>
 		<navigation>
