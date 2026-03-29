@@ -4,7 +4,7 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
-## [0.6.1] — 2026-03-30
+## [0.6.1] — Unreleased
 
 ### Added
 - Dashboard widget: unread mails stay visible after OIDC token expiry (auto-refresh)
