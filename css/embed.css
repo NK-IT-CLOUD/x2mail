@@ -1,0 +1,182 @@
+/*
+This stylesheet is used when X2Mail runs in embed mode.
+*/
+
+/* Fix: X2Mail's global ul/li resets leak into Nextcloud UI (SideMenu, user menu, etc.) */
+#header ul,
+#header ol,
+#side-menu-container ul,
+#side-menu-container ol,
+.header-menu ul,
+.header-menu ol,
+.modal-container ul,
+.modal-container ol {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+#header li,
+#side-menu-container li,
+.header-menu li,
+.modal-container li {
+	line-height: normal;
+}
+#content.app-x2mail {
+	max-height: 100%;
+	overflow: hidden;
+}
+#content #x2m-app {
+	width: 100%;
+	height: 100%;
+	min-height: 100%;
+}
+
+#x2m-app .squire-wysiwyg {
+	min-width: 100%;
+	min-height: 100%;
+}
+
+/* Hide SM admin logout (admin panel accessed via NC settings) */
+#V-AdminPane .btn-logout {
+	display: none;
+}
+
+/* SSO mode: hide user logout (users log out via Nextcloud, not SM) */
+#x2m-app [data-bind*="logoutClick"] {
+	display: none !important;
+}
+
+/* SSO mode: hide auto-logout setting (NC manages the session) */
+#x2m-app .control-group:has([data-i18n="SETTINGS_SECURITY/LABEL_AUTOLOGOUT"]) {
+	display: none !important;
+}
+
+/* Hide toggleLeftPanel button in settings view — no left panel to toggle */
+#x2m-app .b-toolbar .toggleLeft {
+	display: none !important;
+}
+
+/* Hide redundant folder settings icon in sidebar — settings accessible via dropdown menu */
+#x2m-app [data-bind*="configureFolders"] {
+	display: none !important;
+}
+
+#x2m-app select,
+#x2m-app input
+{
+	min-height: auto;
+	height: auto;
+	margin: 0;
+	padding: 3px;
+}
+#x2m-app .select, #x2m-app select {
+	padding-right: 1.5em !important;
+}
+
+#x2m-app button.btn:not(.button-vue) {
+	min-height: auto;
+	height: auto;
+	margin: 0;
+	padding: 0 12px;
+	line-height: 2;
+}
+
+#x2m-app .form-horizontal .control-group > :not(label)
+{
+	margin-left: 20px;
+}
+
+#x2m-app .LoginView .fontastic + input {
+	padding-left: 30px;
+}
+
+#x2m-app .loading::after {
+	display: none;
+}
+
+#x2m-app .squire-plain, #x2m-app .squire-wysiwyg {
+	font-size: 13px;
+	height: 100%;
+	line-height: 16px;
+	min-height: 200px;
+}
+
+#x2m-app tbody tr:hover {
+	background-color: inherit;
+}
+
+#x2m-app table {
+	white-space: inherit;
+}
+
+#x2m-app .b-text-part ul {
+	list-style: initial;
+}
+
+#x2m-app header ul {
+	margin: 0;
+}
+
+#x2m-app h3 {
+	color: inherit;
+}
+
+#x2m-app .messageListItem * {
+	cursor: pointer;
+}
+
+/** Firefox < 98 dialog polyfill */
+#x2m-app dialog.polyfill {
+	margin-top: 50px;
+	max-height: calc(100vh - 60px);
+}
+
+/** messageList spacing fix */
+
+#x2m-app .messageList {
+	margin: 0 5px 0 0;
+}
+
+#x2m-app a.selectable {
+	margin: 2px;
+	line-height: inherit !important;
+	border-radius: var(--border-radius-pill);
+}
+
+#x2m-app a.selectable::after {
+	display: block;
+	margin: 0 !important;
+	top: 50%;
+	transform: translateY(-50%);
+}
+
+#x2m-app .btn {
+	border: initial !important;
+}
+
+#x2m-app .btn-group > .btn {
+	border-radius: 0;
+}
+#x2m-app .btn-group > .btn:first-child {
+	border-top-left-radius: var(--border-radius-pill, 3px);
+	border-bottom-left-radius: var(--border-radius-pill, 3px);
+}
+#x2m-app .btn-group > .btn:last-child {
+	border-top-right-radius: var(--border-radius-pill, 3px);
+	border-bottom-right-radius: var(--border-radius-pill, 3px);
+}
+
+@media print {
+	#body-user #header {
+		display: none;
+	}
+	#content {
+		padding-top: 0;
+	}
+}
+
+@media screen and (max-width: 799px) {
+	#body-user #x2m-left {
+		top: 50px;
+	}
+}

@@ -1,0 +1,616 @@
+<?php
+
+use X2Mail\Engine\Providers\AddressBook\AddressBookInterface;
+use X2Mail\Engine\Providers\AddressBook\Classes\Contact;
+use Sabre\VObject\Component\VCard;
+
+class NextcloudAddressBook implements AddressBookInterface
+{
+	use \X2Mail\Mail\Log\Inherit;
+
+	private ?\OCP\Contacts\IManager $cm = null;
+	private ?object $cardDavBackend = null;
+	private string $addressBookKey = '';
+	private int $addressBookId = 0;
+	private string $sEmail = '';
+	private ?array $userBookKeys = null;
+	private ?array $bookKeyToName = null;
+
+	/**
+	 * No-op stub — Actions/Contacts.php:25 calls this unconditionally.
+	 * Not part of AddressBookInterface but required for compatibility
+	 * with PdoAddressBook's CardDAV trait.
+	 */
+	public function setDAVClientConfig(?array $aConfig): void {}
+
+	public function IsSupported(): bool
+	{
+		return $this->getManager()?->isEnabled() ?? false;
+	}
+
+	public function SetEmail(string $sEmail): bool
+	{
+		$this->sEmail = $sEmail;
+		return true;
+	}
+
+	public function Sync(): bool
+	{
+		// No sync needed — we read/write NC directly
+		return true;
+	}
+
+	public function Export(string $sType = 'vcf'): bool
+	{
+		if ('vcf' !== $sType) {
+			return false;
+		}
+
+		$cm = $this->getManager();
+		if (!$cm) {
+			return false;
+		}
+
+		$results = $this->filterUserContacts(
+			$cm->search('', ['FN'], ['limit' => 10000])
+		);
+
+		foreach ($results as $contact) {
+			if (!empty($contact['UID'])) {
+				$vCard = $this->contactToVCard($contact);
+				if ($vCard) {
+					echo $vCard->serialize();
+				}
+			}
+		}
+
+		return true;
+	}
+
+	public function ContactSave(Contact $oContact): bool
+	{
+		$vCard = $oContact->vCard;
+		if (!$vCard) {
+			return false;
+		}
+
+		$backend = $this->getCardDavBackend();
+		$bookId = $this->getDefaultAddressBookId();
+		if (!$backend || !$bookId) {
+			return false;
+		}
+
+		// Ensure UID exists
+		if (empty((string) $vCard->UID)) {
+			$vCard->UID = \X2Mail\Engine\UUID::generate();
+		}
+
+		$vCard->REV = \gmdate('Ymd\\THis\\Z');
+		$vCard->PRODID = 'X2Mail-' . APP_VERSION;
+		$cardData = $vCard->serialize();
+		$uri = (string) $vCard->UID . '.vcf';
+
+		try {
+			// Check if card already exists (update) or is new (create)
+			$existing = $backend->getCard($bookId, $uri);
+			if ($existing) {
+				$backend->updateCard($bookId, $uri, $cardData);
+			} else {
+				$backend->createCard($bookId, $uri, $cardData);
+			}
+		} catch (\Throwable $e) {
+			$this->logException($e);
+			return false;
+		}
+
+		$oContact->id = (string) \abs(\crc32((string) $vCard->UID));
+		$oContact->IdContactStr = (string) $vCard->UID;
+		return true;
+	}
+
+	public function DeleteContacts(array $aContactIds): bool
+	{
+		$backend = $this->getCardDavBackend();
+		$bookId = $this->getDefaultAddressBookId();
+		if (!$backend || !$bookId) {
+			return false;
+		}
+
+		// IDs are crc32 hashes of UIDs. We need to find the matching URI.
+		// Get all cards and match by crc32(UID).
+		$ok = true;
+		$cards = $backend->getCards($bookId);
+		foreach ($aContactIds as $targetId) {
+			$found = false;
+			foreach ($cards as $card) {
+				$uid = '';
+				if (\preg_match('/^UID:(.+)$/mi', $card['carddata'] ?? '', $m)) {
+					$uid = \trim($m[1]);
+				}
+				if ($uid && \abs(\crc32($uid)) == $targetId) {
+					try {
+						$backend->deleteCard($bookId, $card['uri']);
+						$found = true;
+					} catch (\Throwable $e) {
+						$this->logException($e);
+						$ok = false;
+					}
+					break;
+				}
+			}
+			if (!$found) {
+				$ok = false;
+			}
+		}
+
+		return $ok;
+	}
+
+	public function DeleteAllContacts(string $sEmail): bool
+	{
+		// Not practical via IManager — would need to search+delete all
+		return false;
+	}
+
+	public function GetContacts(int $iOffset = 0, int $iLimit = 20, string $sSearch = '', int &$iResultCount = 0): array
+	{
+		$cm = $this->getManager();
+		if (!$cm) {
+			return [];
+		}
+
+		// IManager::search doesn't support offset natively, fetch all and slice.
+		// Cap at 10000 as safety bound for large address books.
+		$allResults = $cm->search($sSearch, ['FN', 'EMAIL', 'NICKNAME', 'TEL'], ['limit' => 10000]);
+
+		$iResultCount = \count($allResults);
+		$sliced = \array_slice($allResults, $iOffset, $iLimit);
+
+		$contacts = [];
+		foreach ($sliced as $ncContact) {
+			$contact = $this->ncContactToContact($ncContact);
+			if ($contact) {
+				$contacts[] = $contact;
+			}
+		}
+
+		return $contacts;
+	}
+
+	public function GetContactByEmail(string $sEmail): ?Contact
+	{
+		$cm = $this->getManager();
+		if (!$cm) {
+			return null;
+		}
+
+		$results = $cm->search($sEmail, ['EMAIL'], ['strict_search' => true]);
+
+		if ($results) {
+			return $this->ncContactToContact(\reset($results));
+		}
+
+		return null;
+	}
+
+	public function GetContactByID($mID, bool $bIsStrID = false): ?Contact
+	{
+		$cm = $this->getManager();
+		if (!$cm) {
+			return null;
+		}
+
+		// Try UID search first — NC IManager doesn't support numeric id search directly.
+		// Engine stores UID as IdContactStr; the UI may pass either UID or numeric id.
+		$searchValue = (string) $mID;
+		$results = $cm->search($searchValue, ['UID'], ['strict_search' => true]);
+
+		if (!$results && !$bIsStrID) {
+			// Fallback: search all and filter by NC row id (capped for safety)
+			$allResults = $cm->search('', ['FN'], ['limit' => 10000]);
+			$results = \array_filter($allResults, fn($c) => isset($c['id']) && $c['id'] == $mID);
+		}
+
+		if ($results) {
+			return $this->ncContactToContact(\reset($results));
+		}
+
+		return null;
+	}
+
+	public function GetSuggestions(string $sSearch, int $iLimit = 20): array
+	{
+		$cm = $this->getManager();
+		if (!$cm) {
+			return [];
+		}
+
+		$results = $cm->search($sSearch, ['FN', 'NICKNAME', 'EMAIL'], ['limit' => $iLimit]);
+
+		$suggestions = [];
+		foreach ($results as $contact) {
+			if (empty($contact['UID'])) {
+				continue;
+			}
+
+			$fullName = \trim($contact['FN'] ?? $contact['NICKNAME'] ?? '');
+			$emails = $contact['EMAIL'] ?? '';
+			if (!\is_array($emails)) {
+				$emails = $emails ? [$emails] : [];
+			}
+
+			foreach ($emails as $email) {
+				$emailValue = \is_array($email) ? ($email['value'] ?? '') : $email;
+				if ($emailValue) {
+					$suggestions[] = [$emailValue, $fullName];
+				}
+			}
+		}
+
+		return \array_slice($suggestions, 0, $iLimit);
+	}
+
+	public function IncFrec(array $aEmails, bool $bCreateAuto = true): bool
+	{
+		// No frequency tracking in NC Contacts
+		return true;
+	}
+
+	public function Test(): string
+	{
+		$cm = $this->getManager();
+		if (!$cm) {
+			return 'Nextcloud ContactsManager not available';
+		}
+		if (!$cm->isEnabled()) {
+			return 'Nextcloud Contacts not enabled';
+		}
+
+		$books = $cm->getUserAddressBooks();
+		return 'Nextcloud Contacts OK (' . \count($books) . ' address books)';
+	}
+
+	// --- Private helpers ---
+
+	private function getCardDavBackend(): ?object
+	{
+		if (null === $this->cardDavBackend) {
+			try {
+				$this->cardDavBackend = \OCP\Server::get(\OCA\DAV\CardDAV\CardDavBackend::class);
+			} catch (\Throwable $e) {
+				$this->logException($e);
+			}
+		}
+		return $this->cardDavBackend;
+	}
+
+	private function getDefaultAddressBookId(): int
+	{
+		if ($this->addressBookId) {
+			return $this->addressBookId;
+		}
+
+		$backend = $this->getCardDavBackend();
+		if (!$backend) {
+			return 0;
+		}
+
+		try {
+			$user = \OCP\Server::get(\OCP\IUserSession::class)->getUser();
+			if (!$user) {
+				return 0;
+			}
+			$principal = 'principals/users/' . $user->getUID();
+			$books = $backend->getAddressBooksForUser($principal);
+			foreach ($books as $book) {
+				if ($book['uri'] === 'contacts') {
+					$this->addressBookId = (int) $book['id'];
+					return $this->addressBookId;
+				}
+			}
+			// Fallback: first non-system book
+			foreach ($books as $book) {
+				if (($book['{DAV:}resourcetype']->is('{urn:ietf:params:xml:ns:carddav}addressbook') ?? true)) {
+					$this->addressBookId = (int) $book['id'];
+					return $this->addressBookId;
+				}
+			}
+		} catch (\Throwable $e) {
+			$this->logException($e);
+		}
+		return 0;
+	}
+
+	private function getManager(): ?\OCP\Contacts\IManager
+	{
+		if (null === $this->cm) {
+			if (\class_exists('OCP\\Server')) {
+				try {
+					$this->cm = \OCP\Server::get(\OCP\Contacts\IManager::class);
+				} catch (\Throwable $e) {
+					$this->logException($e);
+				}
+			}
+		}
+		return $this->cm;
+	}
+
+	/**
+	 * Get keys of user-owned (non-system) address books for in-memory filtering.
+	 * Does NOT mutate the shared IManager singleton.
+	 */
+	private function getUserBookKeys(): array
+	{
+		if (null === $this->userBookKeys) {
+			$this->loadUserBooks();
+		}
+		return $this->userBookKeys;
+	}
+
+	private function getBookName(string $key): string
+	{
+		if (null === $this->bookKeyToName) {
+			$this->loadUserBooks();
+		}
+		return $this->bookKeyToName[$key] ?? '';
+	}
+
+	private function loadUserBooks(): void
+	{
+		$this->userBookKeys = [];
+		$this->bookKeyToName = [];
+		$cm = $this->getManager();
+		if ($cm) {
+			foreach ($cm->getUserAddressBooks() as $book) {
+				$key = $book->getKey();
+				$this->bookKeyToName[$key] = $book->getDisplayName();
+				if (!$book->isSystemAddressBook()) {
+					$this->userBookKeys[] = $key;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Filter search results to user-owned address books only (in-memory, no singleton mutation).
+	 * If no user-owned books exist, returns empty to avoid leaking system/global contacts.
+	 */
+	private function filterUserContacts(array $results): array
+	{
+		$keys = $this->getUserBookKeys();
+		if (!$keys) {
+			return [];
+		}
+		return \array_values(
+			\array_filter($results, fn($c) => \in_array($c['addressbook-key'] ?? '', $keys))
+		);
+	}
+
+	private function getDefaultAddressBookKey(): string
+	{
+		if ($this->addressBookKey) {
+			return $this->addressBookKey;
+		}
+
+		$cm = $this->getManager();
+		if (!$cm) {
+			return '';
+		}
+
+		$books = $cm->getUserAddressBooks();
+
+		// Prefer first non-system addressbook (typically "Contacts")
+		foreach ($books as $book) {
+			if (!$book->isSystemAddressBook()) {
+				$this->addressBookKey = $book->getKey();
+				return $this->addressBookKey;
+			}
+		}
+
+		// Fallback: first available
+		foreach ($books as $book) {
+			$this->addressBookKey = $book->getKey();
+			return $this->addressBookKey;
+		}
+
+		return '';
+	}
+
+	private function ncContactToContact(array $ncContact): ?Contact
+	{
+		if (empty($ncContact['UID']) || empty($ncContact['EMAIL'])) {
+			return null;
+		}
+
+		$vCard = $this->contactToVCard($ncContact);
+		if (!$vCard) {
+			return null;
+		}
+
+		$contact = new Contact();
+		// SM expects numeric id (JS typeCasts to number).
+		// Use NC id if numeric, otherwise generate stable int from UID hash.
+		$ncId = $ncContact['id'] ?? '';
+		if ($ncId && \is_numeric($ncId)) {
+			$contact->id = (string) $ncId;
+		} else {
+			// CRC32 gives a stable 32-bit int from the UID string
+			$contact->id = (string) \abs(\crc32((string) $ncContact['UID']));
+		}
+		$contact->IdContactStr = (string) $ncContact['UID'];
+		$contact->setVCard($vCard);
+
+		// System addressbook contacts are read-only
+		$bookKey = $ncContact['addressbook-key'] ?? '';
+		$userKeys = $this->getUserBookKeys();
+		$contact->ReadOnly = $userKeys && !\in_array($bookKey, $userKeys);
+		$contact->AddressBookName = $this->getBookName($bookKey);
+
+		return $contact;
+	}
+
+	private function contactToVCard(array $ncContact): ?VCard
+	{
+		// If NC returns raw vCard data, parse it directly
+		if (!empty($ncContact['carddata'])) {
+			try {
+				$vCard = \Sabre\VObject\Reader::read($ncContact['carddata']);
+				if ($vCard instanceof VCard) {
+					return $vCard;
+				}
+			} catch (\Throwable $e) {
+				$this->logException($e);
+			}
+		}
+
+		// Build vCard from NC property arrays
+		$vCard = new VCard();
+		$vCard->UID = $ncContact['UID'] ?? \X2Mail\Engine\UUID::generate();
+		$fn = $ncContact['FN'] ?? '';
+		$vCard->FN = $fn;
+
+		// X2Mail displays the N (structured name) property.
+		// NC returns N as semicolon-separated: "Last;First;Middle;Prefix;Suffix"
+		$sLast = '';
+		$sFirst = '';
+		$sMiddle = '';
+		$sPrefix = '';
+		$sSuffix = '';
+		if (!empty($ncContact['N'])) {
+			$nParts = \explode(';', (string) $ncContact['N']);
+			$sLast = $nParts[0] ?? '';
+			$sFirst = $nParts[1] ?? '';
+			$sMiddle = $nParts[2] ?? '';
+			$sPrefix = $nParts[3] ?? '';
+			$sSuffix = $nParts[4] ?? '';
+		}
+		// If only surName set (e.g. system contacts "alice;;;;"), use FN as givenName
+		if (!$sFirst && !$sMiddle) {
+			$sFirst = $fn;
+			$sLast = '';
+		}
+		$vCard->N = [$sLast, $sFirst, $sMiddle, $sPrefix, $sSuffix];
+
+		if (!empty($ncContact['EMAIL'])) {
+			$emails = \is_array($ncContact['EMAIL']) ? $ncContact['EMAIL'] : [$ncContact['EMAIL']];
+			foreach ($emails as $email) {
+				if (\is_array($email)) {
+					$type = !empty($email['type']) ? \strtoupper($email['type']) : 'WORK';
+					$vCard->add('EMAIL', $email['value'] ?? '', ['TYPE' => $type]);
+				} else {
+					$vCard->add('EMAIL', $email);
+				}
+			}
+		}
+
+		if (!empty($ncContact['TEL'])) {
+			$tels = \is_array($ncContact['TEL']) ? $ncContact['TEL'] : [$ncContact['TEL']];
+			foreach ($tels as $tel) {
+				if (\is_array($tel)) {
+					$type = !empty($tel['type']) ? \strtoupper($tel['type']) : 'WORK';
+					$vCard->add('TEL', $tel['value'] ?? '', ['TYPE' => $type]);
+				} else {
+					$vCard->add('TEL', $tel);
+				}
+			}
+		}
+
+		if (!empty($ncContact['ORG'])) {
+			$vCard->ORG = $ncContact['ORG'];
+		}
+
+		if (!empty($ncContact['TITLE'])) {
+			$vCard->TITLE = $ncContact['TITLE'];
+		}
+
+		if (!empty($ncContact['NICKNAME'])) {
+			$vCard->NICKNAME = $ncContact['NICKNAME'];
+		}
+
+		if (!empty($ncContact['ADR'])) {
+			$addrs = \is_array($ncContact['ADR']) ? $ncContact['ADR'] : [$ncContact['ADR']];
+			foreach ($addrs as $addr) {
+				if (\is_array($addr)) {
+					$vCard->add('ADR', $addr['value'] ?? '', !empty($addr['type']) ? ['TYPE' => \strtoupper($addr['type'])] : []);
+				} else {
+					$vCard->add('ADR', $addr);
+				}
+			}
+		}
+
+		if (!empty($ncContact['NOTE'])) {
+			$vCard->NOTE = $ncContact['NOTE'];
+		}
+
+		$vCard->REV = \gmdate('Ymd\\THis\\Z');
+
+		return $vCard;
+	}
+
+	private function vCardToProperties(VCard $vCard): array
+	{
+		$props = [];
+		$props['UID'] = (string) ($vCard->UID ?? \X2Mail\Engine\UUID::generate());
+
+		// Build FN from N parts if available, otherwise use existing FN
+		if ($vCard->N) {
+			$nParts = $vCard->N->getParts();
+			$sLast = $nParts[0] ?? '';
+			$sFirst = $nParts[1] ?? '';
+			$sMiddle = $nParts[2] ?? '';
+			$sPrefix = $nParts[3] ?? '';
+			$sSuffix = $nParts[4] ?? '';
+			$props['N'] = \implode(';', [$sLast, $sFirst, $sMiddle, $sPrefix, $sSuffix]);
+			// Rebuild FN from parts
+			$props['FN'] = \trim(\implode(' ', \array_filter([$sPrefix, $sFirst, $sMiddle, $sLast, $sSuffix])));
+		}
+		if (empty($props['FN'])) {
+			$props['FN'] = (string) ($vCard->FN ?? '');
+		}
+
+		if ($vCard->EMAIL) {
+			$emails = [];
+			foreach ($vCard->EMAIL as $email) {
+				$type = $email['TYPE'] ? (string) $email['TYPE'] : '';
+				$emails[] = ['value' => (string) $email, 'type' => $type ?: 'work'];
+			}
+			$props['EMAIL'] = $emails;
+		}
+
+		if ($vCard->TEL) {
+			$tels = [];
+			foreach ($vCard->TEL as $tel) {
+				$type = $tel['TYPE'] ? (string) $tel['TYPE'] : '';
+				$tels[] = ['value' => (string) $tel, 'type' => $type ?: 'work'];
+			}
+			$props['TEL'] = $tels;
+		}
+
+		if ($vCard->ORG) {
+			$props['ORG'] = (string) $vCard->ORG;
+		}
+
+		if ($vCard->TITLE) {
+			$props['TITLE'] = (string) $vCard->TITLE;
+		}
+
+		if ($vCard->NICKNAME) {
+			$props['NICKNAME'] = (string) $vCard->NICKNAME;
+		}
+
+		if ($vCard->NOTE) {
+			$props['NOTE'] = (string) $vCard->NOTE;
+		}
+
+		if ($vCard->ADR) {
+			$addrs = [];
+			foreach ($vCard->ADR as $adr) {
+				$type = $adr['TYPE'] ? (string) $adr['TYPE'] : '';
+				$addrs[] = ['value' => (string) $adr, 'type' => $type ?: 'work'];
+			}
+			$props['ADR'] = $addrs;
+		}
+
+		return $props;
+	}
+}

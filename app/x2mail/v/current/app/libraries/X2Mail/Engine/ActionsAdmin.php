@@ -1,0 +1,289 @@
+<?php
+
+namespace X2Mail\Engine;
+
+use X2Mail\Engine\Enumerations\PluginPropertyType;
+use X2Mail\Engine\Exceptions\ClientException;
+
+class ActionsAdmin extends Actions
+{
+	use Actions\AdminDomains;
+	use Actions\AdminExtensions;
+
+	public function DoAdminClearCache() : array
+	{
+		$this->Cacher()->GC(0);
+		if (\is_dir(APP_PRIVATE_DATA . 'cache')) {
+			\X2Mail\Mail\Base\Utils::RecRmDir(APP_PRIVATE_DATA.'cache');
+		}
+		return $this->TrueResponse();
+	}
+
+	public function DoAdminSettingsGet() : array
+	{
+		$aConfig = $this->Config()->jsonSerialize();
+		unset($aConfig['version']);
+		$aConfig['logs']['time_zone'][1] = '';
+		$aConfig['logs']['time_zone'][2] = \DateTimeZone::listIdentifiers();
+		$aConfig['login']['sign_me_auto'][2] = ['DefaultOff','DefaultOn','Unused'];
+		$aConfig['defaults']['view_images'][2] = ['ask','match','always'];
+		return $this->DefaultResponse($aConfig);
+	}
+
+	public function DoAdminSettingsSet() : array
+	{
+		$oConfig = $this->Config();
+		foreach ($this->GetActionParam('config', []) as $sSection => $aItems) {
+			foreach ($aItems as $sKey => $mValue) {
+				$oConfig->Set($sSection, $sKey, $mValue);
+			}
+		}
+		return $this->DefaultResponse($oConfig->Save());
+	}
+
+	public function DoAdminSettingsUpdate() : array
+	{
+//		sleep(3);
+//		return $this->DefaultResponse(false);
+
+		$this->IsAdminLoggined();
+
+		$oConfig = $this->Config();
+
+		$self = $this;
+
+		$this->setConfigFromParams($oConfig, 'language', 'webmail', 'language', 'string', function ($sLanguage) use ($self) {
+			return $self->ValidateLanguage($sLanguage, '', false);
+		});
+
+		$this->setConfigFromParams($oConfig, 'languageAdmin', 'admin_panel', 'language', 'string', function ($sLanguage) use ($self) {
+			return $self->ValidateLanguage($sLanguage, '', true);
+		});
+
+		$this->setConfigFromParams($oConfig, 'Theme', 'webmail', 'theme', 'string', function ($sTheme) use ($self) {
+			return $self->ValidateTheme($sTheme);
+		});
+
+		$this->setConfigFromParams($oConfig, 'proxyExternalImages', 'labs', 'use_local_proxy_for_external_images', 'bool');
+		$this->setConfigFromParams($oConfig, 'autoVerifySignatures', 'security', 'auto_verify_signatures', 'bool');
+
+		$this->setConfigFromParams($oConfig, 'allowLanguagesOnSettings', 'webmail', 'allow_languages_on_settings', 'bool');
+		$this->setConfigFromParams($oConfig, 'allowLanguagesOnLogin', 'login', 'allow_languages_on_login', 'bool');
+		$this->setConfigFromParams($oConfig, 'attachmentLimit', 'webmail', 'attachment_size_limit', 'int');
+
+		$this->setConfigFromParams($oConfig, 'loginDefaultDomain', 'login', 'default_domain', 'string');
+
+		$this->setConfigFromParams($oConfig, 'CapaAdditionalAccounts', 'webmail', 'allow_additional_accounts', 'bool');
+		$this->setConfigFromParams($oConfig, 'CapaIdentities', 'webmail', 'allow_additional_identities', 'bool');
+		$this->setConfigFromParams($oConfig, 'CapaAttachmentThumbnails', 'interface', 'show_attachment_thumbnail', 'bool');
+		$this->setConfigFromParams($oConfig, 'CapaThemes', 'webmail', 'allow_themes', 'bool');
+		$this->setConfigFromParams($oConfig, 'CapaUserBackground', 'webmail', 'allow_user_background', 'bool');
+		$this->setConfigFromParams($oConfig, 'capaGnuPG', 'security', 'gnupg', 'bool');
+		$this->setConfigFromParams($oConfig, 'capaOpenPGP', 'security', 'openpgp', 'bool');
+
+		$this->setConfigFromParams($oConfig, 'determineUserLanguage', 'login', 'determine_user_language', 'bool');
+		$this->setConfigFromParams($oConfig, 'determineUserDomain', 'login', 'determine_user_domain', 'bool');
+
+		$this->setConfigFromParams($oConfig, 'title', 'webmail', 'title', 'string');
+		$this->setConfigFromParams($oConfig, 'loadingDescription', 'webmail', 'loading_description', 'string');
+		$this->setConfigFromParams($oConfig, 'faviconUrl', 'webmail', 'favicon_url', 'string');
+
+		$this->setConfigFromParams($oConfig, 'pluginsEnable', 'plugins', 'enable', 'bool');
+
+		return $this->DefaultResponse($oConfig->Save());
+	}
+
+	public function DoAdminLogin() : array
+	{
+		// NC admin = engine admin — just verify and return app data
+		if ($this->IsAdminLoggined(false)) {
+			return $this->DefaultResponse($this->AppData(true));
+		}
+		throw new ClientException(Notifications::AuthError->value);
+	}
+
+	public function DoAdminLogout() : array
+	{
+		return $this->TrueResponse();
+	}
+
+	// /?admin/Backup
+	public function DoAdminBackup() : void
+	{
+		try {
+			$this->IsAdminLoggined();
+			$file = \X2Mail\Engine\Upgrade::backup();
+			\header('Content-Type: application/gzip');
+			\X2Mail\Mail\Base\Http::setContentDisposition('attachment', ['filename' => \basename($file)]);
+			\header('Content-Transfer-Encoding: binary');
+			\header('Content-Length: ' . \filesize($file));
+			$fp = \fopen($file, 'rb');
+			\fpassthru($fp);
+			\unlink($file);
+		} catch (\Throwable $e) {
+			if (102 == $e->getCode()) {
+				\X2Mail\Mail\Base\Http::StatusHeader(403);
+			}
+			echo $e->getMessage();
+		}
+		exit;
+	}
+
+	public function DoAdminInfo() : array
+	{
+		$this->IsAdminLoggined();
+
+		$latestRelease = \X2Mail\Engine\Repository::getLatestReleaseVersion();
+		$versionCompare = $latestRelease ? \version_compare(APP_VERSION, $latestRelease) : 0;
+
+		$aResult = [
+			'system' => [
+				'load' => \is_callable('sys_getloadavg') ? \sys_getloadavg() : null
+			],
+			'core' => [
+				'updatable' => false,
+				'warning' => false,
+				'version' => $latestRelease ?: APP_VERSION,
+				'versionCompare' => $versionCompare,
+				'warnings' => []
+			],
+			'php' => [
+				[
+					'name' => 'PHP ' . PHP_VERSION,
+					'loaded' => true,
+					'version' => PHP_VERSION
+				],
+				[
+					'name' => 'PHP 64bit',
+					'loaded' => PHP_INT_SIZE == 8,
+					'version' => PHP_INT_SIZE
+				]
+			]
+		];
+
+		foreach (['APCu', 'cURL','Fileinfo','iconv','intl','LDAP','redis','Tidy','uuid','Zip'] as $name) {
+			$aResult['php'][] = [
+				'name' => $name,
+				'loaded' => \extension_loaded(\strtolower($name)),
+				'version' => \phpversion($name)
+			];
+		}
+
+		$aResult['php'][] = [
+			'name' => 'Phar',
+			'loaded' => \class_exists('PharData'),
+			'version' => \phpversion('phar')
+		];
+
+		$aResult['php'][] = [
+			'name' => 'Contacts database:',
+			'loaded' => \extension_loaded('pdo_mysql') || \extension_loaded('pdo_pgsql') || \extension_loaded('pdo_sqlite'),
+			'version' => 0
+		];
+		foreach (['pdo_mysql','pdo_pgsql','pdo_sqlite'] as $name) {
+			$aResult['php'][] = [
+				'name' => "- {$name}",
+				'loaded' => \extension_loaded(\strtolower($name)),
+				'version' => \phpversion($name)
+			];
+		}
+
+		$aResult['php'][] = [
+			'name' => 'Crypt:',
+			'loaded' => true,
+			'version' => 0
+		];
+		foreach (['Sodium','OpenSSL','XXTEA','GnuPG'] as $name) {
+			$aResult['php'][] = [
+				'name' => '- ' . (('OpenSSL' === $name && \defined('OPENSSL_VERSION_TEXT')) ? OPENSSL_VERSION_TEXT : $name),
+				'loaded' => \extension_loaded(\strtolower($name)),
+				'version' => \phpversion($name)
+			];
+		}
+
+		$aResult['php'][] = [
+			'name' => 'Image processing:',
+			'loaded' => \extension_loaded('gd') || \extension_loaded('gmagick') || \extension_loaded('imagick'),
+			'version' => 0
+		];
+		foreach (['GD','Gmagick','Imagick'] as $name) {
+			$aResult['php'][] = [
+				'name' => "- {$name}",
+				'loaded' => \extension_loaded(\strtolower($name)),
+				'version' => \phpversion($name)
+			];
+		}
+
+		return $this->DefaultResponse($aResult);
+	}
+
+	public function DoAdminUpgradeCore() : array
+	{
+		\header('Connection: close');
+		return $this->DefaultResponse(\X2Mail\Engine\Upgrade::core());
+	}
+
+	private function setConfigFromParams(Config\Application $oConfig, string $sParamName, string $sConfigSector, string $sConfigName, string $sType = 'string', ?callable $mStringCallback = null): void
+	{
+		if ($this->HasActionParam($sParamName)) {
+			$sValue = $this->GetActionParam($sParamName, '');
+			switch ($sType) {
+				default:
+				case 'string':
+					$sValue = (string)$sValue;
+					if ($mStringCallback && is_callable($mStringCallback)) {
+						$sValue = $mStringCallback($sValue);
+					}
+
+					$oConfig->Set($sConfigSector, $sConfigName, $sValue);
+					break;
+
+				case 'dummy':
+					$sValue = (string) $this->GetActionParam($sParamName, static::APP_DUMMY);
+					if (static::APP_DUMMY !== $sValue) {
+						$oConfig->Set($sConfigSector, $sConfigName, $sValue);
+					}
+					break;
+
+				case 'int':
+					$iValue = (int)$sValue;
+					$oConfig->Set($sConfigSector, $sConfigName, $iValue);
+					break;
+
+				case 'bool':
+					$oConfig->Set($sConfigSector, $sConfigName, !empty($sValue) && 'false' !== $sValue);
+					break;
+			}
+		}
+	}
+
+	public static function AdminAppData(Actions $oActions, array &$aResult): void
+	{
+		$oConfig = $oActions->Config();
+		$aResult['Admin'] = [
+			'host' => '' !== $oConfig->Get('admin_panel', 'host', ''),
+			'path' => $oConfig->Get('admin_panel', 'key', '') ?: 'admin',
+			'allowed' => (bool)$oConfig->Get('security', 'allow_admin_panel', true)
+		];
+
+		$aResult['Auth'] = $oActions->IsAdminLoggined(false);
+		if ($aResult['Auth']) {
+			$aResult['pluginsEnable'] = (bool)$oConfig->Get('plugins', 'enable', false);
+
+			$aResult['loginDefaultDomain'] = $oConfig->Get('login', 'default_domain', '');
+			$aResult['determineUserLanguage'] = (bool)$oConfig->Get('login', 'determine_user_language', true);
+			$aResult['determineUserDomain'] = (bool)$oConfig->Get('login', 'determine_user_domain', false);
+
+			$aResult['faviconUrl'] = $oConfig->Get('webmail', 'favicon_url', '');
+
+			$aResult['weakPassword'] = false;
+
+			$aResult['Admin']['language'] = $oActions->ValidateLanguage($oConfig->Get('admin_panel', 'language', 'en'), '', true);
+			$aResult['Admin']['languages'] = \X2Mail\Engine\L10n::getLanguages(true);
+			$aResult['Admin']['clientLanguage'] = $oActions->ValidateLanguage($oActions->detectClientLanguage(true), '', true, true);
+
+			$gnupg = \X2Mail\Engine\PGP\GnuPG::getInstance('');
+			$aResult['gnupg'] = $gnupg ? $gnupg->getEngineInfo()['version'] : null;
+		}
+	}
+}

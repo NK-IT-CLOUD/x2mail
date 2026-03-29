@@ -1,0 +1,40 @@
+<div class="legend" data-i18n="TAB_SECURITY/LEGEND_SECURITY"></div>
+<div class="form-horizontal">
+	<div class="control-group">
+		<div data-bind="component: {
+			name: 'Checkbox',
+			params: {
+				label: 'TAB_SECURITY/LABEL_USE_IMAGE_PROXY',
+				value: proxyExternalImages
+			}
+		}"></div>
+	</div>
+</div>
+<div class="legend" data-i18n="TAB_SECURITY/CRYPTO"></div>
+<div class="form-horizontal">
+	<div class="control-group">
+		<div>
+			<div data-bind="component: {
+				name: 'Checkbox',
+				params: {
+					label: gnuPGversion,
+					value: capaGnuPG
+				}
+			}"></div>
+			<div data-bind="component: {
+				name: 'Checkbox',
+				params: {
+					label: 'OpenPGP.js',
+					value: capaOpenPGP
+				}
+			}"></div>
+			<div data-bind="component: {
+				name: 'Checkbox',
+				params: {
+					label: 'TAB_SECURITY/LABEL_AUTO_VERIFY',
+					value: autoVerifySignatures
+				}
+			}"></div>
+		</div>
+	</div>
+</div>

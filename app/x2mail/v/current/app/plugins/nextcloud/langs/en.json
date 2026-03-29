@@ -1,0 +1,34 @@
+{
+	"CONTACTS": {
+		"FIRST_NAME": "First name:",
+		"LAST_NAME": "Last name:",
+		"LABEL_ORGANIZATION": "Organization:",
+		"LABEL_DEPARTMENT": "Department:",
+		"LABEL_TITLE": "Title:",
+		"ADD_MENU_NICKNAME": "Nickname:"
+	},
+	"NEXTCLOUD": {
+		"SAVE_ATTACHMENTS": "Save in Nextcloud",
+		"SAVE_EML": "Save as .eml in Nextcloud",
+		"SAVE_ICS": "Add to calendar",
+		"SELECT_FOLDER": "Select folder",
+		"SELECT_FILES": "Select file(s)",
+		"ATTACH_FILES": "Attach Nextcloud files",
+		"SELECT_CALENDAR": "Select calendar",
+		"FILE_ATTACH": "attach",
+		"FILE_INTERNAL": "internal",
+		"FILE_PUBLIC": "public",
+		"EVENT_CARD_TITLE": "Calendar Invitation",
+		"EVENT_CARD_CANCELLED": "Cancelled",
+		"EVENT_CARD_SAVE": "Save to Calendar",
+		"EVENT_CARD_UPDATE": "Update in Calendar",
+		"EVENT_CARD_UPDATED": "Updated in calendar",
+		"EVENT_CARD_UPDATE_CONFIRM": "Event already exists. Update?",
+		"EVENT_CARD_SAVED": "Saved to calendar",
+		"EVENT_CARD_ERROR": "Save failed — try again",
+		"EVENT_CARD_ORGANIZER": "Organizer",
+		"EVENT_CARD_WHEN": "When",
+		"EVENT_CARD_WHERE": "Where",
+		"EVENT_CARD_ATTENDEES": "Attendees"
+	}
+}

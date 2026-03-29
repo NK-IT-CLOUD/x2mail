@@ -1,0 +1,16 @@
+OC.L10N.register(
+    "x2mail",
+    {
+    "Email" : "Tölvupóstur",
+    "Error" : "Villa",
+    "Invalid argument(s)" : "Ógilt viðfang/viðföng",
+    "Saved successfully" : "Tókst að vista",
+    "Users will login manually, or define credentials in their personal settings for automatic logins." : "Notendur geta skráð sig inn handvirkt, eða skilgreint auðkenni í persónulegum stillingunum sínum til að skrá sig inn sjálfvirkt.",
+    "Attempt to automatically login users with their Nextcloud username and password, or user-defined credentials, if set." : "Reyna að skrá sjálfkrafa inn með Nextcloud notandanafni þeirra og lykilorði, eða auðkennum skilgreindum af notandanum, ef þau eru stillt.",
+    "Attempt to automatically login users with their Nextcloud email and password, or user-defined credentials, if set." : "Reyna að skrá sjálfkrafa inn með Nextcloud tölvupóstfangi þeirra og lykilorði, eða auðkennum skilgreindum af notandanum, ef þau eru stillt.",
+    "Save" : "Vista",
+    "may have some" : "gæti gaft í för með sér",
+    "security considerations" : "ýmis umhugsunarefni varðandi öryggi",
+    "Password" : "Lykilorð"
+},
+"nplurals=2; plural=(n % 10 != 1 || n % 100 == 11);");

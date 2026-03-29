@@ -1,0 +1,16 @@
+OC.L10N.register(
+    "x2mail",
+    {
+    "Email" : "E-mail",
+    "Error" : "Erro",
+    "Invalid argument(s)" : "Argumento(s) inválido(s)",
+    "Saved successfully" : "Salvo com sucesso",
+    "Users will login manually, or define credentials in their personal settings for automatic logins." : "Os usuários farão login manualmente ou definirão credenciais em suas configurações pessoais para logins automáticos.",
+    "Attempt to automatically login users with their Nextcloud username and password, or user-defined credentials, if set." : "Tente conectar-se automaticamente aos usuários com seu nome de usuário e senha do Nextcloud ou credenciais definidas pelo usuário, se configuradas.",
+    "Attempt to automatically login users with their Nextcloud email and password, or user-defined credentials, if set." : "Tente conectar-se automaticamente aos usuários com seu e-mail e senha Nextcloud, ou credenciais definidas pelo usuário, se configuradas.",
+    "Save" : "Salvar",
+    "may have some" : "pode haver algum",
+    "security considerations" : "considerações de segurança",
+    "Password" : "Senha"
+},
+"nplurals=3; plural=(n == 0 || n == 1) ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;");

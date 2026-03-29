@@ -1,0 +1,1041 @@
+<?php
+
+/*
+ * This file is part of MailSo.
+ *
+ * (c) 2014 Usenko Timur
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace X2Mail\Mail\Client;
+
+use X2Mail\Mail\Imap\FolderCollection;
+use X2Mail\Mail\Imap\FolderInformation;
+use X2Mail\Mail\Imap\Enumerations\FetchType;
+use X2Mail\Mail\Imap\Enumerations\MessageFlag;
+use X2Mail\Mail\Imap\Enumerations\StoreAction;
+use X2Mail\Mail\Imap\SequenceSet;
+use X2Mail\Mail\Mime\Enumerations\Header as MimeHeader;
+use X2Mail\Mail\Mime\Enumerations\Parameter as MimeParameter;
+
+/**
+ * @category MailSo
+ * @package Mail
+ */
+class MailClient
+{
+	use \X2Mail\Mail\Log\Inherit;
+
+	private \X2Mail\Mail\Imap\ImapClient $oImapClient;
+
+	private bool $bThreadSort = false;
+
+	function __construct()
+	{
+		$this->oImapClient = new \X2Mail\Mail\Imap\ImapClient;
+	}
+
+	public function ImapClient() : \X2Mail\Mail\Imap\ImapClient
+	{
+		return $this->oImapClient;
+	}
+
+	private function getEnvelopeOrHeadersRequestString() : string
+	{
+		if ($this->oImapClient->Settings->message_all_headers) {
+			return FetchType::BODY_HEADER_PEEK->value;
+		}
+
+		$aHeaders = array(
+//			MimeHeader::RETURN_PATH->value,
+//			MimeHeader::RECEIVED->value,
+//			MimeHeader::MIME_VERSION->value,
+			MimeHeader::MESSAGE_ID->value,
+			MimeHeader::CONTENT_TYPE->value,
+			MimeHeader::FROM->value,
+			MimeHeader::TO->value,
+			MimeHeader::CC->value,
+			MimeHeader::BCC->value,
+			MimeHeader::SENDER->value,
+			MimeHeader::REPLY_TO->value,
+			MimeHeader::DELIVERED_TO->value,
+			MimeHeader::IN_REPLY_TO->value,
+			MimeHeader::REFERENCES->value,
+			MimeHeader::DATE->value,
+			MimeHeader::SUBJECT->value,
+			MimeHeader::X_MSMAIL_PRIORITY->value,
+			MimeHeader::IMPORTANCE->value,
+			MimeHeader::X_PRIORITY->value,
+			MimeHeader::X_DRAFT_INFO->value,
+//			MimeHeader::RETURN_RECEIPT_TO->value,
+			MimeHeader::DISPOSITION_NOTIFICATION_TO->value,
+			MimeHeader::X_CONFIRM_READING_TO->value,
+			MimeHeader::AUTHENTICATION_RESULTS->value,
+			MimeHeader::X_DKIM_AUTHENTICATION_RESULTS->value,
+			MimeHeader::LIST_UNSUBSCRIBE->value,
+			// https://autocrypt.org/level1.html#the-autocrypt-header
+			MimeHeader::AUTOCRYPT->value
+		);
+
+		// SPAM
+		$spam_headers = \explode(',', $this->oImapClient->Settings->spam_headers);
+		if (\in_array('rspamd', $spam_headers)) {
+			$aHeaders[] = MimeHeader::X_SPAMD_RESULT->value;
+		}
+		if (\in_array('spamassassin', $spam_headers)) {
+			$aHeaders[] = MimeHeader::X_SPAM_STATUS->value;
+			$aHeaders[] = MimeHeader::X_SPAM_FLAG->value;
+			$aHeaders[] = MimeHeader::X_SPAM_INFO->value;
+		}
+		if (\in_array('bogofilter', $spam_headers)) {
+			$aHeaders[] = MimeHeader::X_BOGOSITY->value;
+		}
+
+		// Virus
+		$virus_headers = \explode(',', $this->oImapClient->Settings->virus_headers);
+		if (\in_array('rspamd', $virus_headers)) {
+			$aHeaders[] = MimeHeader::X_VIRUS->value;
+		}
+		if (\in_array('clamav', $virus_headers)) {
+			$aHeaders[] = MimeHeader::X_VIRUS_SCANNED->value;
+			$aHeaders[] = MimeHeader::X_VIRUS_STATUS->value;
+		}
+
+		\X2Mail\Engine\Api::Actions()->Plugins()->RunHook('imap.message-headers', array(&$aHeaders));
+
+		return FetchType::BuildBodyCustomHeaderRequest($aHeaders, true);
+	}
+
+	/**
+	 * @throws \InvalidArgumentException
+	 * @throws \X2Mail\Mail\RuntimeException
+	 */
+	public function MessageSetFlag(string $sFolderName, SequenceSet $oRange, string $sMessageFlag, bool $bSetAction = true, bool $bSkipUnsupportedFlag = false) : void
+	{
+		if (\count($oRange)) {
+			if ($this->oImapClient->FolderSelect($sFolderName)->IsFlagSupported($sMessageFlag)) {
+				$sStoreAction = $bSetAction ? StoreAction::ADD_FLAGS_SILENT->value : StoreAction::REMOVE_FLAGS_SILENT->value;
+				$this->oImapClient->MessageStoreFlag($oRange, array($sMessageFlag), $sStoreAction);
+			} else if (!$bSkipUnsupportedFlag) {
+				throw new \X2Mail\Mail\RuntimeException('Message flag "'.$sMessageFlag.'" is not supported.');
+			}
+		}
+	}
+
+	/**
+	 * @throws \InvalidArgumentException
+	 * @throws \X2Mail\Mail\RuntimeException
+	 */
+	public function Message(string $sFolderName, int $iIndex, bool $bIndexIsUid = true, ?\X2Mail\Mail\Cache\CacheClient $oCacher = null) : ?Message
+	{
+		if (1 > $iIndex) {
+			throw new \ValueError;
+		}
+
+		$this->oImapClient->FolderExamine($sFolderName);
+
+		$oBodyStructure = null;
+
+		$aFetchItems = array(
+			FetchType::UID->value,
+//			FetchType::FAST->value,
+			FetchType::RFC822_SIZE->value,
+			FetchType::INTERNALDATE->value,
+			FetchType::FLAGS->value,
+			$this->getEnvelopeOrHeadersRequestString()
+		);
+
+		$aFetchResponse = $this->oImapClient->Fetch(array(FetchType::BODYSTRUCTURE->value), $iIndex, $bIndexIsUid);
+		if (\count($aFetchResponse) && isset($aFetchResponse[0])) {
+			$oBodyStructure = $aFetchResponse[0]->GetFetchBodyStructure();
+			if ($oBodyStructure) {
+				$iBodyTextLimit = $this->oImapClient->Settings->body_text_limit;
+				foreach ($oBodyStructure->GetHtmlAndPlainParts() as $oPart) {
+					$sLine = FetchType::BODY_PEEK->value.'['.$oPart->PartID().']';
+					if (0 < $iBodyTextLimit && $iBodyTextLimit < $oPart->EstimatedSize()) {
+						$sLine .= "<0.{$iBodyTextLimit}>";
+					}
+					$aFetchItems[] = $sLine;
+				}
+			}
+		}
+
+		if (!$oBodyStructure) {
+			$aFetchItems[] = FetchType::BODYSTRUCTURE->value;
+		}
+
+		$aFetchResponse = $this->oImapClient->Fetch($aFetchItems, $iIndex, $bIndexIsUid);
+
+		return \count($aFetchResponse)
+			? Message::fromFetchResponse($sFolderName, $aFetchResponse[0], $oBodyStructure)
+			: null;
+	}
+
+	/**
+	 * Streams mime part to $mCallback
+	 *
+	 * @param mixed $mCallback
+	 *
+	 * @throws \InvalidArgumentException
+	 * @throws \X2Mail\Mail\RuntimeException
+	 */
+	public function MessageMimeStream($mCallback, string $sFolderName, int $iIndex, string $sMimeIndex) : bool
+	{
+		if (!\is_callable($mCallback)) {
+			throw new \ValueError;
+		}
+
+		$this->oImapClient->FolderExamine($sFolderName);
+
+		$sFileName = '';
+		$sContentType = '';
+		$sMailEncoding = '';
+		$sPeek = FetchType::BODY_PEEK->value;
+
+		$sMimeIndex = \trim($sMimeIndex);
+		$aFetchResponse = $this->oImapClient->Fetch(array(
+			\strlen($sMimeIndex)
+				? FetchType::BODY_PEEK->value.'['.$sMimeIndex.'.MIME]'
+				: FetchType::BODY_HEADER_PEEK->value),
+			$iIndex, true);
+
+		if (\count($aFetchResponse)) {
+			$sMime = $aFetchResponse[0]->GetFetchValue(
+				\strlen($sMimeIndex)
+					? FetchType::BODY->value.'['.$sMimeIndex.'.MIME]'
+					: FetchType::BODY_HEADER->value
+			);
+
+			if (\strlen($sMime)) {
+				$oHeaders = new \X2Mail\Mail\Mime\HeaderCollection($sMime);
+
+				if (\strlen($sMimeIndex)) {
+					$sFileName = $oHeaders->ParameterValue(MimeHeader::CONTENT_DISPOSITION->value, MimeParameter::FILENAME->value);
+					if (!\strlen($sFileName)) {
+						$sFileName = $oHeaders->ParameterValue(MimeHeader::CONTENT_TYPE->value, MimeParameter::NAME->value);
+					}
+
+					$sMailEncoding = \X2Mail\Mail\Base\StreamWrappers\Binary::GetInlineDecodeOrEncodeFunctionName(
+						$oHeaders->ValueByName(MimeHeader::CONTENT_TRANSFER_ENCODING->value)
+					);
+
+					// RFC 3516
+					// Should mailserver decode or PHP?
+					if ($sMailEncoding && $this->oImapClient->hasCapability('BINARY')) {
+						$sMailEncoding = '';
+						$sPeek = FetchType::BINARY_PEEK->value;
+					}
+
+					$sContentType = $oHeaders->ValueByName(MimeHeader::CONTENT_TYPE->value);
+				} else {
+					$sFileName = ($oHeaders->ValueByName(MimeHeader::SUBJECT->value) ?: $iIndex) . '.eml';
+
+					$sContentType = 'message/rfc822';
+				}
+			}
+		}
+
+		$callback = function ($sParent, $sLiteralAtomUpperCase, $rImapLiteralStream)
+			use ($mCallback, $sMimeIndex, $sMailEncoding, $sContentType, $sFileName)
+			{
+				if (\strlen($sLiteralAtomUpperCase) && \is_resource($rImapLiteralStream) && 'FETCH' === $sParent) {
+					$mCallback($sMailEncoding
+						? \X2Mail\Mail\Base\StreamWrappers\Binary::CreateStream($rImapLiteralStream, $sMailEncoding)
+						: $rImapLiteralStream,
+						$sContentType, $sFileName, $sMimeIndex);
+				}
+			};
+
+		try {
+			$aFetchResponse = $this->oImapClient->Fetch(array(
+//				FetchType::BINARY_SIZE->value.'['.$sMimeIndex.']',
+				// Push in the aFetchCallbacks array and then called by \X2Mail\Mail\Imap\Traits\ResponseParser::partialResponseLiteralCallbackCallable
+				array(
+					$sPeek.'['.$sMimeIndex.']',
+					$callback
+				)), $iIndex, true);
+		} catch (\X2Mail\Mail\Imap\Exceptions\NegativeResponseException $oException) {
+			if (FetchType::BINARY_PEEK->value === $sPeek && \preg_match('/UNKNOWN-CTE|PARSE/', $oException->getMessage())) {
+				$this->logException($oException, \LOG_WARNING);
+				$aFetchResponse = $this->oImapClient->Fetch(array(
+					array(
+						FetchType::BODY_PEEK->value . '[' . $sMimeIndex . ']',
+						$callback
+					)), $iIndex, true);
+			} else {
+				throw $oException;
+			}
+		}
+
+		return ($aFetchResponse && 1 === \count($aFetchResponse));
+	}
+
+	public function MessageAppendFile(string $sMessageFileName, string $sFolderToSave, ?array $aAppendFlags = null) : int
+	{
+		if (!\is_file($sMessageFileName) || !\is_readable($sMessageFileName)) {
+			throw new \ValueError;
+		}
+
+		$iMessageStreamSize = \filesize($sMessageFileName);
+		$rMessageStream = \fopen($sMessageFileName, 'rb');
+
+		$iUid = $this->oImapClient->MessageAppendStream($sFolderToSave, $rMessageStream, $iMessageStreamSize, $aAppendFlags);
+
+		\fclose($rMessageStream);
+
+		return $iUid;
+	}
+
+	/**
+	 * Returns list of new messages since $iPrevUidNext
+	 * Currently only for INBOX
+	 */
+	private function getFolderNextMessageInformation(string $sFolderName, int $iPrevUidNext, int $iCurrentUidNext) : array
+	{
+		$aNewMessages = array();
+
+		if ($this->oImapClient->Settings->fetch_new_messages && $iPrevUidNext && $iPrevUidNext != $iCurrentUidNext && 'INBOX' === $sFolderName) {
+			$this->oImapClient->FolderExamine($sFolderName);
+
+			$aFetchResponse = $this->oImapClient->Fetch(array(
+				FetchType::UID->value,
+				FetchType::FLAGS->value,
+				FetchType::BuildBodyCustomHeaderRequest(array(
+					MimeHeader::FROM->value,
+					MimeHeader::SUBJECT->value,
+					MimeHeader::CONTENT_TYPE->value
+				))
+			), $iPrevUidNext.':*', true);
+
+			foreach ($aFetchResponse as $oFetchResponse) {
+				$aFlags = \array_map('strtolower', $oFetchResponse->GetFetchValue(FetchType::FLAGS->value));
+
+				if (!\in_array(\strtolower(MessageFlag::SEEN->value), $aFlags)) {
+					$iUid = (int) $oFetchResponse->GetFetchValue(FetchType::UID->value);
+
+					$oHeaders = new \X2Mail\Mail\Mime\HeaderCollection($oFetchResponse->GetHeaderFieldsValue());
+
+					$sContentTypeCharset = $oHeaders->ParameterValue(MimeHeader::CONTENT_TYPE->value, MimeParameter::CHARSET->value);
+
+					if ($sContentTypeCharset) {
+						$oHeaders->SetParentCharset($sContentTypeCharset);
+					}
+
+					$aNewMessages[] = array(
+						'folder' => $sFolderName,
+						'uid' => $iUid,
+						'subject' => $oHeaders->ValueByName(MimeHeader::SUBJECT->value, !$sContentTypeCharset),
+						'from' => $oHeaders->GetAsEmailCollection(MimeHeader::FROM->value)
+					);
+				}
+			}
+		}
+
+		return $aNewMessages;
+	}
+
+	/**
+	 * @throws \InvalidArgumentException
+	 * @throws \X2Mail\Mail\RuntimeException
+	 */
+	public function FolderInformation(string $sFolderName, int $iPrevUidNext = 0, ?SequenceSet $oRange = null) : array
+	{
+		if ($oRange) {
+//			$aInfo = $this->oImapClient->FolderExamine($sFolderName)->jsonSerialize();
+			$aInfo = $this->oImapClient->FolderStatusAndSelect($sFolderName)->jsonSerialize();
+			$aInfo['messagesFlags'] = array();
+			if (\count($oRange)) {
+				$aFetchResponse = $this->oImapClient->Fetch(array(
+					FetchType::UID->value,
+					FetchType::FLAGS->value
+				), (string) $oRange, $oRange->UID);
+				foreach ($aFetchResponse as $oFetchResponse) {
+					$iUid = (int) $oFetchResponse->GetFetchValue(FetchType::UID->value);
+					$aLowerFlags = \array_map('mb_strtolower', \array_map('\\X2Mail\Mail\\Base\\Utils::Utf7ModifiedToUtf8', $oFetchResponse->GetFetchValue(FetchType::FLAGS->value)));
+					$aInfo['messagesFlags'][] = array(
+						'uid' => $iUid,
+						'flags' => $aLowerFlags
+					);
+				}
+			}
+		} else {
+			$aInfo = $this->oImapClient->FolderStatus($sFolderName)->jsonSerialize();
+		}
+
+		if ($iPrevUidNext) {
+			$aInfo['newMessages'] = $this->getFolderNextMessageInformation(
+				$sFolderName,
+				$iPrevUidNext,
+				\intval($aInfo['uidNext'])
+			);
+		}
+
+//		$aInfo['appendLimit'] = $aInfo['appendLimit'] ?: $this->oImapClient->AppendLimit();
+		return $aInfo;
+	}
+
+	/**
+	 * @throws \InvalidArgumentException
+	 * @throws \X2Mail\Mail\RuntimeException
+	 */
+	public function FolderHash(string $sFolderName) : string
+	{
+		try
+		{
+//			return $this->oImapClient->FolderStatusAndSelect($sFolderName)->etag;
+			return $this->oImapClient->FolderStatus($sFolderName)->etag;
+		}
+		catch (\Throwable $oException)
+		{
+			\X2Mail\Engine\Log::warning('IMAP', "FolderHash({$sFolderName}) Exception: {$oException->getMessage()}");
+		}
+		return '';
+	}
+
+	public function MessageThread(string $sFolderName, string $sMessageID) : array
+	{
+		$this->oImapClient->FolderExamine($sFolderName);
+
+		$sMessageID = \X2Mail\Mail\Imap\SearchCriterias::escapeSearchString($this->oImapClient, $sMessageID);
+		$sSearch = "OR HEADER Message-ID {$sMessageID} HEADER References {$sMessageID}";
+		$aResult = [];
+		try
+		{
+			foreach ($this->oImapClient->MessageThread($sSearch) as $mItem) {
+				// Flatten to single level
+				\array_walk_recursive($mItem, fn($a) => $aResult[] = $a);
+			}
+		}
+		catch (\X2Mail\Mail\RuntimeException $oException)
+		{
+			\X2Mail\Engine\Log::warning('MailClient', 'MessageThread ' . $oException->getMessage());
+			unset($oException);
+		}
+//		$this->logWrite('MessageThreadList: '.\print_r($threads, 1));
+		return $aResult;
+	}
+
+	/**
+	 * @throws \InvalidArgumentException
+	 * @throws \X2Mail\Mail\RuntimeException
+	 */
+	protected function ThreadsMap(string $sAlgorithm, MessageCollection $oMessageCollection, ?\X2Mail\Mail\Cache\CacheClient $oCacher, bool $bBackground = false) : array
+	{
+		$oFolderInfo = $oMessageCollection->FolderInfo;
+		$sFolderName = $oFolderInfo->FullName;
+
+		$sSearch = 'ALL';
+//		$sSearch = 'UNDELETED';
+/*
+		$iThreadLimit = $this->oImapClient->Settings->thread_limit;
+		if ($iThreadLimit && $iThreadLimit < $oFolderInfo->MESSAGES) {
+			$sSearch = ($oFolderInfo->MESSAGES - $iThreadLimit) . ':*';
+		}
+*/
+/*
+		$sAlgorithm = '';
+		if ($this->oImapClient->hasCapability('THREAD=REFS')) {
+			$sAlgorithm = 'REFS';
+		} else if ($this->oImapClient->hasCapability('THREAD=REFERENCES')) {
+			$sAlgorithm = 'REFERENCES';
+		} else if ($this->oImapClient->hasCapability('THREAD=ORDEREDSUBJECT')) {
+			$sAlgorithm = 'ORDEREDSUBJECT';
+		}
+*/
+		$sSerializedHashKey = null;
+		if ($oCacher && $oCacher->IsInited()) {
+			$sSerializedHashKey = "ThreadsMap/{$sAlgorithm}/{$sSearch}/{$oFolderInfo->etag}";
+//			$sSerializedHashKey = "ThreadsMap/{$sAlgorithm}/{$sSearch}/{$iThreadLimit}/{$oFolderInfo->etag}";
+
+			$sSerializedUids = $oCacher->Get($sSerializedHashKey);
+			if (!empty($sSerializedUids)) {
+				$aSerializedUids = \json_decode($sSerializedUids, true);
+				if (isset($aSerializedUids['ThreadsUids']) && \is_array($aSerializedUids['ThreadsUids'])) {
+					$oMessageCollection->totalThreads = \count($aSerializedUids['ThreadsUids']);
+					$this->logWrite('Get Threads from cache ("'.$sFolderName.'" / '.$sSearch.') [count:'.\count($aSerializedUids['ThreadsUids']).']');
+					return $aSerializedUids['ThreadsUids'];
+				}
+			}
+/*
+			// Idea to fetch all UID's in background
+			else if (!$bBackground) {
+				$this->logWrite('Set ThreadsMap() as background task ("'.$sFolderName.'" / '.$sSearch.')');
+				\X2Mail\Engine\Shutdown::add(function($oMailClient, $oFolderInfo, $oCacher) {
+					$oFolderInfo->MESSAGES = 0;
+					$oMailClient->ThreadsMap($sAlgorithm, $oMessageCollection, $oCacher, true);
+				}, [$this, $oFolderInfo, $oCacher]);
+				return [];
+			}
+*/
+		}
+
+		$this->oImapClient->FolderExamine($sFolderName);
+
+		$aResult = array();
+		try
+		{
+			foreach ($this->oImapClient->MessageThread($sSearch, $sAlgorithm) as $mItem) {
+				// Flatten to single level
+				$aMap = [];
+				\array_walk_recursive($mItem, function($a) use (&$aMap) { $aMap[] = $a; });
+				$aResult[] = $aMap;
+			}
+		}
+		catch (\X2Mail\Mail\RuntimeException $oException)
+		{
+			\X2Mail\Engine\Log::warning('MailClient', 'ThreadsMap ' . $oException->getMessage());
+			unset($oException);
+		}
+
+		if ($sSerializedHashKey) {
+			$oCacher->Set($sSerializedHashKey, \json_encode(array('ThreadsUids' => $aResult)));
+			$this->logWrite('Save Threads to cache ("'.$sFolderName.'" / '.$sSearch.') [count:'.\count($aResult).']');
+		}
+
+		$oMessageCollection->totalThreads = \count($aResult);
+		return $aResult;
+	}
+
+	// All threads UID's except the most recent UID of each thread
+	protected function ThreadsOldUids(array $aAllThreads, MessageCollection $oMessageCollection, ?\X2Mail\Mail\Cache\CacheClient $oCacher, bool $bBackground = false) : array
+	{
+		$oFolderInfo = $oMessageCollection->FolderInfo;
+
+		$bThreadSort = $this->bThreadSort && $this->oImapClient->hasCapability('SORT');
+
+		$sSerializedHashKey = null;
+		if ($oCacher && $oCacher->IsInited()) {
+			$sSerializedHashKey = "ThreadsOldUids/{$oFolderInfo->etag}/" . ($bThreadSort ? 'S' : 'N');
+			$sSerializedUids = $oCacher->Get($sSerializedHashKey);
+			if (!empty($sSerializedUids)) {
+				$aSerializedUids = \json_decode($sSerializedUids, true);
+				if (isset($aSerializedUids['ThreadsUids']) && \is_array($aSerializedUids['ThreadsUids'])) {
+					$this->logWrite('Get old Threads UIDs from cache ("'.$oFolderInfo->FullName.'") [count:'.\count($aSerializedUids['ThreadsUids']).']');
+					return $aSerializedUids['ThreadsUids'];
+				}
+			}
+		}
+
+		$aUids = [];
+
+		if ($bThreadSort) {
+			$oParams = new MessageListParams;
+			$oParams->sFolderName = $oFolderInfo->FullName;
+			$oParams->sSort = 'DATE';
+			$oParams->bUseSort = true;
+			$oParams->bHideDeleted = false;
+			foreach ($aAllThreads as $aThreadUIDs) {
+				$oParams->oSequenceSet = new \X2Mail\Mail\Imap\SequenceSet($aThreadUIDs);
+				$aThreadUIDs = $this->GetUids($oParams, $oFolderInfo);
+				if ($aThreadUIDs) {
+					// Remove the most recent UID
+					\array_pop($aThreadUIDs);
+					$aUids = \array_merge($aUids, $aThreadUIDs);
+				}
+			}
+/*
+			// Idea to use one SORT for all threads instead of per thread
+			$aSortUids = \array_reduce($aAllThreads, 'array_merge', []);
+			$oParams->oSequenceSet = new \X2Mail\Mail\Imap\SequenceSet($aSortUids);
+			$aSortUids = $this->GetUids($oParams, $oFolderInfo);
+			if ($aSortUids) {
+				foreach ($aAllThreads as $aThreadUIDs) {
+					$aThreadUIDs = \array_intersect($aSortUids, $aThreadUIDs);
+					// Remove the most recent UID
+					\array_pop($aThreadUIDs);
+					$aUids = \array_merge($aUids, $aThreadUIDs);
+				}
+			}
+*/
+		} else {
+			// Not the best solution to remove the most recent UID,
+			// as older messages could have a higher UID
+			foreach ($aAllThreads as $aThreadUIDs) {
+				unset($aThreadUIDs[\array_search(\max($aThreadUIDs), $aThreadUIDs)]);
+				$aUids = \array_merge($aUids, $aThreadUIDs);
+			}
+		}
+
+		if ($sSerializedHashKey) {
+			$oCacher->Set($sSerializedHashKey, \json_encode(array('ThreadsUids' => $aUids)));
+			$this->logWrite('Save old Threads UIDs to cache ("'.$oFolderInfo->FullName.'") [count:'.\count($aUids).']');
+		}
+
+		return $aUids;
+	}
+
+	/**
+	 * @throws \X2Mail\Mail\RuntimeException
+	 */
+	protected function MessageListByRequestIndexOrUids(MessageCollection $oMessageCollection, SequenceSet $oRange,
+		array &$aAllThreads = [], array &$aUnseenUIDs = []) : void
+	{
+		if (\count($oRange)) {
+			$aFetchItems = array(
+				FetchType::UID->value,
+				FetchType::RFC822_SIZE->value,
+				FetchType::INTERNALDATE->value,
+				FetchType::FLAGS->value,
+				FetchType::BODYSTRUCTURE->value
+			);
+			if ($this->oImapClient->hasCapability('PREVIEW')) {
+				$aFetchItems[] = FetchType::PREVIEW->value; // . ' (LAZY)';
+			}
+			$aFetchItems[] = $this->getEnvelopeOrHeadersRequestString();
+			$aFetchIterator = $this->oImapClient->FetchIterate($aFetchItems, (string) $oRange, $oRange->UID);
+			// FETCH does not respond in the id order of the SequenceSet, so we prefill $aCollection for the right sort order.
+			$aCollection = \array_fill_keys($oRange->getArrayCopy(), null);
+			foreach ($aFetchIterator as $oFetchResponse) {
+				$id = $oRange->UID
+					? $oFetchResponse->GetFetchValue(FetchType::UID->value)
+					: $oFetchResponse->oImapResponse->ResponseList[1];
+				$oMessage = Message::fromFetchResponse($oMessageCollection->FolderName, $oFetchResponse);
+				if ($oMessage) {
+					if ($aAllThreads) {
+						$iUid = $oMessage->Uid;
+						// Find thread and set it.
+						// Used by GUI to delete/move the whole thread or other features
+						foreach ($aAllThreads as $aMap) {
+							if (\in_array($iUid, $aMap)) {
+								$oMessage->SetThreads($aMap);
+								$oMessage->SetThreadUnseen(\array_values(\array_intersect($aUnseenUIDs, $aMap)));
+								break;
+							}
+						}
+					}
+					$aCollection[$id] = $oMessage;
+				}
+			}
+			$oMessageCollection->exchangeArray(\array_values(\array_filter($aCollection)));
+		}
+	}
+
+	/**
+	 * @throws \InvalidArgumentException
+	 * @throws \X2Mail\Mail\RuntimeException
+	 */
+	private function GetUids(MessageListParams $oParams, FolderInformation $oInfo, bool $onlyCache = false) : ?array
+	{
+		$oCacher = $oParams->oCacher;
+		$sFolderName = $oParams->sFolderName;
+
+		$bUseSort = $oParams->bUseSort && $this->oImapClient->hasCapability('SORT');
+		$aSortTypes = [];
+		if ($bUseSort) {
+			if ($oParams->sSort) {
+				// TODO: $oParams->sortValid($this->oImapClient);
+				$aSortTypes[] = $oParams->sSort;
+			}
+			if (!\str_contains($oParams->sSort, 'DATE')) {
+				// Always also sort DATE descending when DATE is not defined
+				$aSortTypes[] = 'REVERSE DATE';
+			}
+		}
+		$oParams->sSort = \implode(' ', $aSortTypes);
+
+		$bUseCache = $oCacher && $oCacher->IsInited();
+		$oSearchCriterias = \X2Mail\Mail\Imap\SearchCriterias::fromString(
+			$this->oImapClient,
+			$sFolderName,
+			$oParams->sSearch,
+			$oParams->bHideDeleted,
+			$bUseCache
+		);
+		// Disable? as there are many cases that change the result
+//		$bUseCache = false;
+
+		$bReturnUid = true;
+		if ($oParams->oSequenceSet) {
+			$bReturnUid = $oParams->oSequenceSet->UID;
+			$oSearchCriterias->prepend(($bReturnUid ? 'UID ' : '') . $oParams->oSequenceSet);
+		}
+
+/*
+		$oSearchCriterias->fuzzy = $oParams->bSearchFuzzy && $this->oImapClient->hasCapability('SEARCH=FUZZY');
+*/
+		$sSerializedHash = '';
+		$sSerializedLog = '';
+		if ($bUseCache && $oInfo->etag) {
+			$sSerializedHash = 'Get'
+				. ($bReturnUid ? 'UIDS/' : 'IDS/')
+				. "{$oParams->sSort}/{$this->oImapClient->Hash()}/{$sFolderName}/{$oSearchCriterias}";
+			$sSerializedLog = "\"{$sFolderName}\" / {$oParams->sSort} / {$oSearchCriterias}";
+			$sSerialized = $oCacher->Get($sSerializedHash);
+			if (!empty($sSerialized)) {
+				$aSerialized = \json_decode($sSerialized, true);
+				if (\is_array($aSerialized)
+				 && isset($aSerialized['FolderHash'], $aSerialized['Uids'])
+				 && $oInfo->etag === $aSerialized['FolderHash']
+				 && \is_array($aSerialized['Uids'])
+				) {
+					$this->logWrite('Get Serialized '.($bReturnUid?'UIDS':'IDS').' from cache ('.$sSerializedLog.') [count:'.\count($aSerialized['Uids']).']');
+					return $aSerialized['Uids'];
+				}
+			}
+		}
+		if ($onlyCache) {
+			return null;
+		}
+
+		$this->oImapClient->FolderExamine($sFolderName);
+
+		$aResultUids = [];
+		if ($bUseSort) {
+//			$this->oImapClient->hasCapability('ESORT')
+//			$aResultUids = $this->oImapClient->MessageESort($aSortTypes, $oSearchCriterias)['ALL'];
+			$aResultUids = $this->oImapClient->MessageSort($aSortTypes, $oSearchCriterias, $bReturnUid);
+		} else {
+//			$this->oImapClient->hasCapability('ESEARCH')
+//			$aResultUids = $this->oImapClient->MessageESearch($oSearchCriterias, null, $bReturnUid)
+			$aResultUids = $this->oImapClient->MessageSearch($oSearchCriterias,        $bReturnUid);
+		}
+
+		if ($bUseCache) {
+			$oCacher->Set($sSerializedHash, \json_encode(array(
+				'FolderHash' => $oInfo->etag,
+				'Uids' => $aResultUids
+			)));
+
+			$this->logWrite('Save Serialized '.($bReturnUid?'UIDS':'IDS').' to cache ('.$sSerializedLog.') [count:'.\count($aResultUids).']');
+		}
+
+//		$oSequenceSet = new SequenceSet($aResultUids, false);
+//		$oSequenceSet->UID = $bReturnUid;
+//		return $oSequenceSet;
+
+		return $aResultUids;
+	}
+
+	public function MessageListUnseen(MessageListParams $oParams, FolderInformation $oInfo) : array
+	{
+		$oUnseenParams = new MessageListParams;
+		$oUnseenParams->sFolderName = $oParams->sFolderName;
+		$oUnseenParams->sSearch = 'unseen';
+//		$oUnseenParams->sSort = $oParams->sSort;
+		$oUnseenParams->oCacher = $oParams->oCacher;
+		$oUnseenParams->bUseSort = false; // $oParams->bUseSort
+		$oUnseenParams->bUseThreads = false; // $oParams->bUseThreads;
+		$oUnseenParams->bHideDeleted = $oParams->bHideDeleted;
+//		$oUnseenParams->iOffset = $oParams->iOffset;
+//		$oUnseenParams->iLimit = $oParams->iLimit;
+//		$oUnseenParams->iPrevUidNext = $oParams->iPrevUidNext;
+//		$oUnseenParams->iThreadUid = $oParams->iThreadUid;
+		return $this->GetUids($oUnseenParams, $oInfo);
+	}
+
+	/**
+	 * Runs SORT/SEARCH when $sSearch is provided
+	 * @throws \InvalidArgumentException
+	 * @throws \X2Mail\Mail\RuntimeException
+	 */
+	public function MessageList(MessageListParams $oParams) : MessageCollection
+	{
+		if (0 > $oParams->iOffset || 0 > $oParams->iLimit) {
+			throw new \ValueError;
+		}
+		if (10 > $oParams->iLimit) {
+			$oParams->iLimit = 10;
+		} else if (999 < $oParams->iLimit) {
+			$oParams->iLimit = 50;
+		}
+
+		$sSearch = \trim($oParams->sSearch);
+
+		$oMessageCollection = new MessageCollection;
+		$oMessageCollection->FolderName = $oParams->sFolderName;
+		$oMessageCollection->Offset = $oParams->iOffset;
+		$oMessageCollection->Limit = $oParams->iLimit;
+		$oMessageCollection->Search = $sSearch;
+		$oMessageCollection->ThreadUid = $oParams->iThreadUid;
+//		$oMessageCollection->Filtered = '' !== $this->oImapClient->Settings->search_filter;
+
+		$oInfo = $this->oImapClient->FolderStatusAndSelect($oParams->sFolderName);
+		$oMessageCollection->FolderInfo = $oInfo;
+		$oMessageCollection->totalEmails = $oInfo->MESSAGES;
+
+		$oParams->bUseThreads = $oParams->bUseThreads && $this->oImapClient->CapabilityValue('THREAD');
+//			&& ($this->oImapClient->hasCapability('THREAD=REFS') || $this->oImapClient->hasCapability('THREAD=REFERENCES') || $this->oImapClient->hasCapability('THREAD=ORDEREDSUBJECT'));
+		if ($oParams->iThreadUid && !$oParams->bUseThreads) {
+			throw new \ValueError('THREAD not supported');
+		}
+
+		if (!$oInfo->MESSAGES || $oParams->iOffset > $oInfo->MESSAGES) {
+			return $oMessageCollection;
+		}
+
+		if (!$oParams->iThreadUid) {
+			$oMessageCollection->NewMessages = $this->getFolderNextMessageInformation(
+				$oParams->sFolderName, $oParams->iPrevUidNext, $oInfo->UIDNEXT
+			);
+		}
+
+		$bUseSort = ($oParams->bUseSort || $oParams->sSort) && $this->oImapClient->hasCapability('SORT');
+		$oParams->bUseSort = $bUseSort;
+		$oParams->sSearch = $sSearch;
+
+		$aAllThreads = [];
+		$aUnseenUIDs = [];
+		$aUids = null;
+
+		$message_list_limit = $this->oImapClient->Settings->message_list_limit;
+		if (100 > $message_list_limit || $message_list_limit > $oInfo->MESSAGES) {
+			$message_list_limit = 0;
+		}
+
+		// Idea to fetch all UID's in background
+		$oAllParams = clone $oParams;
+		$oAllParams->sSearch = '';
+		$oAllParams->oSequenceSet = null;
+		if ($message_list_limit && !$oParams->iThreadUid && $oParams->oCacher && $oParams->oCacher->IsInited()) {
+			$aUids = $this->GetUids($oAllParams, $oInfo, true);
+			if (null !== $aUids) {
+				$message_list_limit = 0;
+				$oMessageCollection->Sort = $oAllParams->sSort;
+			} else {
+				\X2Mail\Engine\Shutdown::add(function($oMailClient, $oAllParams, $oInfo, $oMessageCollection) {
+					$oMailClient->GetUids($oAllParams, $oInfo);
+					if ($oAllParams->bUseThreads) {
+						$oMailClient->ThreadsMap($oAllParams->sThreadAlgorithm, $oMessageCollection, $oAllParams->oCacher, true);
+					}
+				}, [$this, $oAllParams, $oInfo, $oMessageCollection]);
+			}
+		}
+
+		if ($message_list_limit && !$aUids) {
+//		if ($message_list_limit || (!$this->oImapClient->hasCapability('SORT') && !$this->oImapClient->CapabilityValue('THREAD'))) {
+			// Don't use THREAD for speed
+			$oMessageCollection->Limited = true;
+			$this->logWrite('List optimization (count: '.$oInfo->MESSAGES.', limit:'.$message_list_limit.')');
+			if (\strlen($sSearch)) {
+				// Don't use SORT for speed
+				$oParams->bUseSort = false;
+				$aUids = $this->GetUids($oParams, $oInfo);
+			} else {
+				if ($bUseSort) {
+					// Attempt to sort REVERSE DATE with a bigger range then $oParams->iLimit
+					$end = \min($oInfo->MESSAGES, \max(1, $oInfo->MESSAGES - $oParams->iOffset + $oParams->iLimit));
+					$start = \max(1, $end - ($oParams->iLimit * 3) + 1);
+					$oParams->oSequenceSet = new SequenceSet(\range($end, $start), false);
+					$aRequestIndexes = $this->GetUids($oParams, $oInfo);
+					// Attempt to get the correct $oParams->iLimit slice
+					$aRequestIndexes = \array_slice($aRequestIndexes, $oParams->iOffset ? $oParams->iLimit : 0, $oParams->iLimit);
+				} else {
+					// Fetch ID's from high to low
+					$end = \max(1, $oInfo->MESSAGES - $oParams->iOffset);
+					$start = \max(1, $end - $oParams->iLimit + 1);
+					$aRequestIndexes = \range($end, $start);
+				}
+				$this->MessageListByRequestIndexOrUids($oMessageCollection, new SequenceSet($aRequestIndexes, false));
+			}
+			$oMessageCollection->Sort = $oParams->sSort;
+		} else {
+			if ($oParams->bUseThreads && $oParams->iThreadUid) {
+				$aUids = [$oParams->iThreadUid];
+			} else if (!$aUids) {
+				$aUids = $this->GetUids($oAllParams, $oInfo);
+				$oMessageCollection->Sort = $oAllParams->sSort;
+			}
+
+			if ($oParams->bUseThreads) {
+				$aAllThreads = $this->ThreadsMap($oParams->sThreadAlgorithm, $oMessageCollection, $oParams->oCacher);
+//				$iThreadLimit = $this->oImapClient->Settings->thread_limit;
+				if ($oParams->iThreadUid) {
+					// Only show the selected thread messages
+					foreach ($aAllThreads as $aMap) {
+						if (\in_array($oParams->iThreadUid, $aMap)) {
+							$aUids = $aMap;
+							break;
+						}
+					}
+					$aAllThreads = [$aUids];
+					// This only speeds up the search when not cached
+//					$oParams->oSequenceSet = new SequenceSet($aUids);
+				} else {
+					// Remove all threaded UID's except the most recent of each thread
+					$aUids = \array_diff($aUids, $this->ThreadsOldUids($aAllThreads, $oMessageCollection, $oParams->oCacher));
+					// Get all unseen
+					$aUnseenUIDs = $this->MessageListUnseen($oParams, $oInfo);
+				}
+			}
+
+			if ($aUids && \strlen($sSearch)) {
+				$oParams->bUseSort = false;
+				$aSearchedUids = $this->GetUids($oParams, $oInfo);
+				if ($oParams->bUseThreads && !$oParams->iThreadUid) {
+					$matchingThreadUids = [];
+					foreach ($aAllThreads as $aMap) {
+						if (\array_intersect($aSearchedUids, $aMap)) {
+							$matchingThreadUids = \array_merge($matchingThreadUids, $aMap);
+						}
+					}
+					$aUids = \array_filter($aUids, function($iUid) use ($aSearchedUids, $matchingThreadUids) {
+						return \in_array($iUid, $aSearchedUids) || \in_array($iUid, $matchingThreadUids);
+					});
+				} else {
+					$aUids = \array_filter($aUids, function($iUid) use ($aSearchedUids) {
+						return \in_array($iUid, $aSearchedUids);
+					});
+				}
+			}
+		}
+
+		if (\is_array($aUids)) {
+			$oMessageCollection->totalEmails = \count($aUids);
+			if ($oMessageCollection->totalEmails) {
+				$aUids = \array_slice($aUids, $oParams->iOffset, $oParams->iLimit);
+				$this->MessageListByRequestIndexOrUids($oMessageCollection, new SequenceSet($aUids), $aAllThreads, $aUnseenUIDs);
+			}
+		}
+
+		return $oMessageCollection;
+	}
+
+	public function FindMessageUidByMessageId(string $sFolderName, string $sMessageId) : ?int
+	{
+		if (!\strlen($sMessageId)) {
+			throw new \ValueError;
+		}
+
+		$this->oImapClient->FolderExamine($sFolderName);
+
+		$aUids = $this->oImapClient->MessageSearch('HEADER Message-ID '.$sMessageId);
+
+		return 1 === \count($aUids) && \is_numeric($aUids[0]) ? (int) $aUids[0] : null;
+	}
+
+	public function Folders(string $sParent, string $sListPattern, bool $bUseListSubscribeStatus) : ?FolderCollection
+	{
+		$oFolderCollection = $this->oImapClient->FolderStatusList($sParent, $sListPattern);
+		if (!$oFolderCollection->count()) {
+			return null;
+		}
+
+		if ($bUseListSubscribeStatus && !$this->oImapClient->hasCapability('LIST-EXTENDED')) {
+//			$this->logWrite('RFC5258 not supported, using LSUB');
+//			\X2Mail\Engine\Log::warning('IMAP', 'RFC5258 not supported, using LSUB');
+			try
+			{
+				$oSubscribedFolders = $this->oImapClient->FolderSubscribeList($sParent, $sListPattern);
+				foreach ($oSubscribedFolders as /* @var $oImapFolder \X2Mail\Mail\Imap\Folder */ $oImapFolder) {
+					isset($oFolderCollection[$oImapFolder->FullName])
+					&& $oFolderCollection[$oImapFolder->FullName]->setSubscribed();
+				}
+			}
+			catch (\Throwable $oException)
+			{
+				\X2Mail\Engine\Log::error('IMAP', 'FolderSubscribeList: ' . $oException->getMessage());
+				foreach ($oFolderCollection as /* @var $oImapFolder \X2Mail\Mail\Imap\Folder */ $oImapFolder) {
+					$oImapFolder->setSubscribed();
+				}
+			}
+		}
+
+		return $oFolderCollection;
+	}
+
+	/**
+	 * @throws \ValueError
+	 */
+	public function FolderCreate(string $sFolderNameInUtf8, string $sFolderParentFullName = '', bool $bSubscribeOnCreation = true, string $sDelimiter = '') : ?\X2Mail\Mail\Imap\Folder
+	{
+		$sFolderNameInUtf8 = \trim($sFolderNameInUtf8);
+		$sFolderParentFullName = \trim($sFolderParentFullName);
+
+		if (!\strlen($sFolderNameInUtf8)) {
+			throw new \ValueError;
+		}
+
+		if (!\strlen($sDelimiter) || \strlen($sFolderParentFullName)) {
+			$sDelimiter = $this->oImapClient->FolderHierarchyDelimiter($sFolderParentFullName);
+			if (null === $sDelimiter) {
+				// TODO: Translate
+				throw new \X2Mail\Mail\RuntimeException(
+					\strlen($sFolderParentFullName)
+						? 'Cannot create folder in non-existent parent folder.'
+						: 'Cannot get folder delimiter.');
+			}
+
+			if (\strlen($sDelimiter) && \strlen($sFolderParentFullName)) {
+				$sFolderParentFullName .= $sDelimiter;
+			}
+		}
+
+/*		// Allow non existent parent folders
+		if (\strlen($sDelimiter) && false !== \strpos($sFolderNameInUtf8, $sDelimiter)) {
+			// TODO: Translate
+			throw new \X2Mail\Mail\RuntimeException('New folder name contains delimiter.');
+		}
+*/
+		$sFullNameToCreate = $sFolderParentFullName.$sFolderNameInUtf8;
+
+		$this->oImapClient->FolderCreate($sFullNameToCreate, $bSubscribeOnCreation);
+
+		$aFolders = $this->oImapClient->FolderStatusList($sFullNameToCreate, '');
+		if (isset($aFolders[$sFullNameToCreate])) {
+			$oImapFolder = $aFolders[$sFullNameToCreate];
+			$bSubscribeOnCreation && $oImapFolder->setSubscribed();
+			return $oImapFolder;
+		}
+
+		return null;
+	}
+
+	/**
+	 * @throws \InvalidArgumentException
+	 */
+	public function FolderRename(string $sPrevFolderFullName, string $sNewFolderFullName) : self
+	{
+		if (!\strlen($sPrevFolderFullName) || !\strlen($sNewFolderFullName)) {
+			throw new \ValueError;
+		}
+
+		if (!$this->oImapClient->FolderHierarchyDelimiter($sPrevFolderFullName)) {
+			// TODO: Translate
+			throw new \X2Mail\Mail\RuntimeException('Cannot rename non-existent folder.');
+		}
+/*
+		if (\strlen($sDelimiter) && false !== \strpos($sNewFolderFullName, $sDelimiter)) {
+			// TODO: Translate
+			throw new \X2Mail\Mail\RuntimeException('New folder name contains delimiter.');
+		}
+*/
+
+		/**
+		 * https://datatracker.ietf.org/doc/html/rfc3501#section-6.3.5
+		 *   Does not mention subscriptions
+		 * https://datatracker.ietf.org/doc/html/rfc9051#section-6.3.6
+		 *   Mentions that a server doesn't automatically manage subscriptions
+		 */
+		$oSubscribedFolders = $this->oImapClient->FolderSubscribeList($sPrevFolderFullName, '*');
+
+		$this->oImapClient->FolderRename($sPrevFolderFullName, $sNewFolderFullName);
+
+		foreach ($oSubscribedFolders as /* @var $oFolder \X2Mail\Mail\Imap\Folder */ $oFolder) {
+			$sFolderFullNameForResubscribe = $oFolder->FullName;
+			if (\str_starts_with($sFolderFullNameForResubscribe, $sPrevFolderFullName)) {
+				$this->oImapClient->FolderUnsubscribe($sFolderFullNameForResubscribe);
+				$this->oImapClient->FolderSubscribe(
+					$sNewFolderFullName . \substr($sFolderFullNameForResubscribe, \strlen($sPrevFolderFullName))
+				);
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @throws \InvalidArgumentException
+	 */
+	public function SetLogger(?\X2Mail\Mail\Log\Logger $oLogger) : void
+	{
+		$this->oLogger = $oLogger;
+		$this->oImapClient->SetLogger($oLogger);
+	}
+
+	public function __call(string $name, array $arguments) /*: mixed*/
+	{
+		return $this->oImapClient->{$name}(...$arguments);
+	}
+}

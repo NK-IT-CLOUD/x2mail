@@ -1,0 +1,214 @@
+<?php
+
+/*
+ * This file is part of MailSo.
+ *
+ * (c) 2014 Usenko Timur
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace X2Mail\Mail\Mime;
+
+/**
+ * @category MailSo
+ * @package Mime
+ */
+class Header implements \JsonSerializable
+{
+	private string $sName;
+
+	private string $sValue;
+
+	private string $sFullValue;
+
+	private string $sEncodedValue;
+
+	private ?ParameterCollection $oParameters = null;
+
+	private string $sParentCharset;
+
+	function __construct(string $sName, string $sValue = '', string $sEncodedValueForReparse = '', string $sParentCharset = '')
+	{
+		$this->sParentCharset = $sParentCharset;
+		$this->initInputData($sName, $sValue, $sEncodedValueForReparse);
+	}
+
+	private function initInputData(string $sName, string $sValue, string $sEncodedValueForReparse) : void
+	{
+		$this->sName = \trim($sName);
+		$this->sFullValue = \trim($sValue);
+		$this->sEncodedValue = '';
+
+		if (\strlen($sEncodedValueForReparse) && ($this->IsEmail() || $this->IsSubject() || $this->IsParameterized())) {
+			$this->sEncodedValue = \trim($sEncodedValueForReparse);
+		}
+
+		if (\strlen($this->sFullValue) && $this->IsParameterized()) {
+			$aRawExplode = \explode(';', $this->sFullValue, 2);
+			if (2 === \count($aRawExplode)) {
+				$this->sValue = $aRawExplode[0];
+				$this->oParameters = new ParameterCollection($aRawExplode[1]);
+			} else {
+				$this->sValue = $this->sFullValue;
+			}
+		} else {
+			$this->sValue = $this->sFullValue;
+		}
+
+		if (!$this->oParameters) {
+			$this->oParameters = new ParameterCollection();
+		}
+	}
+
+	public static function NewInstanceFromEncodedString(string $sEncodedLines, string $sIncomingCharset = \X2Mail\Mail\Base\Enumerations\Charset::ISO_8859_1->value) : Header
+	{
+		if (empty($sIncomingCharset)) {
+			$sIncomingCharset = \X2Mail\Mail\Base\Enumerations\Charset::ISO_8859_1->value;
+		}
+
+		$aParts = \explode(':', \str_replace("\r", '', $sEncodedLines), 2);
+		if (isset($aParts[0]) && isset($aParts[1]) && \strlen($aParts[0]) && \strlen($aParts[1])) {
+			return new self(
+				\trim($aParts[0]),
+				\trim(\X2Mail\Mail\Base\Utils::DecodeHeaderValue(\trim($aParts[1]), $sIncomingCharset)),
+				\trim($aParts[1]),
+				$sIncomingCharset
+			);
+		}
+
+		return false;
+	}
+
+	public function Name() : string
+	{
+		return $this->sName;
+	}
+
+	public function Value() : string
+	{
+		return $this->sValue;
+	}
+
+	public function FullValue() : string
+	{
+		return $this->sFullValue;
+	}
+
+	public function EncodedValue() : string
+	{
+		return $this->sEncodedValue ?: $this->sFullValue;
+	}
+
+	public function SetParentCharset(string $sParentCharset) : Header
+	{
+		if ($this->sParentCharset !== $sParentCharset && \strlen($this->sEncodedValue)) {
+			$this->initInputData(
+				$this->sName,
+				\trim(\X2Mail\Mail\Base\Utils::DecodeHeaderValue($this->sEncodedValue, $sParentCharset)),
+				$this->sEncodedValue
+			);
+		}
+
+		$this->sParentCharset = $sParentCharset;
+
+		return $this;
+	}
+
+	public function Parameters() : ?ParameterCollection
+	{
+		return $this->oParameters;
+	}
+
+	public function setParameter(string $sName, string $sValue) : void
+	{
+		$this->oParameters->setParameter($sName, $sValue);
+	}
+
+	public function __toString() : string
+	{
+		$sResult = $this->sFullValue;
+
+		if ($this->IsSubject()) {
+			if (!\X2Mail\Mail\Base\Utils::IsAscii($sResult) && \function_exists('iconv_mime_encode')) {
+				return \iconv_mime_encode($this->Name(), $sResult, array(
+//					'scheme' => \X2Mail\Mail\Base\Enumerations\Encoding::QUOTED_PRINTABLE_SHORT,
+					'scheme' => \X2Mail\Mail\Base\Enumerations\Encoding::BASE64_SHORT->value,
+					'input-charset' => \X2Mail\Mail\Base\Enumerations\Charset::UTF_8->value,
+					'output-charset' => \X2Mail\Mail\Base\Enumerations\Charset::UTF_8->value,
+					'line-length' => 74,
+					'line-break-chars' => "\r\n"
+				));
+			}
+		}
+		else if ($this->IsParameterized() && $this->oParameters->count())
+		{
+			$sResult = $this->sValue.'; '.$this->oParameters->ToString(true);
+		}
+		else if ($this->IsEmail())
+		{
+			$oEmailCollection = new EmailCollection($this->sFullValue);
+			if ($oEmailCollection && $oEmailCollection->count()) {
+				$sResult = $oEmailCollection->ToString(true);
+			}
+		}
+
+		// https://www.rfc-editor.org/rfc/rfc2822#section-2.1.1, avoid folding immediately after the header name
+		$sName = $this->sName . ': ';
+		return $sName . \wordwrap($sResult, 78 - \strlen($sName) - 1, "\r\n ");
+	}
+
+	private function IsSubject() : bool
+	{
+		return \strtolower(Enumerations\Header::SUBJECT->value) === \strtolower($this->Name());
+	}
+
+	private function IsParameterized() : bool
+	{
+		return \in_array(\strtolower($this->sName), array(
+			\strtolower(Enumerations\Header::CONTENT_TYPE->value),
+			\strtolower(Enumerations\Header::CONTENT_DISPOSITION->value)
+//			,\strtolower(Enumerations\Header::AUTOCRYPT->value)
+		));
+	}
+
+	private function IsEmail() : bool
+	{
+		return \in_array(\strtolower($this->sName), array(
+			\strtolower(Enumerations\Header::FROM->value),
+			\strtolower(Enumerations\Header::TO->value),
+			\strtolower(Enumerations\Header::CC->value),
+			\strtolower(Enumerations\Header::BCC->value),
+			\strtolower(Enumerations\Header::REPLY_TO->value),
+//			\strtolower(Enumerations\Header::RETURN_PATH->value),
+			\strtolower(Enumerations\Header::SENDER->value)
+		));
+	}
+
+	public function ValueWithCharsetAutoDetect() : string
+	{
+		if (!\X2Mail\Mail\Base\Utils::IsAscii($this->Value())
+		 && \strlen($this->sEncodedValue)
+		 && !\X2Mail\Mail\Base\Utils::IsAscii($this->sEncodedValue)
+		 && ($mEncoding = \mb_detect_encoding($this->sEncodedValue, 'auto', true))
+		) {
+			$this->SetParentCharset($mEncoding);
+		}
+		return $this->Value();
+	}
+
+	#[\ReturnTypeWillChange]
+	public function jsonSerialize()
+	{
+		$aResult = array(
+			'@Object' => 'Object/MimeHeader',
+			'name' => $this->sName,
+			'value' => $this->sValue // $this->EncodedValue()
+		);
+		if ($this->oParameters->count()) {
+			$aResult['parameters'] = $this->oParameters;
+		}
+		return $aResult;
+	}
+}
