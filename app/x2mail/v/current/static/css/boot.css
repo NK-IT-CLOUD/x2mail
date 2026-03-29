@@ -1,0 +1,79 @@
+:root {
+	--fontSans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--fontSerif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+	--fontMono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+#x2m-app.fontArial {
+	--fontSans: "Nimbus Sans L", "Liberation sans", "Arial Unicode MS", Arial, Helvetica, Garuda, Utkal, FreeSans, sans-serif;
+}
+#x2m-app.fontTahoma {
+	--fontSans: "Luxi Sans", Tahoma, Loma, Geneva, Meera, sans-serif;
+}
+#x2m-app.fontTrebuchet {
+	--fontSans: "DejaVu Sans Condensed", Trebuchet, "Trebuchet MS", sans-serif;
+}
+#x2m-app.fontLucida {
+	--fontSans: "Lucida Sans Unicode", "Lucida Sans", "DejaVu Sans", "Bitstream Vera Sans", "DejaVu LGC Sans", sans-serif;
+}
+#x2m-app.fontVerdana {
+	--fontSans: "DejaVu Sans", Verdana, Geneva, "Bitstream Vera Sans", "DejaVu LGC Sans", sans-serif;
+}
+#x2m-app.fontMonoCourier {
+	--fontMono: "Liberation Mono", "Courier New", FreeMono, Courier, monospace;
+}
+#x2m-app.fontMonoLucida {
+	--fontMono: "DejaVu Sans Mono", "DejaVu LGC Sans Mono", "Bitstream Vera Sans Mono", "Lucida Console", Monaco, monospace;
+}
+#x2m-app.fontSerifTimes {
+	--fontSerif: "Nimbus Roman No9 L", "Times New Roman", Times, FreeSerif, serif;
+}
+#x2m-app.fontSerifPalatino {
+	--fontSerif: "Bitstream Charter", "Palatino Linotype", Palatino, Palladio, "URW Palladio L", "Book Antiqua", Times, serif;
+}
+#x2m-app.fontSerifGeorgia {
+	--fontSerif: "URW Palladio L", Georgia, Times, serif;
+}
+
+html, body {
+	margin: 0;
+	padding: 0;
+	-webkit-text-size-adjust: 100%; /* 2 */
+}
+
+#x2m-app *, #x2m-app *::before, #x2m-app *::after {
+	box-sizing: border-box;
+}
+
+#x2m-app {
+	background-color: var(--main-bg-color, #aaa);
+	color: var(--main-color, #333);
+	font-family: var(--fontSans);
+
+	-webkit-touch-callout: none;
+	font-size: var(--main-font-size, 14px);
+	line-height: 1.25; /* 1 */
+	position: relative;
+}
+body#x2m-app {
+	height: 100vh;
+	height: 100dvh;
+	width: 100vw;
+}
+
+#x2m-loading, #x2m-loading-error, #x2m-BadBrowser, #x2m-NoCookie {
+	color: var(--loading-color, #000);
+	text-shadow: var(--loading-text-shadow);
+	font-size: 214%;
+	line-height: 130%;
+	position: fixed;
+	text-align: center;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 100%;
+}
+
+#x2m-loading .icon-spinner {
+	height: 1em;
+	width: 1em;
+}

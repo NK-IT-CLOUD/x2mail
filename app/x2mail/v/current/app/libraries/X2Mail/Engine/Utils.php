@@ -1,0 +1,170 @@
+<?php
+
+namespace X2Mail\Engine;
+
+class Utils
+{
+	const
+		/**
+		 * 30 days cookie
+		 * Used by: ServiceProxyExternal, compileLogParams, GetCsrfToken
+		 */
+		CONNECTION_TOKEN = 'x2mtoken',
+
+		/**
+		 * Session cookie
+		 * Used by: EncodeKeyValuesQ, DecodeKeyValuesQ
+		 */
+		SESSION_TOKEN = 'x2msession';
+
+	/**
+	 * @param mixed $value
+	 * @param int $flags Bitmask
+	 */
+	public static function jsonEncode($value, int $flags = \JSON_INVALID_UTF8_SUBSTITUTE) : string
+	{
+		try {
+			/* Issue with \X2Mail\Engine\HTTP\Stream
+			if (Api::Config()->Get('debug', 'enable', false)) {
+				$flags |= \JSON_PRETTY_PRINT;
+			}
+			*/
+			return \json_encode($value, $flags | \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR);
+		} catch (\Throwable $e) {
+			Api::Logger()->WriteException($e, \LOG_ERR, 'JSON');
+		}
+		return '';
+	}
+
+	public static function EncodeKeyValuesQ(array $aValues, string $sCustomKey = '') : string
+	{
+		return \X2Mail\Engine\Crypt::EncryptUrlSafe(
+			$aValues,
+			\sha1(APP_SALT.$sCustomKey.'Q'.static::GetSessionToken())
+		);
+	}
+
+	public static function DecodeKeyValuesQ(string $sEncodedValues, string $sCustomKey = '') : array
+	{
+		return \X2Mail\Engine\Crypt::DecryptUrlSafe(
+			$sEncodedValues,
+			\sha1(APP_SALT.$sCustomKey.'Q'.static::GetSessionToken(false))
+		) ?: array();
+	}
+
+	public static function GetSessionToken(bool $generate = true) : ?string
+	{
+		$sToken = \X2Mail\Engine\Cookies::get(self::SESSION_TOKEN);
+		if (!$sToken) {
+			if (!$generate) {
+				return null;
+			}
+			\X2Mail\Engine\Log::debug('TOKENS', 'New SESSION_TOKEN');
+			$sToken = \X2Mail\Mail\Base\Utils::Sha1Rand(APP_SALT);
+			\X2Mail\Engine\Cookies::set(self::SESSION_TOKEN, $sToken);
+		}
+		return \sha1('Session'.APP_SALT.$sToken.'Token'.APP_SALT);
+	}
+
+	public static function GetConnectionToken() : string
+	{
+		$oActions = \X2Mail\Engine\Api::Actions();
+		$oAccount = $oActions->getAccountFromToken(false);
+//		$oAccount = $oActions->getMainAccountFromToken(false);
+		if ($oAccount) {
+			if ($oAccount instanceof \X2Mail\Engine\Model\AdditionalAccount) {
+				return '2-' . \sha1(APP_SALT.$oAccount->Hash());
+			}
+			return '1-' . \sha1(APP_SALT.$oAccount->Hash());
+		}
+		$sToken = \X2Mail\Engine\Cookies::get(self::CONNECTION_TOKEN);
+		if (!$sToken) {
+			$sToken = \X2Mail\Mail\Base\Utils::Sha1Rand(APP_SALT);
+			\X2Mail\Engine\Cookies::set(self::CONNECTION_TOKEN, $sToken, \time() + 3600 * 24 * 30);
+		}
+		return '0-' . \sha1('Connection'.APP_SALT.$sToken.'Token'.APP_SALT);
+	}
+
+	public static function GetCsrfToken() : string
+	{
+		return self::GetConnectionToken();
+//		return \sha1('Csrf'.APP_SALT.self::GetConnectionToken().'Token'.APP_SALT);
+	}
+
+	public static function UpdateConnectionToken() : void
+	{
+		$sToken = \X2Mail\Engine\Cookies::get(self::CONNECTION_TOKEN);
+		if ($sToken) {
+			\X2Mail\Engine\Cookies::set(self::CONNECTION_TOKEN, $sToken, \time() + 3600 * 24 * 30);
+		}
+	}
+
+	public static function ClearHtmlOutput(string $sHtml) : string
+	{
+//		return $sHtml;
+		return \preg_replace('/>\\s+</', '> <', \preg_replace(
+			['@\\s*/>@', '/\\s*&nbsp;/i', '/&nbsp;\\s*/i', '/[\\r\\n\\t]+/'],
+			['>', "\xC2\xA0", "\xC2\xA0", ' '],
+			\trim($sHtml)
+		));
+	}
+
+	public static function WebPath() : string
+	{
+		static $sAppPath;
+		if (!$sAppPath) {
+			$sAppPath = \rtrim(Api::Config()->Get('webmail', 'app_path', '')
+				?: \preg_replace('#index\\.php.*$#D', '', $_SERVER['SCRIPT_NAME']),
+			'/') . '/';
+		}
+		return $sAppPath;
+	}
+
+	public static function WebVersionPath() : string
+	{
+		// X2Mail: use static 'current' path — version is in info.xml, not the directory name
+		return self::WebPath() . 'x2mail/v/current/';
+	}
+
+	public static function WebStaticPath(string $path = '') : string
+	{
+		return self::WebVersionPath() . 'static/' . $path;
+	}
+
+	public static function inOpenBasedir(string $name) : string
+	{
+		static $open_basedir;
+		if (null === $open_basedir) {
+			$open_basedir = \array_filter(\explode(PATH_SEPARATOR, \ini_get('open_basedir')));
+		}
+		if ($open_basedir) {
+			foreach ($open_basedir as $dir) {
+				if (\str_starts_with($name, $dir)) {
+					return true;
+				}
+			}
+//			\X2Mail\Engine\Log::warning('OpenBasedir', "open_basedir restriction in effect. {$name} is not within the allowed path(s): " . \ini_get('open_basedir'));
+			return false;
+		}
+		return true;
+	}
+
+	public static function saveFile(string $filename, string $data) : void
+	{
+		$dir = \dirname($filename);
+		if (!\is_dir($dir) && !\mkdir($dir, 0700, true)) {
+			throw new \RuntimeException('Failed to create directory "'.$dir.'"');
+		}
+		if (false === \file_put_contents($filename, $data)) {
+			throw new \RuntimeException('Failed to save file "'.$filename.'"');
+		}
+		\clearstatcache();
+		\chmod($filename, 0600);
+/*
+		try {
+		} catch (\Throwable $oException) {
+			throw new \RuntimeException($oException->getMessage() . ': ' . \error_get_last()['message']);
+		}
+*/
+	}
+}

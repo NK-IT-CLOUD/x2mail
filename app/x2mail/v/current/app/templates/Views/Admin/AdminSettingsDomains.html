@@ -1,0 +1,14 @@
+<div class="legend">
+	<span data-i18n="TAB_DOMAINS/LEGEND_DOMAINS"></span>
+	<i class="icon-spinner" style="margin: 5px" data-bind="visible: domains.loading"></i>
+</div>
+
+<table class="table table-hover b-admin-domains-list-table" data-bind="i18nUpdate: domains">
+	<tbody data-bind="foreach: domains">
+		<tr>
+			<td class="e-action">
+				<span class="domain-name" data-bind="text: name"></span>
+			</td>
+		</tr>
+	</tbody>
+</table>

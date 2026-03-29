@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>x2mail</id>
+	<name>X2Mail</name>
+	<summary>Webmail with native OAuth2 SSO — zero extra passwords</summary>
+	<version>0.6.0</version>
+	<licence>AGPL-3.0-or-later</licence>
+	<author homepage="https://github.com/NK-IT-CLOUD/x2mail">NK-IT Dev</author>
+	<website>https://github.com/NK-IT-CLOUD/x2mail</website>
+	<repository type="git">https://github.com/NK-IT-CLOUD/x2mail</repository>
+	<bugs>https://github.com/NK-IT-CLOUD/x2mail/issues</bugs>
+	<documentation>
+		<admin>https://github.com/NK-IT-CLOUD/x2mail#setup</admin>
+		<developer>https://github.com/NK-IT-CLOUD/x2mail</developer>
+	</documentation>
+	<screenshot>https://raw.githubusercontent.com/NK-IT-CLOUD/x2mail/main/img/screenshot-inbox.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/NK-IT-CLOUD/x2mail/main/img/screenshot-wizard.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/NK-IT-CLOUD/x2mail/main/img/screenshot-calendar.png</screenshot>
+	<description><![CDATA[**X2Mail** — Webmail for Nextcloud with zero-login SSO.
+
+Log into Nextcloud via Keycloak or any OIDC provider, open Email — done. No extra passwords, no extra login forms. Your OIDC access token authenticates directly against the IMAP server via OAuth2 (OAUTHBEARER/XOAUTH2).
+
+### Key Features
+- **SSO Webmail** — Keycloak, Authentik, any OIDC provider → IMAP without credentials
+- **OAuth2 IMAP auth** — OAUTHBEARER + XOAUTH2 auto-detected
+- **Automatic token refresh** — seamless sessions via user_oidc TokenService
+- **Admin Panel via SSO** — NC admin = engine admin, no separate password
+- **Setup Wizard** — preflight checks for IMAP, SMTP, OIDC + JWT token diagnostics
+- **NC33 native theme** — light + dark mode
+- **Sieve filtering** — server-side mail rules
+- **Multiple identities** — manage sender aliases
+- **Nextcloud integration** — Contacts, Files, Calendar
+- **OpenPGP / S/MIME** encryption
+- **CLI tools** — `occ x2mail:setup`, `occ x2mail:status`
+- **Password auth fallback** — legacy support when SSO unavailable
+
+### Setup
+```
+occ x2mail:setup --imap-host mail.example.com --domain example.com --sieve
+```
+SSO is the default. The setup wizard verifies connectivity, OIDC config, and decodes your JWT token to check email claim and audience.
+
+### Requirements
+- Nextcloud 33+, PHP 8.4+
+- IMAP server with OAUTHBEARER (Dovecot 2.4+)
+- OIDC provider (Keycloak, Authentik, etc.) + `user_oidc`
+
+	]]></description>
+	<namespace>X2Mail</namespace>
+	<category>integration</category>
+	<category>office</category>
+	<dependencies>
+		<php min-version="8.4" min-int-size="64" />
+		<lib>mbstring</lib>
+		<lib>openssl</lib>
+		<lib>zlib</lib>
+		<nextcloud min-version="33" max-version="33" />
+	</dependencies>
+	<settings>
+		<admin>OCA\X2Mail\Settings\AdminSettings</admin>
+		<admin-section>OCA\X2Mail\Settings\AdminSection</admin-section>
+		<personal>OCA\X2Mail\Settings\PersonalSettings</personal>
+		<personal-section>OCA\X2Mail\Settings\PersonalSection</personal-section>
+	</settings>
+	<navigations>
+		<navigation>
+			<name>Email</name>
+			<route>x2mail.page.index</route>
+			<icon>logo-white-64x64.png</icon>
+			<order>4</order>
+		</navigation>
+	</navigations>
+	<repair-steps>
+		<install>
+			<step>OCA\X2Mail\Migration\InstallStep</step>
+		</install>
+		<post-update>
+			<step>OCA\X2Mail\Migration\InstallStep</step>
+		</post-update>
+	</repair-steps>
+	<commands>
+		<command>OCA\X2Mail\Command\Setup</command>
+		<command>OCA\X2Mail\Command\Status</command>
+		<command>OCA\X2Mail\Command\Settings</command>
+	</commands>
+</info>

@@ -1,0 +1,87 @@
+<div class="form-horizontal">
+	<div class="legend" data-i18n="TAB_ABOUT/LEGEND_ABOUT"></div>
+	<div class="row">
+		<div class="span4">
+			<div class="x2m-logo"></div>
+			<div>
+				2026 &copy; NK-IT Dev. <span data-i18n="TAB_ABOUT/LABEL_ALL_RIGHTS_RESERVED"></span>
+				<br>
+				<a class="g-ui-link" href="https://github.com/NK-IT-CLOUD/x2mail" target="_blank" style="padding-left: 0">github.com/NK-IT-CLOUD/x2mail</a>
+			</div>
+		</div>
+		<div class="span6">
+			<h1 style="margin-bottom: 0;">X2Mail</h1>
+			<h4 style="margin-top: 0;" data-bind="text: version"></h4>
+			<h4 style="color: #aaa; font-weight: normal;">Nextcloud Webmail with native XOAUTH2/OAUTHBEARER SSO</h4>
+			<h4 style="color: #aaa; font-weight: normal;">X2Mail</h4>
+
+			<div>
+				<hr>
+				<div data-bind="visible: 'error' === statusType()">
+					<i class="fontastic" style="color:red">⚠</i>
+					<span data-bind="text: errorDesc"></span>
+				</div>
+				<div data-bind="visible: 'available' === statusType()">
+					<i class="fontastic" style="color:orange">⚠</i>
+					<span data-bind="html: coreVersionHtmlDesc"></span>
+					<br />
+					<span data-bind="if: coreWarning">
+						<br />
+						<i class="fontastic" style="color:red">⚠</i>
+						<b data-i18n="HINTS/WARNING"></b>
+						<span data-i18n="TAB_ABOUT/HINT_READ_CHANGE_LOG"></span>
+						<br />
+					</span>
+					<br />
+					<a class="btn" href="https://github.com/NK-IT-CLOUD/x2mail/releases" target="_blank" data-i18n="TAB_ABOUT/BUTTON_RELEASES"></a>
+				</div>
+				<div data-bind="visible: 'up-to-date' === statusType()">
+					<i style="color: green">✔</i>
+					<span data-i18n="TAB_ABOUT/HINT_IS_UP_TO_DATE"></span>
+				</div>
+				<div data-bind="visible: 'updating' === statusType()">
+					<i class="icon-spinner"></i>
+					<span data-i18n="TAB_ABOUT/LABEL_UPDATING"></span>…
+				</div>
+				<div data-bind="visible: 'checking' === statusType()">
+					<i class="icon-spinner"></i>
+					<span data-i18n="TAB_ABOUT/LABEL_CHECKING"></span>…
+				</div>
+			</div>
+
+			<h3>System</h3>
+			<table class="table table-hover table-bordered"><tbody>
+				<tr>
+					<td>Average load past minute</td>
+					<td data-bind="text: load1"></td>
+				</tr>
+				<tr>
+					<td>Average load past 5 minutes</td>
+					<td data-bind="text: load5"></td>
+				</tr>
+				<tr>
+					<td>Average load past 15 minutes</td>
+					<td data-bind="text: load15"></td>
+				</tr>
+			</tbody>
+			</table>
+
+			<h3>PHP</h3>
+			<div data-bind="hidden: php64" class="alert">
+				<i class="fontastic" style="color:red">⚠</i>
+				PHP is running in 32bit mode.
+			</div>
+
+			<table class="table table-hover table-bordered"><thead><tr>
+				<th>Extension</th>
+				<th>Loaded</th>
+			</tr></thead><tbody data-bind="foreach: phpextensions">
+				<tr>
+					<td data-bind="text: name"></td>
+					<td data-bind="text: loaded ? '✔' : '❌'"></td>
+				</tr>
+			</tbody>
+			</table>
+		</div>
+	</div>
+</div>

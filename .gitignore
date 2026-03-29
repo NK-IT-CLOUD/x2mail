@@ -1,0 +1,12 @@
+app/data/
+app/x2mail/v/current/app/plugins/nextcloud/js/*.min.js
+build/
+*.tar.gz
+appinfo/signature.json
+vendor/
+.phpunit.cache/
+docs/
+scripts/.env
+.claude/
+.remember/
+scripts/CLAUDE.md

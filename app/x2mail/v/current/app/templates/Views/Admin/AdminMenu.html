@@ -1,0 +1,6 @@
+<div class="b-toolbar btn-toolbar">
+	<a class="btn" href="/settings/admin/x2mail" data-icon="⬅">Zurück</a>
+</div>
+<nav data-bind="foreach: menu">
+	<a data-bind="css: {'selected': selected }, attr: { 'href': $root.link(route), 'data-i18n': label }"></a>
+</nav>
