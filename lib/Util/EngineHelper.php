@@ -186,6 +186,7 @@ class EngineHelper
             if ($sPassword) {
                 return [$sUID, $sEmail, $this->decodePassword($sPassword, $sUID)];
             }
+        } else {
         }
 
         return [$sUID, '', ''];

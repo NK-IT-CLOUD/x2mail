@@ -26,15 +26,15 @@ const
 		}) : Promise.reject('src is empty');
 
 try {
-	let smctoken = doc.cookie.match(/(^|;) ?smctoken=([^;]+)/);
-	smctoken = smctoken ? smctoken[2] : localStorage.getItem('smctoken');
-	if (!smctoken) {
+	let x2mctoken = doc.cookie.match(/(^|;) ?x2mctoken=([^;]+)/);
+	x2mctoken = x2mctoken ? x2mctoken[2] : localStorage.getItem('x2mctoken');
+	if (!x2mctoken) {
 		let data = new Uint8Array(16);
 		crypto.getRandomValues(data);
-		smctoken = encodeURIComponent(btoa(String.fromCharCode(...data)));
+		x2mctoken = encodeURIComponent(btoa(String.fromCharCode(...data)));
 	}
-	localStorage.setItem('smctoken', smctoken);
-	doc.cookie = 'smctoken='+smctoken+";path=/;samesite=strict";
+	localStorage.setItem('x2mctoken', x2mctoken);
+	doc.cookie = 'x2mctoken='+x2mctoken+";path=/;samesite=strict";
 } catch (e) {
 	console.error(e);
 }

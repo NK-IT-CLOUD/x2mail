@@ -61,8 +61,6 @@ class PageController extends Controller
         $oActions = $bAdmin ? new \X2Mail\Engine\ActionsAdmin() : \X2Mail\Engine\Api::Actions();
         $oHttp = \X2Mail\Mail\Base\Http::SingletonInstance();
         $oServiceActions = new \X2Mail\Engine\ServiceActions($oHttp, $oActions);
-        $sAppJsMin = $oConfig->Get('debug', 'javascript', false) ? '' : '.min';
-        $sAppCssMin = $oConfig->Get('debug', 'css', false) ? '' : '.min';
         $sLanguage = $oActions->GetLanguage(false);
 
         $csp = new ContentSecurityPolicy();
@@ -79,12 +77,11 @@ class PageController extends Controller
                 $oServiceActions->compileTemplates($bAdmin)
             ),
             'BaseAppBootScript' => \file_get_contents(
-                APP_VERSION_ROOT_PATH . 'static/js'
-                . ($sAppJsMin ? '/min' : '') . '/boot' . $sAppJsMin . '.js'
+                APP_VERSION_ROOT_PATH . 'static/js/boot.js'
             ),
             'BaseAppBootScriptNonce' => $sNonce,
             'BaseLanguage' => $oActions->compileLanguage($sLanguage, $bAdmin),
-            'BaseAppBootCss' => \file_get_contents(APP_VERSION_ROOT_PATH . 'static/css/boot' . $sAppCssMin . '.css'),
+            'BaseAppBootCss' => \file_get_contents(APP_VERSION_ROOT_PATH . 'static/css/boot.css'),
             'BaseAppThemeCss' => \preg_replace(
                 '/\\s*([:;{},]+)\\s*/s',
                 '$1',
@@ -92,7 +89,7 @@ class PageController extends Controller
             )
         ];
 
-        $cssFile = 'css/' . ($bAdmin ? 'admin' : 'app') . $sAppCssMin . '.css';
+        $cssFile = 'css/' . ($bAdmin ? 'admin' : 'app') . '.css';
         \OCP\Util::addHeader('link', [
             'type' => 'text/css',
             'rel' => 'stylesheet',

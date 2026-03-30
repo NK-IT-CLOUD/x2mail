@@ -422,18 +422,17 @@ class ServiceActions
 		\header('Content-Type: application/javascript; charset=utf-8');
 
 		$bAppDebug = $this->Config()->Get('debug', 'enable', false);
-		$sMinify = ($bAppDebug || $this->Config()->Get('debug', 'javascript', false)) ? '' : 'min';
 
 		$bCacheEnabled = !$bAppDebug && $this->Config()->Get('cache', 'system_data', true);
 		$sCacheFileName = '';
 		if ($bCacheEnabled) {
-			$sCacheFileName = KeyPathHelper::PluginsJsCache($this->oActions->Plugins()->Hash()) . $sMinify;
+			$sCacheFileName = KeyPathHelper::PluginsJsCache($this->oActions->Plugins()->Hash());
 			$this->oActions->verifyCacheByKey(\md5($sCacheFileName));
 			$sResult = $this->Cacher()->Get($sCacheFileName);
 		}
 
 		if (!$sResult) {
-			$sResult = $this->Plugins()->CompileJs($bAdmin, !!$sMinify);
+			$sResult = $this->Plugins()->CompileJs($bAdmin);
 			if ($sCacheFileName) {
 				$this->Cacher()->Set($sCacheFileName, $sResult);
 			}
@@ -463,12 +462,11 @@ class ServiceActions
 			$sTheme = $this->oActions->ValidateTheme($this->aPaths[4]);
 
 			$bAppDebug = $this->Config()->Get('debug', 'enable', false);
-			$sMinify = ($bAppDebug || $this->Config()->Get('debug', 'css', false)) ? '' : 'min';
 
 			$bCacheEnabled = !$bAppDebug && $this->Config()->Get('cache', 'system_data', true);
 			$sCacheFileName = '';
 			if ($bCacheEnabled) {
-				$sCacheFileName = '/CssCache/'.$this->oActions->Plugins()->Hash().'/'.$sTheme.'/'.APP_VERSION.'/' . $sMinify;
+				$sCacheFileName = '/CssCache/'.$this->oActions->Plugins()->Hash().'/'.$sTheme.'/'.APP_VERSION.'/';
 				$this->oActions->verifyCacheByKey(\md5($sCacheFileName . ($bJson ? 1 : 0)));
 				$sResult = $this->Cacher()->Get($sCacheFileName);
 			}

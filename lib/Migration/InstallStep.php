@@ -86,7 +86,7 @@ class InstallStep implements IRepairStep
         $oConfig->Set('webmail', 'allow_additional_accounts', false);
         $oConfig->Set('webmail', 'allow_additional_identities', true);
         $oConfig->Set('login', 'allow_languages_on_login', false);
-        $oConfig->Set('login', 'sign_me_auto', \X2Mail\Engine\Enumerations\SignMeType::Unused);
+        $oConfig->Set('login', 'sign_me_auto', \X2Mail\Engine\Enumerations\SignMeType::Unused->value);
         $oConfig->Set('imap', 'show_login_alert', false);
         $oConfig->Set('defaults', 'autologout', 15);
         $oConfig->Set('defaults', 'contacts_autosave', false);
@@ -111,20 +111,28 @@ class InstallStep implements IRepairStep
 
         $bSave = true;
 
-        // Sync bundled nextcloud plugin to engine data directory on every install/upgrade
+        // Clean-sync bundled nextcloud plugin to engine data directory
         $bundledPlugin = $app_dir . '/x2mail/v/current/app/plugins/nextcloud';
         $installedPlugin = APP_PLUGINS_PATH . 'nextcloud';
         if (\is_dir($bundledPlugin)) {
-            if (!\is_dir($installedPlugin)) {
-                \mkdir($installedPlugin, 0755, true);
-                $oConfig->Set('plugins', 'enable', true);
-                $aList = \X2Mail\Engine\Repository::getEnabledPackagesNames();
+            // Ensure plugin is registered
+            $oConfig->Set('plugins', 'enable', true);
+            $aList = \X2Mail\Engine\Repository::getEnabledPackagesNames();
+            if (!\in_array('nextcloud', $aList)) {
                 $aList[] = 'nextcloud';
                 $oConfig->Set('plugins', 'enabled_list', \implode(',', \array_unique($aList)));
                 $bSave = true;
             }
-            // Always sync plugin files from bundled version
+
+            // Delete old plugin dir to prevent stale files
+            if (\is_dir($installedPlugin)) {
+                $output->info('Clean installed plugin dir');
+                $this->recursiveDelete($installedPlugin);
+            }
+
+            // Copy fresh from bundled version
             $output->info('Sync bundled nextcloud plugin');
+            \mkdir($installedPlugin, 0755, true);
             foreach (
                 new \RecursiveIteratorIterator(
                     new \RecursiveDirectoryIterator($bundledPlugin, \FilesystemIterator::SKIP_DOTS),
@@ -134,7 +142,7 @@ class InstallStep implements IRepairStep
                 $relPath = \substr($item->getPathname(), \strlen($bundledPlugin));
                 $dest = $installedPlugin . $relPath;
                 if ($item->isDir()) {
-                    !\is_dir($dest) && \mkdir($dest, 0755, true);
+                    \mkdir($dest, 0755, true);
                 } else {
                     \copy($item->getPathname(), $dest);
                 }
@@ -178,5 +186,17 @@ class InstallStep implements IRepairStep
         } catch (\Throwable $e) {
             // Non-fatal — users will re-authenticate
         }
+    }
+
+    private function recursiveDelete(string $dir): void
+    {
+        $items = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($items as $item) {
+            $item->isDir() ? \rmdir($item->getPathname()) : \unlink($item->getPathname());
+        }
+        \rmdir($dir);
     }
 }

@@ -17,7 +17,7 @@ class Actions
 
 	use \X2Mail\Mail\Log\Inherit;
 
-	const AUTH_MAILTO_TOKEN_KEY = 'smmailtoauth';
+	const AUTH_MAILTO_TOKEN_KEY = 'x2mmailtoauth';
 
 	/**
 	 * This 30 days cookie contains decrypt data,
@@ -25,19 +25,19 @@ class Actions
 	 * /_data_/.../storage/DOMAIN/LOCAL/.sign_me/*
 	 * Gets refreshed on each login
 	 */
-	const AUTH_SIGN_ME_TOKEN_KEY = 'smremember';
+	const AUTH_SIGN_ME_TOKEN_KEY = 'x2mremember';
 
 	/**
 	 * This session cookie contains a \X2Mail\Engine\Model\Account
 	 * Value is Base64 EncryptToJSON
 	 */
-	const AUTH_SPEC_TOKEN_KEY = 'smaccount';
+	const AUTH_SPEC_TOKEN_KEY = 'x2maccount';
 
 	/**
 	 * This session cookie optionally contains a \X2Mail\Engine\Model\AdditionalAccount
 	 * Value is Base64 EncryptToJSON
 	 */
-	const AUTH_ADDITIONAL_TOKEN_KEY = 'smadditional';
+	const AUTH_ADDITIONAL_TOKEN_KEY = 'x2madditional';
 
 	const APP_DUMMY = '********';
 
@@ -762,11 +762,7 @@ class Actions
 			? 'Plugins/0/' . ($bAdmin ? 'Admin' : 'User') . '/' . $this->etag($this->oPlugins->Hash()) . '/'
 			: '';
 
-		$bAppJsDebug = $this->oConfig->Get('debug', 'javascript', false)
-			|| $this->oConfig->Get('debug', 'enable', false);
-
-		$aResult['StaticLibsJs'] = Utils::WebStaticPath('js/' . ($bAppJsDebug ? '' : 'min/') .
-			'libs' . ($bAppJsDebug ? '' : '.min') . '.js');
+		$aResult['StaticLibsJs'] = Utils::WebStaticPath('js/libs.js');
 
 		$this->oPlugins->InitAppData($bAdmin, $aResult, $oAccount);
 

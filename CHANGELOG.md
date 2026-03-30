@@ -4,7 +4,13 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
-## [0.6.1] — Unreleased
+## [0.6.2] — 2026-03-30
+
+### Fixed
+- SSO login works reliably after App Store upgrades
+- Plugin updates no longer leave stale files that break the frontend
+
+## [0.6.1] — 2026-03-30
 
 ### Added
 - Dashboard widget: unread mails stay visible after OIDC token expiry (auto-refresh)

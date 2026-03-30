@@ -169,17 +169,11 @@ class Manager
 		return $this->bIsEnabled && \count($this->aJs[$bAdminScope ? 1 : 0]);
 	}
 
-	public function CompileCss(bool $bAdminScope, bool &$bLess, bool $bMinified) : string
+	public function CompileCss(bool $bAdminScope, bool &$bLess) : string
 	{
 		$aResult = array();
 		if ($this->bIsEnabled) {
 			foreach ($this->aCss[$bAdminScope ? 1 : 0] as $sFile) {
-				if ($bMinified) {
-					$sMinFile = \str_replace('.css', '.min.css', $sFile);
-					if (\is_readable($sMinFile)) {
-						$sFile = $sMinFile;
-					}
-				}
 				if (\is_readable($sFile)) {
 					$aResult[] = \file_get_contents($sFile);
 					$bLess = $bLess || \str_ends_with($sFile, '.less');
@@ -189,17 +183,11 @@ class Manager
 		return \implode("\n", $aResult);
 	}
 
-	public function CompileJs(bool $bAdminScope = false, bool $bMinified = false) : string
+	public function CompileJs(bool $bAdminScope = false) : string
 	{
 		$aResult = array();
 		if ($this->bIsEnabled) {
 			foreach ($this->aJs[$bAdminScope ? 1 : 0] as $sFile) {
-				if ($bMinified) {
-					$sMinFile = \str_replace('.js', '.min.js', $sFile);
-					if (\is_readable($sMinFile)) {
-						$sFile = $sMinFile;
-					}
-				}
 				if (\is_readable($sFile)) {
 					$aResult[] = \file_get_contents($sFile);
 				}

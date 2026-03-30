@@ -108,7 +108,7 @@ trait Themes
 		return $sTheme;
 	}
 
-	public function compileCss(string $sTheme, bool $bAdmin, bool $bMinified = false) : string
+	public function compileCss(string $sTheme, bool $bAdmin) : string
 	{
 		$mResult = array();
 		$bLess = false;
@@ -141,7 +141,7 @@ trait Themes
 			$mResult[] = \file_get_contents($sThemeCSSFile);
 		}
 
-		$mResult[] = $this->Plugins()->CompileCss($bAdmin, $bLess, $bMinified);
+		$mResult[] = $this->Plugins()->CompileCss($bAdmin, $bLess);
 
 		$mResult = \preg_replace('@(url\(["\']?)(\\./)?([a-z]+[^:a-z])@',
 			"\$1{$sBase}\$3",
