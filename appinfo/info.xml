@@ -3,7 +3,7 @@
 	<id>x2mail</id>
 	<name>X2Mail</name>
 	<summary>Webmail with native Nextcloud SSO — zero extra passwords, full NC integration</summary>
-	<version>0.7.2</version>
+	<version>0.7.3</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author homepage="https://github.com/NK-IT-CLOUD/x2mail">NK-IT Dev</author>
 	<website>https://github.com/NK-IT-CLOUD/x2mail</website>
@@ -34,7 +34,7 @@ Everything runs through Nextcloud's native APIs — no external services, no sep
 - **Zero-config SSO** — OAUTHBEARER + XOAUTH2 auto-detected, token auto-refreshed
 - **Admin Panel via SSO** — NC admin = engine admin, no separate password
 - **Setup Wizard** — preflight checks for IMAP, SMTP, OIDC + JWT diagnostics
-- **NC33 native theme** — light + dark mode
+- **Native Nextcloud theme** — light + dark mode
 - **Sieve filtering** — server-side mail rules
 - **Multiple identities** — manage sender aliases
 - **OpenPGP / S/MIME** — end-to-end encryption

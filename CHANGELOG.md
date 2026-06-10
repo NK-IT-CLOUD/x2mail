@@ -4,6 +4,14 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.7.3] — 2026-06-10
+
+### Fixed
+- Nextcloud 34 compatibility: the content security policy no longer depends on the `allowEvalScript()` API removed in NC 34. A leftover `$evalScriptAllowed` subclass property additionally crashed NC 34's reflection-based policy merge with an HTTP 500 on every page load; the property is gone and `'unsafe-eval'` — required by the Knockout-based UI — is now added to `script-src` via the version-appropriate path (direct keyword on NC 34, `allowEvalScript()` on NC 33).
+
+### Changed
+- CSP nonce lookup now degrades to a self-generated nonce if the internal `ContentSecurityPolicyNonceManager` is removed in a future release, turning a potential fatal error into a soft failure (no public nonce API exists yet — see #181).
+
 ## [0.7.2] — 2026-06-05
 
 ### Changed

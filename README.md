@@ -1,6 +1,6 @@
 # X2Mail — Nextcloud Webmail with Native SSO
 
-Feature-rich webmail client for **Nextcloud 33** with native Single Sign-On via OAuth2
+Feature-rich webmail client for **Nextcloud 33 and 34** with native Single Sign-On via OAuth2
 SASL (`OAUTHBEARER` / `XOAUTH2`). Users log into Nextcloud via your OIDC provider and open
 webmail without a second login or stored mail password.
 
@@ -345,7 +345,7 @@ Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 ## Origin
 
-Permanent fork of [SnappyMail v2.38.2](https://github.com/the-djmaze/snappymail/releases/tag/v2.38.2), rebuilt for Nextcloud 33 with native OIDC/SSO.
+Permanent fork of [SnappyMail v2.38.2](https://github.com/the-djmaze/snappymail/releases/tag/v2.38.2), rebuilt for Nextcloud 33+ with native OIDC/SSO.
 
 ## License
 
