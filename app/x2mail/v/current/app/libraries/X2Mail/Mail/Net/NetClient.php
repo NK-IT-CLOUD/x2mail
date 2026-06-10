@@ -311,4 +311,20 @@ abstract class NetClient
 			throw $oException;
 		}
 	}
+
+	/**
+	 * NC-only OAUTHBEARER: the OIDC bearer token must never cross the wire in
+	 * the clear. Loopback is exempt (mail server on the same host).
+	 */
+	protected function assertEncryptedForBearerAuth() : void
+	{
+		if (!$this->Encrypted()) {
+			// sConnectedHost carries the stream scheme (tcp:// or ssl://)
+			$sHost = \preg_replace('#^[a-z0-9._]+://#i', '', $this->GetConnectedHost());
+			if (!\in_array($sHost, array('127.0.0.1', '::1', 'localhost'), true)) {
+				$this->writeLogException(new \X2Mail\Mail\RuntimeException(
+					"Refusing to send bearer token over unencrypted connection to {$sHost}"), \LOG_ERR);
+			}
+		}
+	}
 }

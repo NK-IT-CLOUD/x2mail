@@ -7,7 +7,6 @@ namespace OCA\X2Mail\Command;
 use OCA\X2Mail\Service\DomainConfigService;
 use OCA\X2Mail\Service\LogService;
 use OCA\X2Mail\Util\EngineHelper;
-use OCA\X2Mail\Util\SetupResolvers;
 use Symfony\Component\Console\Command\Command;
 use OCP\App\IAppManager;
 use OCP\IAppConfig;
@@ -16,10 +15,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class Status extends Command
 {
-    use SetupResolvers;
-
     private const APP_ID = 'x2mail';
-    private const OIDC_PROVIDER_KEY = 'oidc-provider';
 
     public function __construct(
         private IAppConfig $appConfig,
@@ -91,23 +87,16 @@ class Status extends Command
         $autologin = $this->appConfig->getValueString(self::APP_ID, 'autologin', '0') === '1';
 
         $userOidc = $this->appManager->isEnabledForUser('user_oidc');
-        $oidcLogin = $this->appManager->isEnabledForUser('oidc_login');
-        $configuredProvider = $this->normalizeOidcProvider(
-            $this->appConfig->getValueString(self::APP_ID, self::OIDC_PROVIDER_KEY, '')
-        );
-        $provider = $this->resolvePreferredOidcProvider($configuredProvider, $userOidc, $oidcLogin) ?? 'none';
+        $provider = $userOidc ? 'user_oidc' : 'none';
 
         $output->writeln('  OIDC auto-login: ' . ($oidcEnabled ? '<info>enabled</info>' : 'disabled'));
         $output->writeln('  Autologin:       ' . ($autologin ? '<info>enabled</info>' : 'disabled'));
-        $providerLabel = match (true) {
-            $provider === 'none' => '<error>none installed</error>',
-            $configuredProvider !== null && $configuredProvider !== $provider =>
-                "<comment>{$provider} (fallback from {$configuredProvider})</comment>",
-            default => "<info>{$provider}</info>",
-        };
+        $providerLabel = $provider === 'none'
+            ? '<error>user_oidc not installed</error>'
+            : "<info>{$provider}</info>";
         $output->writeln('  Provider:        ' . $providerLabel);
 
-        if ($provider === 'user_oidc' && $userOidc) {
+        if ($userOidc) {
             $storeToken = $this->appConfig->getValueString(
                 'user_oidc',
                 'store_login_token',

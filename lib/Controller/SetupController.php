@@ -63,7 +63,8 @@ class SetupController extends Controller
                 'imap_host' => $raw['IMAP']['host'] ?? '',
                 'imap_port' => $raw['IMAP']['port'] ?? 143,
                 'imap_ssl' => DomainConfigService::sslToString($raw['IMAP']['type'] ?? 0),
-                'imap_audience' => $this->appConfig->getValueString(self::APP_ID, 'oidc-exchange-audience', ''),
+                'oidc_audience' => $this->appConfig->getValueString(self::APP_ID, 'oidc-exchange-audience', ''),
+                'oidc_scopes' => $this->appConfig->getValueString(self::APP_ID, 'oidc-exchange-scopes', ''),
                 'smtp_host' => $raw['SMTP']['host'] ?? '',
                 'smtp_port' => $raw['SMTP']['port'] ?? 587,
                 'smtp_ssl' => DomainConfigService::sslToString($raw['SMTP']['type'] ?? 0),
@@ -77,14 +78,8 @@ class SetupController extends Controller
 
         // OIDC status
         $userOidcInstalled = $this->appManager->isEnabledForUser('user_oidc');
-        $oidcLoginInstalled = $this->appManager->isEnabledForUser('oidc_login');
         $oidcAutoLogin = $this->appConfig->getValueString(self::APP_ID, 'autologin-oidc', '0');
-
-        $oidcProvider = $this->resolvePreferredOidcProvider(
-            $this->appConfig->getValueString(self::APP_ID, self::OIDC_PROVIDER_KEY, ''),
-            $userOidcInstalled,
-            $oidcLoginInstalled,
-        ) ?? 'none';
+        $oidcProvider = $userOidcInstalled ? 'user_oidc' : 'none';
 
         // Suggest domain from admin's email (part after @)
         $suggestedDomain = '';
@@ -105,7 +100,6 @@ class SetupController extends Controller
                 'enabled' => $oidcAutoLogin === '1',
                 'provider' => $oidcProvider,
                 'user_oidc' => $userOidcInstalled,
-                'oidc_login' => $oidcLoginInstalled,
             ],
         ]);
     }
@@ -152,16 +146,11 @@ class SetupController extends Controller
         }
 
         $userOidc = $this->appManager->isEnabledForUser('user_oidc');
-        $oidcLogin = $this->appManager->isEnabledForUser('oidc_login');
         $requestedProvider = $this->normalizeOidcProvider($oidc_provider);
         if ($requestedProvider === null) {
             return new JSONResponse(['error' => 'Invalid OIDC provider'], 400);
         }
-        $resolvedProvider = $this->resolvePreferredOidcProvider(
-            $requestedProvider,
-            $userOidc,
-            $oidcLogin,
-        ) ?? 'none';
+        $resolvedProvider = $userOidc ? 'user_oidc' : 'none';
 
         $results = [];
 
@@ -209,8 +198,7 @@ class SetupController extends Controller
         // OIDC check
         $oidcResult = [
             'user_oidc' => $userOidc,
-            'oidc_login' => $oidcLogin,
-            'any_installed' => $userOidc || $oidcLogin,
+            'any_installed' => $userOidc,
             'requested_provider' => $requestedProvider,
             'provider' => $resolvedProvider,
             'provider_fallback' => $requestedProvider !== $resolvedProvider,
@@ -239,27 +227,43 @@ class SetupController extends Controller
 
         // Decode JWT payload for admin diagnostics (no signature verification needed)
         $accessToken = $this->session->get('oidc_access_token');
-        if ($accessToken && \is_string($accessToken)) {
-            $parts = \explode('.', $accessToken);
-            if (\count($parts) === 3) {
-                $b64 = \strtr($parts[1], '-_', '+/');
-                $b64 .= \str_repeat('=', (4 - \strlen($b64) % 4) % 4);
-                $payload = \json_decode(\base64_decode($b64), true);
-                if ($payload) {
-                    $oidcResult['token'] = [
-                        'email' => $payload['email'] ?? null,
-                        'aud' => $payload['aud'] ?? null,
-                        'iss' => $payload['iss'] ?? null,
-                        'exp' => $payload['exp'] ?? null,
-                        'expires_in' => isset($payload['exp']) ? $payload['exp'] - \time() : null,
-                    ];
-                }
+        if (\is_string($accessToken)) {
+            $claims = $this->decodeJwtClaims($accessToken);
+            if ($claims !== null) {
+                $oidcResult['token'] = $claims;
             }
         }
 
         $results['oidc'] = $oidcResult;
 
         return new JSONResponse($results);
+    }
+
+    /**
+     * Decode a JWT payload for admin diagnostics (no signature verification needed).
+     *
+     * @return array<string, mixed>|null
+     */
+    private function decodeJwtClaims(string $token): ?array
+    {
+        $parts = \explode('.', $token);
+        if (\count($parts) !== 3) {
+            return null;
+        }
+        $b64 = \strtr($parts[1], '-_', '+/');
+        $b64 .= \str_repeat('=', (4 - \strlen($b64) % 4) % 4);
+        $payload = \json_decode(\base64_decode($b64), true);
+        if (!\is_array($payload)) {
+            return null;
+        }
+        return [
+            'email' => $payload['email'] ?? null,
+            'aud' => $payload['aud'] ?? null,
+            'iss' => $payload['iss'] ?? null,
+            'exp' => $payload['exp'] ?? null,
+            'expires_in' => isset($payload['exp']) ? $payload['exp'] - \time() : null,
+            'scope' => $payload['scope'] ?? null,
+        ];
     }
 
     /**
@@ -270,7 +274,8 @@ class SetupController extends Controller
         string $imap_host = '',
         int $imap_port = 143,
         string $imap_ssl = 'none',
-        string $imap_audience = '',
+        string $oidc_audience = '',
+        string $oidc_scopes = '',
         string $smtp_host = '',
         int $smtp_port = 587,
         string $smtp_ssl = 'none',
@@ -332,23 +337,24 @@ class SetupController extends Controller
         if (!\in_array($sieveSsl, ['none', 'ssl', 'starttls'], true)) {
             return new JSONResponse(['status' => 'error', 'message' => 'Invalid Sieve SSL mode'], 400);
         }
-        $audienceTooLong = $imap_audience !== '' && \strlen($imap_audience) > 255;
-        $audienceInvalid = $imap_audience !== '' && !\preg_match('/\A[A-Za-z0-9._:\/\-]+\z/', $imap_audience);
+        $audienceTooLong = $oidc_audience !== '' && \strlen($oidc_audience) > 255;
+        $audienceInvalid = $oidc_audience !== '' && !\preg_match('/\A[A-Za-z0-9._:\/\-]+\z/', $oidc_audience);
         if ($audienceTooLong || $audienceInvalid) {
             return new JSONResponse(['status' => 'error', 'message' => 'Invalid IMAP audience'], 400);
+        }
+        $oidc_scopes = \trim($oidc_scopes);
+        $scopesInvalid = \strlen($oidc_scopes) > 255
+            || ($oidc_scopes !== '' && !\preg_match('/\A[A-Za-z0-9._:\/\- ]+\z/', $oidc_scopes));
+        if ($scopesInvalid) {
+            return new JSONResponse(['status' => 'error', 'message' => 'Invalid token exchange scopes'], 400);
         }
 
         try {
             $userOidcInstalled = $this->appManager->isEnabledForUser('user_oidc');
-            $oidcLoginInstalled = $this->appManager->isEnabledForUser('oidc_login');
-            $resolvedProvider = $this->resolvePreferredOidcProvider(
-                $requestedProvider,
-                $userOidcInstalled,
-                $oidcLoginInstalled,
-            );
-            if ($resolvedProvider === null) {
-                return new JSONResponse(['status' => 'error', 'message' => 'No OIDC provider enabled'], 400);
+            if (!$userOidcInstalled) {
+                return new JSONResponse(['status' => 'error', 'message' => 'user_oidc is not enabled'], 400);
             }
+            $resolvedProvider = 'user_oidc';
 
             $domainConfig = $this->domainService->buildDomainConfig(
                 $imapHost,
@@ -387,12 +393,11 @@ class SetupController extends Controller
             $this->appConfig->setValueString(self::APP_ID, 'autologin', '1');
             $this->appConfig->setValueString(self::APP_ID, 'autologin-oidc', '1');
             $this->appConfig->setValueString(self::APP_ID, self::OIDC_PROVIDER_KEY, $resolvedProvider);
-            $this->appConfig->setValueString(self::APP_ID, 'oidc-exchange-audience', \trim($imap_audience));
+            $this->appConfig->setValueString(self::APP_ID, 'oidc-exchange-audience', \trim($oidc_audience));
+            $this->appConfig->setValueString(self::APP_ID, 'oidc-exchange-scopes', $oidc_scopes);
 
             // Ensure store_login_token is set for user_oidc
-            if ($resolvedProvider === 'user_oidc' && $userOidcInstalled) {
-                $this->appConfig->setValueString('user_oidc', 'store_login_token', '1');
-            }
+            $this->appConfig->setValueString('user_oidc', 'store_login_token', '1');
 
             // Set engine config for this auth mode
             try {
@@ -440,7 +445,8 @@ class SetupController extends Controller
         string $imap_host = '',
         int $imap_port = 143,
         string $imap_ssl = 'none',
-        string $imap_audience = '',
+        string $oidc_audience = '',
+        string $oidc_scopes = '',
         string $smtp_host = '',
         int $smtp_port = 587,
         string $smtp_ssl = 'none',
@@ -477,18 +483,29 @@ class SetupController extends Controller
         if (!\in_array($sieveSsl, ['none', 'ssl', 'starttls'], true)) {
             return new JSONResponse(['error' => 'Invalid Sieve SSL mode'], 400);
         }
-        $audience = \trim($imap_audience);
+        $audience = \trim($oidc_audience);
         $audienceTooLong = $audience !== '' && \strlen($audience) > 255;
         $audienceInvalid = $audience !== '' && !\preg_match('/\A[A-Za-z0-9._:\/\-]+\z/', $audience);
         if ($audienceTooLong || $audienceInvalid) {
             return new JSONResponse(['error' => 'Invalid IMAP audience'], 400);
         }
+        $scopes = \trim($oidc_scopes);
+        if ($scopes !== '' && (\strlen($scopes) > 255 || !\preg_match('/\A[A-Za-z0-9._:\/\- ]+\z/', $scopes))) {
+            return new JSONResponse(['error' => 'Invalid token exchange scopes'], 400);
+        }
 
-        // Test with the audience typed in the wizard (even if not yet saved).
-        $token = $this->engineHelper->getOidcAccessToken($audience);
+        // Test with the audience/scopes typed in the wizard (even if not yet saved).
+        $token = $this->engineHelper->getOidcAccessToken($audience, $scopes);
         if ($token === null) {
             return new JSONResponse(['error' => 'No active SSO token — log in via SSO first'], 400);
         }
+
+        // Report which token the test actually used (exchange vs login token).
+        $loginToken = $this->session->get('oidc_access_token');
+        $tokenInfo = $this->decodeJwtClaims($token) ?? [];
+        $tokenInfo['audience_requested'] = $audience;
+        $tokenInfo['scopes_requested'] = $scopes;
+        $tokenInfo['exchanged'] = $audience !== '' && $token !== $loginToken;
 
         // Resolve the user email for OAUTHBEARER (n,a=<email>,...)
         $user = $this->userSession->getUser();
@@ -522,6 +539,8 @@ class SetupController extends Controller
                 $token
             );
         }
+
+        $results['token'] = $tokenInfo;
 
         return new JSONResponse($results);
     }

@@ -60,16 +60,23 @@ class Setup extends Command
                 'oidc-provider',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'OIDC provider app (user_oidc, oidc_login)',
+                'OIDC provider app (user_oidc)',
                 'user_oidc'
             )
             ->addOption(
-                'imap-audience',
+                'oidc-audience',
                 null,
                 InputOption::VALUE_REQUIRED,
                 'Optional: target OIDC client/audience for the mail server. '
                 . 'When set, x2mail exchanges the login token for one scoped to this audience '
                 . '(requires IdP token-exchange support).'
+            )
+            ->addOption(
+                'oidc-scopes',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Optional: space-separated extra scopes requested during token exchange '
+                . '(only if your IdP requires them).'
             )
             ->addOption('sieve', null, InputOption::VALUE_NONE, 'Enable Sieve filtering support')
             ->addOption(
@@ -117,7 +124,7 @@ class Setup extends Command
         $skipChecks = $input->getOption('skip-checks');
 
         if ($requestedOidcProvider === null) {
-            $output->writeln('<error>Invalid --oidc-provider. Must be: user_oidc or oidc_login</error>');
+            $output->writeln('<error>Invalid --oidc-provider. Must be: user_oidc</error>');
             return 1;
         }
         foreach (['imap-ssl' => $imapSsl, 'smtp-ssl' => $smtpSsl, 'sieve-ssl' => $sieveSsl] as $name => $val) {
@@ -133,12 +140,7 @@ class Setup extends Command
 
         $errors = 0;
         $userOidcInstalled = $this->appManager->isEnabledForUser('user_oidc');
-        $oidcLoginInstalled = $this->appManager->isEnabledForUser('oidc_login');
-        $oidcProvider = $this->resolvePreferredOidcProvider(
-            $requestedOidcProvider,
-            $userOidcInstalled,
-            $oidcLoginInstalled,
-        );
+        $oidcProvider = $userOidcInstalled ? 'user_oidc' : null;
 
         // ═══════════════════════════════════════════
         // PREFLIGHT CHECKS
@@ -239,27 +241,18 @@ class Setup extends Command
 
         // 3. OIDC
         if ($oidcProvider === null) {
-            $output->writeln('  <error>✗ OIDC  No provider installed (need user_oidc or oidc_login)</error>');
+            $output->writeln('  <error>✗ OIDC  user_oidc is not installed</error>');
             $output->writeln('    → occ app:install user_oidc');
             return 1;
         }
 
-        if ($requestedOidcProvider !== $oidcProvider) {
-            $output->writeln(
-                "  <comment>↳ Requested {$requestedOidcProvider}, using {$oidcProvider}"
-                . ' because only that provider is enabled</comment>'
-            );
-        }
-
         $oidcInfo = $oidcProvider;
-        if ($oidcProvider === 'user_oidc') {
-            $storeToken = $this->appConfig->getValueString('user_oidc', 'store_login_token', '0');
-            if ($storeToken !== '1') {
-                $this->appConfig->setValueString('user_oidc', 'store_login_token', '1');
-                $oidcInfo .= ', store_login_token=1 (set)';
-            } else {
-                $oidcInfo .= ', store_login_token=1';
-            }
+        $storeToken = $this->appConfig->getValueString('user_oidc', 'store_login_token', '0');
+        if ($storeToken !== '1') {
+            $this->appConfig->setValueString('user_oidc', 'store_login_token', '1');
+            $oidcInfo .= ', store_login_token=1 (set)';
+        } else {
+            $oidcInfo .= ', store_login_token=1';
         }
         $output->writeln("  <info>✓ OIDC  {$oidcInfo}</info>");
 
@@ -324,12 +317,20 @@ class Setup extends Command
         $this->appConfig->setValueString(self::APP_ID, 'autologin', '1');
         $this->appConfig->setValueString(self::APP_ID, 'autologin-oidc', '1');
         $this->appConfig->setValueString(self::APP_ID, self::OIDC_PROVIDER_KEY, $oidcProvider);
-        $imapAudience = $input->getOption('imap-audience');
-        if (\is_string($imapAudience) && $imapAudience !== '') {
-            $this->appConfig->setValueString(self::APP_ID, 'oidc-exchange-audience', $imapAudience);
-            $output->writeln('  Token exchange audience: <comment>' . $imapAudience . '</comment>');
+        $oidcAudience = $input->getOption('oidc-audience');
+        if (\is_string($oidcAudience) && $oidcAudience !== '') {
+            $this->appConfig->setValueString(self::APP_ID, 'oidc-exchange-audience', $oidcAudience);
+            $output->writeln('  Token exchange audience: <comment>' . $oidcAudience . '</comment>');
         } else {
             $this->appConfig->setValueString(self::APP_ID, 'oidc-exchange-audience', '');
+        }
+        $oidcScopes = $input->getOption('oidc-scopes');
+        $oidcScopes = \is_string($oidcScopes) ? \trim($oidcScopes) : '';
+        if ($oidcScopes !== '') {
+            $this->appConfig->setValueString(self::APP_ID, 'oidc-exchange-scopes', $oidcScopes);
+            $output->writeln('  Token exchange scopes: <comment>' . $oidcScopes . '</comment>');
+        } else {
+            $this->appConfig->setValueString(self::APP_ID, 'oidc-exchange-scopes', '');
         }
 
         // Engine config (app_path, default_domain)

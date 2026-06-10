@@ -58,7 +58,7 @@ Keycloak (external IdP) checklist:
 1. Create a mail-scoped client (example id: `mail-service`) or add an **Audience** mapper on the Nextcloud client so access tokens include that client in `aud`.
 2. In Stalwart: OIDC directory with the same issuer as Nextcloud, `requireAudience` matching that client id, `claimUsername` = `email`.
 3. X2Mail domain profile must match the mailbox domain (e.g. `example.com` for `user@example.com`).
-4. Optional: `--imap-audience mail-service` when the login token does not already carry the mail audience (token exchange).
+4. Optional: `--oidc-audience mail-service` when the login token does not already carry the mail audience (token exchange).
 
 Stalwart Webadmin/Management uses Stalwart’s internal OAuth; external IdP SSO for the admin UI is not supported in current releases — configure mail via OIDC + optional LDAP; use Stalwart’s recovery/fallback admin for server management.
 

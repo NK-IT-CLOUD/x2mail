@@ -16,10 +16,6 @@
             <option value="ssl">SSL/TLS</option>
             <option value="starttls">STARTTLS</option>
         </select>
-
-        <label for="wiz-imap-audience"><?php echo($l->t('IMAP Token Audience (optional)')); ?></label>
-        <input type="text" id="wiz-imap-audience"
-            placeholder="<?php echo($l->t('leave empty unless your mail server uses a different OIDC client')); ?>">
     </div>
 
     <h3><?php echo($l->t('SMTP')); ?></h3>
@@ -69,9 +65,15 @@
         <label for="wiz-oidc-provider"><?php echo($l->t('OIDC Provider')); ?></label>
         <select id="wiz-oidc-provider">
             <option value="user_oidc">user_oidc</option>
-            <option value="oidc_login">oidc_login</option>
         </select>
 
+        <label for="wiz-oidc-audience"><?php echo($l->t('Token Exchange Audience (optional)')); ?></label>
+        <input type="text" id="wiz-oidc-audience"
+            placeholder="<?php echo($l->t('leave empty unless your mail server uses a different OIDC client')); ?>">
+
+        <label for="wiz-oidc-scopes"><?php echo($l->t('Token Exchange Scopes (optional)')); ?></label>
+        <input type="text" id="wiz-oidc-scopes"
+            placeholder="<?php echo($l->t('space-separated, only if your IdP requires extra scopes')); ?>">
     </div>
 
     <h2 style="margin-top:1.5em"><?php echo($l->t('Connectivity & SSO')); ?></h2>

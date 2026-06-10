@@ -111,6 +111,8 @@ class SieveClient extends \X2Mail\Mail\Net\NetClient
 			$this->writeLogException(new \X2Mail\Mail\Sieve\Exceptions\LoginException, \LOG_ERR);
 		}
 
+		$this->assertEncryptedForBearerAuth();
+
 		$SASL = \X2Mail\Engine\SASL::factory($type);
 
 		$bAuth = false;

@@ -135,6 +135,8 @@ class ImapClient extends \X2Mail\Mail\Net\NetClient
 			);
 		}
 
+		$this->assertEncryptedForBearerAuth();
+
 		$SASL = \X2Mail\Engine\SASL::factory($type);
 
 		try

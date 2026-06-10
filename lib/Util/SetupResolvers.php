@@ -16,35 +16,13 @@ trait SetupResolvers
         return $ssl === 'tls' ? 'starttls' : $ssl;
     }
 
+    /**
+     * Only user_oidc is supported (oidc_login is unmaintained and stops at
+     * NC 33). A stored legacy "oidc_login" value normalizes to null.
+     */
     private function normalizeOidcProvider(string $provider): ?string
     {
         $provider = \strtolower(\trim($provider));
-        return \in_array($provider, ['user_oidc', 'oidc_login'], true) ? $provider : null;
-    }
-
-    /**
-     * Resolve the effective OIDC provider, normalizing the request and
-     * falling back to whichever provider is actually installed.
-     */
-    private function resolvePreferredOidcProvider(
-        ?string $provider,
-        bool $userOidcInstalled,
-        bool $oidcLoginInstalled,
-    ): ?string {
-        $normalized = $provider === null ? null : $this->normalizeOidcProvider($provider);
-        if ($normalized === 'user_oidc' && $userOidcInstalled) {
-            return $normalized;
-        }
-        if ($normalized === 'oidc_login' && $oidcLoginInstalled) {
-            return $normalized;
-        }
-        if ($userOidcInstalled) {
-            return 'user_oidc';
-        }
-        if ($oidcLoginInstalled) {
-            return 'oidc_login';
-        }
-
-        return null;
+        return $provider === 'user_oidc' ? $provider : null;
     }
 }

@@ -4,6 +4,26 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [Unreleased]
+
+## [0.8.0] — 2026-06-10
+
+### Removed
+- Support for the unmaintained `oidc_login` app — `user_oidc` is the only supported SSO provider now (`oidc_login` does not support Nextcloud 34+). Existing `oidc_login` setups must migrate to `user_oidc`.
+
+### Added
+- Optional extra scopes for OIDC token exchange — configurable in the setup wizard next to the token audience, via `occ x2mail:setup --oidc-scopes "scope1 scope2"`, or directly: `occ config:app:set x2mail oidc-exchange-scopes --value "scope1 scope2"`. The wizard's Test Login uses the typed scopes.
+- Test Login diagnostics show which token was actually used: exchanged token (with audience, scopes and remaining lifetime), a warning when the token exchange fell back to the login token, or the plain login token
+
+### Security
+- Bearer tokens are never sent over unencrypted connections to remote mail servers (loopback connections are exempt)
+
+### Fixed
+- An expired or rejected token during SMTP authentication now terminates the SASL exchange cleanly (RFC 7628) and the mail server's error details are logged, instead of failing with a generic error
+- Token exchange/refresh failures now log the identity provider's error response and the remaining token lifetime, making SSO issues diagnosable from the log
+- The engine log no longer fills with `CRITICAL: Caught SIGCHLD` entries — these fired on every normal helper-process exit and were not errors
+- The webmail UI keeps loading even if a future Nextcloud release removes the internal CSP nonce API (the self-generated fallback nonce is now correctly referenced by the app's content security policy)
+
 ## [0.7.3] — 2026-06-10
 
 ### Fixed

@@ -37,12 +37,33 @@ Expected token excerpt:
 }
 ```
 
-## Optional: Token Exchange
+## Optional: Token Exchange (Least Privilege)
 
-If audience cannot be added directly to the Nextcloud token, X2Mail can request a
-mail-scoped token via `--imap-audience mail-service`.
+Instead of adding the mail audience to every login token, X2Mail can exchange
+the login token for a mail-scoped token: `--oidc-audience mail-service`,
+optionally `--oidc-scopes "mail"` (or the matching setup-wizard fields). The
+login token then never works against the mail server — only the exchanged,
+narrowly scoped token does.
 
-Use this only when direct audience mapping is not possible.
+Requirements with Keycloak 26.2+ (Standard Token Exchange), all on the
+Nextcloud client:
+
+- Enable **Standard token exchange** (Capability config)
+- Set **Allow refresh token in Standard Token Exchange** to `Same session`
+  (the exchange requests a refresh token)
+- `offline_access` must not be a *default* client scope — offline sessions
+  cannot issue same-session refresh tokens
+- The exchange `audience` parameter only *filters* audiences provided by the
+  client's scopes; it cannot add them. Put the audience mapper into a
+  dedicated **optional client scope** (e.g. `mail`) and request it via
+  `--oidc-scopes mail` — then only exchanged tokens carry the mail audience
+  and scope
+- The login token must contain the Nextcloud client itself in `aud`
+  (self-audience mapper)
+
+The exchanged token can be verified in the setup wizard: **Test Login** shows
+`TOKEN exchanged for "<audience>"` with the token's `aud`, scopes and
+remaining lifetime.
 
 ## Network Requirements
 

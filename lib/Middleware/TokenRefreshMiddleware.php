@@ -37,7 +37,7 @@ class TokenRefreshMiddleware extends Middleware
 
         $eventClass = 'OCA\\UserOIDC\\Event\\ExternalTokenRequestedEvent';
         if (!\class_exists($eventClass)) {
-            return; // oidc_login path, or user_oidc not installed
+            return; // user_oidc not installed
         }
 
         try {

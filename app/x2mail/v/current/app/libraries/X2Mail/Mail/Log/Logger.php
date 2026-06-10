@@ -30,8 +30,8 @@ class Logger extends \SplFixedArray
 		'SIGALRM',
 		'SIGBABY',
 		'SIGBUS',
-		'SIGCHLD',
-		'SIGCLD',
+//		'SIGCHLD', // fires on every normal child exit (gnupg/openssl) — pure log spam
+//		'SIGCLD',
 //		'SIGCONT',
 		'SIGFPE',
 		'SIGHUP',

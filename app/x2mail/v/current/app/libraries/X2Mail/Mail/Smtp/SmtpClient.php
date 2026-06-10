@@ -160,6 +160,8 @@ class SmtpClient extends \X2Mail\Mail\Net\NetClient
 			$this->writeLogException(new \X2Mail\Mail\Smtp\Exceptions\LoginBadMethodException);
 		}
 
+		$this->assertEncryptedForBearerAuth();
+
 		$SASL = \X2Mail\Engine\SASL::factory($type);
 		$sResult = '';
 
@@ -181,7 +183,17 @@ class SmtpClient extends \X2Mail\Mail\Net\NetClient
 			$sRequest = $SASL->authenticate($sLogin, $sPassword);
 			if ($sRequest) {
 				$this->logMask($sRequest);
-				$SASL->verify($this->sendRequestWithCheck($sRequest, 235));
+				$sResult = $this->sendRequestWithCheck($sRequest, [235, 334]);
+				if (!empty($this->aResults[0]) && \str_starts_with($this->aResults[0], '334')) {
+					// RFC 7628: a rejected bearer token comes back as a 334 base64
+					// JSON error challenge; the client must answer with the dummy
+					// response (single ^A) to receive the final reply.
+					if (\preg_match('/^[a-zA-Z0-9=+\/]+$/', $sResult)) {
+						$this->logWrite(\base64_decode($sResult), \LOG_WARNING);
+					}
+					$sResult = $this->sendRequestWithCheck('AQ==', 235);
+				}
+				$SASL->verify($sResult);
 			}
 		}
 		catch (\X2Mail\Mail\Smtp\Exceptions\NegativeResponseException $oException)

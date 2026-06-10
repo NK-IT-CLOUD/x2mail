@@ -204,7 +204,7 @@ class EngineHelper
     public function isOIDCLogin(): bool
     {
         if ($this->appConfig->getValueString('x2mail', 'autologin-oidc', '0') !== '0') {
-            if ($this->appManager->isEnabledForUser('oidc_login') || $this->appManager->isEnabledForUser('user_oidc')) {
+            if ($this->appManager->isEnabledForUser('user_oidc')) {
                 if ($this->session->get('is_oidc')) {
                     if ($this->session->get('oidc_access_token')) {
                         return true;
@@ -223,19 +223,24 @@ class EngineHelper
     /**
      * Single source for the OIDC access token used for IMAP/SMTP OAUTHBEARER.
      * Order: token exchange (if an audience is configured) -> fresh login token
-     * via user_oidc public event -> session value (oidc_login / cached).
+     * via user_oidc public event -> cached session value (last resort).
      *
-     * Pass $audienceOverride (e.g. from the setup wizard Test Login) to exchange
-     * for that audience instead of the stored one; null falls back to config.
+     * Pass $audienceOverride / $scopesOverride (e.g. from the setup wizard
+     * Test Login) to use the typed values instead of the stored ones; null
+     * falls back to config.
      */
-    public function getOidcAccessToken(?string $audienceOverride = null): ?string
+    public function getOidcAccessToken(?string $audienceOverride = null, ?string $scopesOverride = null): ?string
     {
         $audience = $audienceOverride
             ?? $this->appConfig->getValueString('x2mail', 'oidc-exchange-audience', '');
         if ($audience !== '') {
+            $rawScopes = $scopesOverride
+                ?? $this->appConfig->getValueString('x2mail', 'oidc-exchange-scopes', '');
+            $scopes = \preg_split('/\s+/', \trim($rawScopes), -1, PREG_SPLIT_NO_EMPTY) ?: [];
             $exchanged = $this->dispatchTokenEvent(
                 'OCA\\UserOIDC\\Event\\ExchangedTokenRequestedEvent',
-                $audience
+                $audience,
+                $scopes
             );
             if ($exchanged !== null) {
                 return $exchanged;
@@ -255,13 +260,20 @@ class EngineHelper
         return \is_string($sessionToken) && $sessionToken !== '' ? $sessionToken : null;
     }
 
-    private function dispatchTokenEvent(string $eventClass, ?string $audienceArg): ?string
+    /** @param list<string> $extraScopes */
+    private function dispatchTokenEvent(string $eventClass, ?string $audienceArg, array $extraScopes = []): ?string
     {
         if (!\class_exists($eventClass)) {
             return null;
         }
         try {
-            $event = $audienceArg === null ? new $eventClass() : new $eventClass($audienceArg);
+            if ($audienceArg === null) {
+                $event = new $eventClass();
+            } elseif ($extraScopes === []) {
+                $event = new $eventClass($audienceArg);
+            } else {
+                $event = new $eventClass($audienceArg, $extraScopes);
+            }
             if (!$event instanceof Event) {
                 return null;
             }
@@ -274,9 +286,30 @@ class EngineHelper
                 return null;
             }
             $access = $token->getAccessToken();
-            return \is_string($access) && $access !== '' ? $access : null;
+            if (!\is_string($access) || $access === '') {
+                return null;
+            }
+            if (\method_exists($token, 'getExpiresInFromNow')) {
+                // Visibility for the known "user_oidc reports expires_in=0" realm issue
+                $this->logger->debug(
+                    'OIDC token (' . $eventClass . ') expires in '
+                    . (int)$token->getExpiresInFromNow() . 's'
+                );
+            }
+            return $access;
         } catch (\Throwable $e) {
-            $this->logger->warning('OIDC token event failed (' . $eventClass . '): ' . $e->getMessage());
+            $message = 'OIDC token event failed (' . $eventClass . '): ' . $e->getMessage();
+            // user_oidc's GetExternalTokenFailedException / TokenExchangeFailedException
+            // carry the IdP error response — surface it for diagnosis.
+            if (\method_exists($e, 'getError') && \method_exists($e, 'getErrorDescription')) {
+                $error = $e->getError();
+                $description = $e->getErrorDescription();
+                if (\is_string($error) || \is_string($description)) {
+                    $message .= ' — IdP: ' . (\is_string($error) ? $error : '')
+                        . ' (' . (\is_string($description) ? $description : '') . ')';
+                }
+            }
+            $this->logger->warning($message);
             return null;
         }
     }

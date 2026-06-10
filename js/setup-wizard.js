@@ -49,7 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			imap_host: el('wiz-imap-host').value.trim(),
 			imap_port: parseInt(el('wiz-imap-port').value) || 143,
 			imap_ssl: el('wiz-imap-ssl').value,
-			imap_audience: el('wiz-imap-audience').value.trim(),
+			oidc_audience: el('wiz-oidc-audience').value.trim(),
+			oidc_scopes: el('wiz-oidc-scopes').value.trim(),
 			smtp_host: el('wiz-smtp-host').value.trim(),
 			smtp_port: parseInt(el('wiz-smtp-port').value) || 587,
 			smtp_ssl: el('wiz-smtp-ssl').value,
@@ -67,7 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		el('wiz-domain').value = domain || '';
 		el('wiz-imap-host').value = cfg?.imap_host || '';
 		el('wiz-imap-port').value = cfg?.imap_port || 143;
-		el('wiz-imap-audience').value = cfg?.imap_audience || '';
+		el('wiz-oidc-audience').value = cfg?.oidc_audience || '';
+		el('wiz-oidc-scopes').value = cfg?.oidc_scopes || '';
 		el('wiz-imap-ssl').value = normSsl(cfg?.imap_ssl);
 		el('wiz-smtp-host').value = cfg?.smtp_host || '';
 		el('wiz-smtp-port').value = cfg?.smtp_port || 587;
@@ -109,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
 				const provSel = el('wiz-oidc-provider');
 				Array.from(provSel.options).forEach(opt => {
 					if (opt.value === 'user_oidc') opt.disabled = !data.oidc.user_oidc;
-					if (opt.value === 'oidc_login') opt.disabled = !data.oidc.oidc_login;
 				});
 				if (data.oidc.provider && data.oidc.provider !== 'none') {
 					provSel.value = data.oidc.provider;
@@ -262,6 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
 							const lines = [];
 							if (t.email) lines.push('email=' + t.email);
 							if (t.aud) lines.push('aud=' + (Array.isArray(t.aud) ? t.aud.join(',') : t.aud));
+							if (t.scope) lines.push('scope=' + t.scope);
 							if (t.expires_in != null) lines.push('expires=' + Math.round(t.expires_in / 60) + 'min');
 							if (lines.length) {
 								results.appendChild(buildCheckLine('ok', 'TOKEN ' + lines.join(', ')));
@@ -269,13 +271,9 @@ document.addEventListener('DOMContentLoaded', () => {
 							if (!t.email) {
 								results.appendChild(buildCheckLine('warn', 'TOKEN Missing email claim — IMAP login may fail'));
 							}
-							if (vals.imap_audience && t.aud) {
-								const auds = Array.isArray(t.aud) ? t.aud : [t.aud];
-								if (!auds.includes(vals.imap_audience)) {
-									results.appendChild(buildCheckLine('warn',
-										'TOKEN Configured audience "' + vals.imap_audience + '" not in token aud — verify OIDC mapper'));
-								}
-							}
+							// Note: with token exchange configured, the login token is NOT
+							// supposed to carry the mail audience — Test Login reports the
+							// exchanged token, which is the authoritative diagnostic.
 						}
 					} else if (data.oidc.session_is_oidc) {
 						results.appendChild(buildCheckLine('warn', 'SSO   OIDC session but no access token'));
@@ -284,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 				} else {
 					results.appendChild(buildCheckLine('fail',
-						'OIDC  No provider installed (need user_oidc or oidc_login)'));
+						'OIDC  user_oidc is not installed'));
 					hasError = true;
 				}
 			}
@@ -319,7 +317,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			imap_host: vals.imap_host,
 			imap_port: vals.imap_port,
 			imap_ssl: vals.imap_ssl,
-			imap_audience: vals.imap_audience,
+			oidc_audience: vals.oidc_audience,
+			oidc_scopes: vals.oidc_scopes,
 			smtp_host: vals.smtp_host,
 			smtp_port: vals.smtp_port,
 			smtp_ssl: vals.smtp_ssl,
@@ -347,6 +346,24 @@ document.addEventListener('DOMContentLoaded', () => {
 				results.appendChild(buildCheckLine('fail', data.error));
 				results.className = 'preflight-results error';
 				return;
+			}
+
+			// Which token was actually used (exchange vs login token)
+			if (data.token) {
+				const t = data.token;
+				const aud = Array.isArray(t.aud) ? t.aud.join(',') : (t.aud || '?');
+				const mins = typeof t.expires_in === 'number' ? Math.round(t.expires_in / 60) + 'min' : '?';
+				let info = 'aud=' + aud + (t.scope ? ', scope=' + t.scope : '') + ', expires=' + mins;
+				if (t.exchanged) {
+					results.appendChild(buildCheckLine('ok', 'TOKEN exchanged for "'
+						+ t.audience_requested + '" — ' + info));
+				} else if (t.audience_requested) {
+					results.appendChild(buildCheckLine('warn', 'TOKEN exchange for "'
+						+ t.audience_requested + '" failed, using login token — ' + info
+						+ ' (check Nextcloud log)'));
+				} else {
+					results.appendChild(buildCheckLine('ok', 'TOKEN login token (no exchange) — ' + info));
+				}
 			}
 
 			// IMAP result

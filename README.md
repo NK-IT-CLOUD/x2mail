@@ -11,7 +11,7 @@ protocol authentication.
 
 ```text
 User -> OIDC provider (Keycloak, Authentik, ...)
-     -> Nextcloud (user_oidc / oidc_login)
+     -> Nextcloud (user_oidc)
      -> X2Mail reads access token from session
      -> IMAP/SMTP/Sieve: AUTHENTICATE OAUTHBEARER <token>
      -> Mail server validates token (introspection/JWKS)
@@ -72,10 +72,9 @@ Same requirements whether services run on one host or many:
 
 ### 1. Nextcloud with OIDC Login
 
-Install and configure one OIDC app:
+Install and configure the OIDC app:
 
-- `user_oidc` (recommended)
-- `oidc_login`
+- `user_oidc`
 
 ```bash
 occ app:install user_oidc
@@ -105,7 +104,7 @@ release (not shipped inside the Nextcloud app package from the App Store).
 The mail server accepts tokens only when:
 
 - `aud` includes the mail-server OIDC client (recommended via audience mapper), or
-- X2Mail token exchange is configured (`--imap-audience`)
+- X2Mail token exchange is configured (`--oidc-audience`, optionally `--oidc-scopes`)
 
 Required claims:
 
@@ -236,8 +235,9 @@ The release setup keeps one active domain profile. Saving replaces older stored 
 | `--smtp-port` | `587` | SMTP port |
 | `--smtp-ssl` | `none` | `none`, `ssl`, `tls`/`starttls` |
 | `--domain` | (required) | Mail domain (`user@domain`) |
-| `--oidc-provider` | `user_oidc` | `user_oidc` or `oidc_login` |
-| `--imap-audience` | (empty) | Token exchange audience/client (optional) |
+| `--oidc-provider` | `user_oidc` | `user_oidc` |
+| `--oidc-audience` | (empty) | Token exchange audience/client (optional) |
+| `--oidc-scopes` | (empty) | Extra scopes requested during token exchange (optional) |
 | `--sieve` | off | Enable ManageSieve |
 | `--sieve-host` | same as IMAP | ManageSieve hostname |
 | `--sieve-port` | `4190` | ManageSieve port |

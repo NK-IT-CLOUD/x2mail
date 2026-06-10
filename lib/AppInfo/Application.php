@@ -3,7 +3,6 @@
 namespace OCA\X2Mail\AppInfo;
 
 use OCA\X2Mail\Dashboard\UnreadMailWidget;
-use OCA\X2Mail\Listeners\AccessTokenUpdatedListener;
 use OCA\X2Mail\Listeners\ImpersonateListener;
 use OCA\X2Mail\Listeners\LoginBridgeListener;
 use OCA\X2Mail\Listeners\LogoutListener;
@@ -38,12 +37,6 @@ class Application extends App implements IBootstrap
         // The DI container resolves constructor dependencies automatically.
 
         $context->registerSearchProvider(Provider::class);
-
-        // OIDCLogin AccessTokenUpdatedEvent — use string class name to avoid autoload interference
-        $context->registerEventListener(
-            'OCA\\OIDCLogin\\Events\\AccessTokenUpdatedEvent',
-            AccessTokenUpdatedListener::class
-        );
 
         // user_oidc TokenObtainedEvent — use string class name to avoid autoload interference
         $context->registerEventListener(

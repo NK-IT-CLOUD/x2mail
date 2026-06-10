@@ -21,6 +21,15 @@ client_secret      = <secret>
 username_attribute = email
 ```
 
+Optional hardening (Dovecot 2.4+): require a dedicated scope so only
+exchanged/mail-scoped tokens can authenticate — any other valid IdP token
+(e.g. a plain login token) is rejected with `insufficient_scope`. Pair this
+with the token-exchange setup in [keycloak.md](keycloak.md):
+
+```ini
+scope = mail
+```
+
 `/etc/dovecot/conf.d/10-auth.conf` (excerpt):
 
 ```ini
