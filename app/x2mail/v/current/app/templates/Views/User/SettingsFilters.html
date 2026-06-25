@@ -25,9 +25,28 @@
 		<!-- ko if: allowFilters() -->
 		<tr class="script-item">
 			<td><div class="e-action fontastic" data-bind="visible: body, click: function (oScript) { $root.enableScript(oScript); }, text: active() ? '⦿' : '○'"></div></td>
-			<td class="e-action script-name" data-i18n="SETTINGS_FILTERS/SIMPLE" data-bind="attr:{title: name}"></td>
+			<td colspan="3" class="script-name" data-bind="text: name, attr:{title: name}"></td>
+		</tr>
+		<!-- ko foreach: filters -->
+		<tr class="filter-item">
+			<td class="fontastic" data-bind="text: enabled() ? '☑' : '☐', click: function(oFilter) { $root.toggleFilter(oFilter); }"></td>
+			<td class="e-action">
+				<span class="filter-name" data-bind="text: name()"></span>
+				&nbsp;&nbsp;
+				<span class="filter-sub-name" data-bind="text: nameSub()"></span>
+			</td>
+			<td>
+				<a class="btn btn-small btn-danger button-confirm-delete" data-bind="css: {'delete-access': askDelete()}, click: function(oFilter) { $root.deleteFilter(oFilter); }"
+					data-i18n="GLOBAL/ARE_YOU_SURE"></a>
+			</td>
+			<td>
+				<span class="fontastic" data-bind="visible: !askDelete(), click: function(oFilter) { $root.filterForDeletion(oFilter); }">🗑</span>
+			</td>
+		</tr>
+		<!-- /ko -->
+		<tr class="script-item add-filter-row">
 			<td></td>
-			<td></td>
+			<td colspan="3"><a class="btn btn-small" data-bind="click: function() { $root.addFilter(); }" data-icon="✚" data-i18n="POPUPS_SIEVE_SCRIPT/BUTTON_ADD_FILTER"></a></td>
 		</tr>
 		<tr><th colspan="4" data-i18n="SETTINGS_FILTERS/ADVANCED"></th></tr>
 		<!-- /ko -->

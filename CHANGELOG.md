@@ -6,6 +6,15 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-06-25
+
+### Added
+- Filters can be created and edited directly on the Filters settings page — the filter list with add, edit and delete is shown inline, with no separate window to open first
+
+### Changed
+- Simple-mode filters are now written into the active Sieve script on the server instead of a separate script, preserving any existing rules in that script
+- The visual filter builder now reads plain Sieve directly: existing scripts (including a server-side default) show up as editable filters, and saved scripts contain clean, human-readable Sieve with no base64 blocks or metadata comments. Filter rules the builder does not recognise are preserved unchanged
+
 ## [0.8.0] — 2026-06-10
 
 ### Removed

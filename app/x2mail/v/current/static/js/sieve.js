@@ -565,20 +565,16 @@
 		}
 	}
 
-	const SIEVE_FILE_NAME = 'x2mail.user';
+	const SIEVE_BOOTSTRAP_NAME = 'x2mail.user';
+	const FILTER_FENCE_START = '# --- X2Mail Filter (nicht bearbeiten) ---';
+	const FILTER_FENCE_END = '# --- Ende X2Mail Filter ---';
 
-	// collectionToFileString
-	function filtersToSieveScript(filters)
+	// collectionToFileString — pure, reads plain def props (no ko observables)
+	function filterDefsToSieve(defs, untouched)
 	{
 		let eol = '\r\n',
-			split = /.{0,74}/g,
 			require = {},
-			parts = [
-				'# This is X2Mail sieve script.',
-				'# Please don\'t change anything here.',
-				'# X2MAIL:SIEVE',
-				''
-			];
+			blocks = [];
 
 		const quote = string => '"' + string.replace(/(\\|")/g, '\\$1') + '"';
 		const StripSpaces = string => string.replace(/\s+/, ' ');
@@ -587,10 +583,10 @@
 		const conditionToString = (condition, require) =>
 		{
 			let result = '',
-				type = condition.type(),
-				field = condition.field(),
-				value = condition.value(),
-				valueSecond = condition.valueSecond();
+				type = condition.Type,
+				field = condition.Field,
+				value = condition.Value,
+				valueSecond = condition.ValueSecond;
 
 			if (value.length && ('Header' !== field || valueSecond.length)) {
 				switch (type)
@@ -662,18 +658,18 @@
 		};
 
 		// filterToSieveScript
-		const filterToString = (filter, require) =>
+		const defToString = (def, require) =>
 		{
 			let sTab = '    ',
 				block = true,
 				result = [],
-				conditions = filter.conditions();
+				conditions = def.Conditions;
 
 			const errorAction = type => result.push(sTab + '# @Error (' + type + '): empty action value');
 
 			// Conditions
 			if (1 < conditions.length) {
-				result.push('Any' === filter.conditionsType()
+				result.push('Any' === def.ConditionsType
 					? 'if anyof('
 					: 'if allof('
 				);
@@ -688,14 +684,14 @@
 			// actions
 			block ? result.push('{') : (sTab = '');
 
-			if (filter.markAsRead() && ['None','MoveTo','Forward'].includes(filter.actionType())) {
+			if (def.MarkAsRead && ['None','MoveTo','Forward'].includes(def.ActionType)) {
 				require.imap4flags = 1;
 				result.push(sTab + 'addflag "\\\\Seen";');
 			}
 
-			let value = filter.actionValue();
+			let value = def.ActionValue;
 			value = value.length ? quote(value) : 0;
-			switch (filter.actionType())
+			switch (def.ActionType)
 			{
 				case 'None':
 					break;
@@ -709,18 +705,18 @@
 						let days = 1,
 							subject = '',
 							addresses = '',
-							paramValue = filter.actionValueSecond();
+							paramValue = def.ActionValueSecond;
 
 						if (paramValue.length) {
 							subject = ':subject ' + quote(StripSpaces(paramValue)) + ' ';
 						}
 
-						paramValue = ('' + (filter.actionValueThird() || ''));
+						paramValue = ('' + (def.ActionValueThird || ''));
 						if (paramValue.length) {
 							days = Math.max(1, parseInt(paramValue, 10));
 						}
 
-						paramValue = ('' + (filter.actionValueFourth() || ''));
+						paramValue = ('' + (def.ActionValueFourth || ''));
 						if (paramValue.length) {
 							paramValue = paramValue.split(',').map(email =>
 								email.length ? quote(email) : ''
@@ -745,7 +741,7 @@
 					break; }
 				case 'Forward':
 					if (value) {
-						if (filter.keep()) {
+						if (def.Keep) {
 							require.fileinto = 1;
 							result.push(sTab + 'fileinto "INBOX";');
 						}
@@ -764,50 +760,80 @@
 					break;
 			}
 
-			filter.stop() && result.push(sTab + 'stop;');
+			def.Stop && result.push(sTab + 'stop;');
 
 			block && result.push('}');
 
 			return result.join(eol);
 		};
 
-		filters.forEach(filter => {
-			parts.push([
-				'/*',
-				'BEGIN:FILTER:' + filter.id,
-				'BEGIN:HEADER',
-				btoa(unescape(encodeURIComponent(JSON.stringify(filter)))).match(split).join(eol) + 'END:HEADER',
-				'*/',
-				filter.enabled() ? '' : '/* @Filter is disabled ',
-				filterToString(filter, require),
-				filter.enabled() ? '' : '*/',
-				'/* END:FILTER */',
-				''
-			].join(eol));
+		defs.forEach(def => {
+			blocks.push([
+				'# ' + (def.Name || 'Filter'),
+				def.Enabled ? '' : '/* @Filter is disabled ',
+				defToString(def, require),
+				def.Enabled ? '' : '*/'
+			].filter(line => line.length).join(eol));
 		});
 
 		require = Object.keys(require);
-		return (require.length ? 'require ' + JSON.stringify(require) + ';' + eol : '') + eol + parts.join(eol);
+
+		untouched = (untouched || '').replace(/\r?\n/g, eol).trim();
+
+		let out = [];
+		if (blocks.length) {
+			if (untouched.length) {
+				// Foreign content present: hoist our `require` into its own fence at
+				// the very top (Sieve requires all `require` before any command),
+				// keep foreign content verbatim in the middle, our rules at the bottom.
+				if (require.length) {
+					out.push(FILTER_FENCE_START, 'require ' + JSON.stringify(require) + ';', FILTER_FENCE_END);
+				}
+				out.push(untouched);
+				out.push(FILTER_FENCE_START, blocks.join(eol), FILTER_FENCE_END);
+			} else {
+				// No foreign content: a single block, `require` inside it (still on top).
+				out.push(FILTER_FENCE_START);
+				if (require.length) {
+					out.push('require ' + JSON.stringify(require) + ';');
+				}
+				out.push(blocks.join(eol), FILTER_FENCE_END);
+			}
+		} else if (untouched.length) {
+			out.push(untouched);
+		}
+		// Every line — including the final comment — must end with CRLF, else the
+		// GUI parser reads an unterminated hash-comment as stray commands.
+		return out.length ? out.join(eol) + eol : '';
 	}
 
-	// fileStringToCollection
-	function sieveScriptToFilters(script)
-	{
-		let regex = /BEGIN:HEADER([\s\S]+?)END:HEADER/gm,
-			filters = [],
-			json,
-			filter;
-		if (script.length && (script.includes('X2MAIL:SIEVE') || script.includes('RAINLOOP:SIEVE'))) {
-			while ((json = regex.exec(script))) {
-				json = decodeURIComponent(escape(atob(json[1].replace(/\s+/g, ''))));
-				if (json && json.length && (json = JSON.parse(json))) {
-					json['@Object'] = 'Object/Filter';
-					filter = FilterModel.reviveFromJson(json);
-					filter && filters.push(filter);
-				}
-			}
-		}
-		return filters;
+	function filterModelToDef(filter) {
+		return {
+			Enabled: filter.enabled(), Name: filter.name(),
+			Conditions: filter.conditions().map(c => ({
+				Field: c.field(), Type: c.type(), Value: c.value(), ValueSecond: c.valueSecond()
+			})),
+			ConditionsType: filter.conditionsType(),
+			ActionType: filter.actionType(), ActionValue: filter.actionValue(),
+			ActionValueSecond: filter.actionValueSecond(),
+			ActionValueThird: filter.actionValueThird(),
+			ActionValueFourth: filter.actionValueFourth(),
+			Keep: filter.keep(), Stop: filter.stop(), MarkAsRead: filter.markAsRead()
+		};
+	}
+	function filtersToSieveScript(filters, untouched) {
+		return filterDefsToSieve((filters || []).map(filterModelToDef), untouched);
+	}
+
+	function splitSieveScript(body) {
+		const { defs, untouched } = sieveToFilterDefs(body);
+		const filters = [];
+		defs.forEach(json => {
+			json['@Object'] = 'Object/Filter';
+			const f = FilterModel.reviveFromJson(json);
+			f && filters.push(f);
+		});
+		return { filters, untouched };
 	}
 
 	class SieveScriptModel extends AbstractModel
@@ -819,6 +845,7 @@
 				name: '',
 				active: false,
 				body: '',
+				untouched: '',
 
 				exists: false,
 				nameError: false,
@@ -837,8 +864,7 @@
 		}
 
 		filtersToRaw() {
-			return filtersToSieveScript(this.filters);
-	//		this.body(filtersToSieveScript(this.filters));
+			return filtersToSieveScript(this.filters, this.untouched());
 		}
 
 		verify() {
@@ -856,10 +882,10 @@
 		}
 
 		/**
-		 * Only 'x2mail.user' script supports filters
+		 * The simple-filter editor binds to the server's active script.
 		 */
 		allowFilters() {
-			return SIEVE_FILE_NAME === this.name();
+			return this.active();
 		}
 
 		/**
@@ -870,9 +896,13 @@
 		static reviveFromJson(json) {
 			const script = super.reviveFromJson(json);
 			if (script) {
-				if (script.allowFilters()) {
-					script.filters(sieveScriptToFilters(script.body()));
-				}
+				// Parse filters for EVERY script at load, not only the active one,
+				// so switching the active script shows its filters immediately
+				// without a page reload. allowFilters()/active() still controls
+				// which script renders the inline simple-filter UI.
+				const parts = splitSieveScript(script.body());
+				script.filters(parts.filters);
+				script.untouched(parts.untouched);
 				script.exists(true);
 				script.hasChanges(false);
 			}
@@ -3808,7 +3838,7 @@
 					return;
 				}
 
-				if (!script.exists() && scripts.find(item => item.name() === script.name())) {
+				if (!script.exists() && scripts.find(item => item !== script && item.name() === script.name())) {
 					script.nameError(true);
 					return;
 				}
@@ -3821,27 +3851,13 @@
 				}
 
 				self.saving(true);
-
-				if (script.allowFilters()) {
-					script.body(script.filtersToRaw());
-				}
-
-				Remote.request('FiltersScriptSave',
-					(iError, data) => {
-						self.saving(false);
-
-						if (iError) {
-							self.saveError(true);
-							self.errorText(data?.messageAdditional || getNotification(iError));
-						} else {
-							script.exists() || scripts.push(script);
-							script.exists(true);
-							script.hasChanges(false);
-	//						this.close();
-						}
-					},
-					script.toJSON()
-				);
+				window.Sieve.saveScript(script, (iError, errorText) => {
+					self.saving(false);
+					if (iError) {
+						self.saveError(true);
+						self.errorText(errorText);
+					}
+				});
 			}
 		}
 
@@ -3916,6 +3932,37 @@
 		serverError: serverError,
 		serverErrorDesc: serverErrorDesc,
 		ScriptView: SieveScriptPopupView,
+		FilterView: FilterPopupView,
+		FilterModel: FilterModel,
+
+		// saveScript(script, onDone)
+		// onDone(iError, errorText) — called on both success and failure.
+		// Handles body serialization, bootstrap push, and activate-on-create.
+		saveScript: (script, onDone) => {
+			if (script.allowFilters()) {
+				script.body(script.filtersToRaw());
+			}
+
+			Remote.request('FiltersScriptSave',
+				(iError, data) => {
+					if (iError) {
+						onDone && onDone(iError, data?.messageAdditional || getNotification(iError));
+					} else {
+						const wasNew = !script.exists();
+						if (wasNew && !scripts.includes(script)) {
+							scripts.push(script);
+						}
+						script.exists(true);
+						script.hasChanges(false);
+						if (wasNew && script.active()) {
+							window.Sieve.setActiveScript(script.name());
+						}
+						onDone && onDone(0);
+					}
+				},
+				script.toJSON()
+			);
+		},
 
 		folderList: null,
 
@@ -3942,6 +3989,18 @@
 							value = SieveScriptModel.reviveFromJson(value);
 							value && (value.allowFilters() ? scripts.unshift(value) : scripts.push(value));
 						});
+
+						// Bootstrap: empty server has no script to merge into.
+						// Offer a placeholder so the user can create the first
+						// simple-filter script; it is created + activated on save.
+						if (!scripts().length) {
+							const placeholder = new SieveScriptModel();
+							placeholder.name(SIEVE_BOOTSTRAP_NAME);
+							placeholder.active(true);
+							placeholder.exists(false);
+							placeholder.hasChanges(false);
+							scripts.unshift(placeholder);
+						}
 					}
 				});
 			}
@@ -3961,15 +4020,302 @@
 
 		setActiveScript(name) {
 			serverError(false);
+			// Optimistic update: flip active state immediately so the UI (the
+			// simple-filter row and its filter list) reflects the switch without
+			// waiting for the server round-trip or needing a page reload.
+			scripts.forEach(script => script.active(script.name() === name));
 			Remote.request('FiltersScriptActivate',
-				(iError, data) =>
-					iError
-						? setError(data?.messageAdditional || iError)
-						: scripts.forEach(script => script.active(script.name() === name))
-				,
+				(iError, data) => {
+					if (iError) {
+						setError(data?.messageAdditional || iError);
+						// Server rejected the switch: resync from the server.
+						window.Sieve.updateList();
+					}
+				},
 				{name:name}
 			);
 		}
 	};
+
+	// Parse a sieve string literal or list -> array of strings.
+	function parseSieveStrings(s) {
+		s = s.trim();
+		const out = [];
+		const re = /"((?:[^"\\]|\\.)*)"/g;
+		let m;
+		while ((m = re.exec(s))) out.push(m[1].replace(/\\(["\\])/g, '$1'));
+		return out;
+	}
+
+	const MATCH_TO_TYPE = { ':is':'EqualTo', ':contains':'Contains', ':regex':'Regex',
+		':text':'Text', ':raw':'Raw', ':over':'Over', ':under':'Under' };
+	const NOT_TYPE = { EqualTo:'NotEqualTo', Contains:'NotContains' };
+
+	function parseTest(str) {
+		str = str.trim();
+		let negate = false;
+		if (str.startsWith('not ')) { negate = true; str = str.slice(4).trim(); }
+
+		let m = str.match(/^header\s+(:[a-z]+)\s+(\[[^\]]*\]|"[^"]*")\s+(.+)$/);
+		if (m) {
+			let type = MATCH_TO_TYPE[m[1]];
+			if (!type) return null;
+			if (negate) type = NOT_TYPE[type] || type;
+			const headers = parseSieveStrings(m[2]);
+			const values = parseSieveStrings(m[3]);
+			const hkey = headers.map(h => h.toLowerCase()).join(',');
+			let Field, ValueSecond = '';
+			if (hkey === 'from') Field = 'From';
+			else if (hkey === 'to,cc') Field = 'Recipient';
+			else if (hkey === 'subject') Field = 'Subject';
+			else { Field = 'Header'; ValueSecond = headers[0] || ''; }
+			return { Field, Type: type, Value: values.join(','), ValueSecond };
+		}
+		m = str.match(/^body\s+:[a-z]+\s+(:[a-z]+)\s+(.+)$/);
+		if (m) {
+			const type = MATCH_TO_TYPE[m[1]] || 'Contains';
+			return { Field:'Body', Type:type, Value:parseSieveStrings(m[2]).join(','), ValueSecond:'' };
+		}
+		m = str.match(/^size\s+(:over|:under)\s+([0-9]+[KMG]?)\s*$/i);
+		if (m) {
+			return { Field:'Size', Type:MATCH_TO_TYPE[m[1].toLowerCase()], Value:m[2], ValueSecond:'' };
+		}
+		return null;
+	}
+
+	// Split "t1, t2, t3" at top level (commas not inside [...] or "...").
+	function splitTopLevelCommas(s) {
+		const parts = []; let depth = 0, inStr = false, cur = '';
+		for (let i = 0; i < s.length; i++) {
+			const ch = s[i];
+			if (inStr) { cur += ch; if (ch === '"' && s[i-1] !== '\\') inStr = false; continue; }
+			if (ch === '"') { inStr = true; cur += ch; continue; }
+			if (ch === '[' || ch === '(') depth++;
+			if (ch === ']' || ch === ')') depth--;
+			if (ch === ',' && depth === 0) { parts.push(cur.trim()); cur = ''; continue; }
+			cur += ch;
+		}
+		if (cur.trim()) parts.push(cur.trim());
+		return parts;
+	}
+
+	function parseConditionClause(clause) {
+		clause = clause.trim();
+		let type = 'Any', inner = clause;
+		const m = clause.match(/^(anyof|allof)\s*\(([\s\S]*)\)\s*$/i);
+		if (m) {
+			type = m[1].toLowerCase() === 'allof' ? 'All' : 'Any';
+			inner = m[2];
+		}
+		const tests = splitTopLevelCommas(inner);
+		const conditions = [];
+		for (const t of tests) {
+			const c = parseTest(t);
+			if (!c) return null;
+			conditions.push(c);
+		}
+		return conditions.length ? { ConditionsType: type, Conditions: conditions } : null;
+	}
+
+	function parseActionBlock(body) {
+		// Split into statements on ';' at top level (ignore ';' inside strings).
+		const stmts = [];
+		let cur = '', inStr = false;
+		for (let i = 0; i < body.length; i++) {
+			const ch = body[i];
+			if (inStr) { cur += ch; if (ch === '"' && body[i-1] !== '\\') inStr = false; continue; }
+			if (ch === '"') { inStr = true; cur += ch; continue; }
+			if (ch === ';') { if (cur.trim()) stmts.push(cur.trim()); cur = ''; continue; }
+			cur += ch;
+		}
+		if (cur.trim()) stmts.push(cur.trim());
+
+		const a = { ActionType:'None', ActionValue:'', ActionValueSecond:'', ActionValueThird:'',
+			ActionValueFourth:'', Keep:true, Stop:false, MarkAsRead:false };
+		let redirect = null, fileinto = null, sawInboxFileinto = false;
+
+		for (const s of stmts) {
+			let m;
+			if (s === 'stop') { a.Stop = true; }
+			else if (/^addflag\s+"\\\\Seen"$/.test(s)) { a.MarkAsRead = true; }
+			else if ((m = s.match(/^fileinto\s+"((?:[^"\\]|\\.)*)"$/))) {
+				const v = m[1].replace(/\\(["\\])/g,'$1');
+				if (v === 'INBOX') sawInboxFileinto = true; else fileinto = v;
+			}
+			else if ((m = s.match(/^redirect\s+"((?:[^"\\]|\\.)*)"$/))) { redirect = m[1].replace(/\\(["\\])/g,'$1'); }
+			else if (s === 'discard') { a.ActionType = 'Discard'; }
+			else if ((m = s.match(/^reject\s+"((?:[^"\\]|\\.)*)"$/))) { a.ActionType = 'Reject'; a.ActionValue = m[1].replace(/\\(["\\])/g,'$1'); }
+			else if (/^vacation\b/.test(s)) {
+				a.ActionType = 'Vacation';
+				const subj = s.match(/:subject\s+"((?:[^"\\]|\\.)*)"/); if (subj) a.ActionValueSecond = subj[1];
+				const days = s.match(/:days\s+(\d+)/); if (days) a.ActionValueThird = days[1];
+				const addr = s.match(/:addresses\s+\[([^\]]*)\]/); if (addr) a.ActionValueFourth = parseSieveStrings(addr[1]).join(',');
+				const msg = s.match(/"((?:[^"\\]|\\.)*)"\s*$/); if (msg) a.ActionValue = msg[1];
+			}
+			else { return null; } // unsupported action
+		}
+
+		if (redirect !== null) { a.ActionType = 'Forward'; a.ActionValue = redirect; a.Keep = sawInboxFileinto; }
+		else if (fileinto !== null) { a.ActionType = 'MoveTo'; a.ActionValue = fileinto; }
+		return a;
+	}
+
+	function newDef() {
+		return { Enabled:true, Name:'Filter', Conditions:[], ConditionsType:'Any',
+			ActionType:'None', ActionValue:'', ActionValueSecond:'', ActionValueThird:'',
+			ActionValueFourth:'', Keep:true, Stop:false, MarkAsRead:false };
+	}
+
+	// Count net { minus } in a string, ignoring characters inside double-quoted strings.
+	function netBraces(s) {
+		let depth = 0, inStr = false;
+		for (let i = 0; i < s.length; i++) {
+			const ch = s[i];
+			if (inStr) { if (ch === '\\') { i++; } else if (ch === '"') { inStr = false; } continue; }
+			if (ch === '"') { inStr = true; continue; }
+			if (ch === '{') depth++;
+			else if (ch === '}') depth--;
+		}
+		return depth;
+	}
+
+	// Try to parse one rule starting at lines[i] (already past any leading # name / /*).
+	// Returns { def, next } where def may be null if a block was collected but could not
+	// be parsed (caller must treat whole block as foreign). Returns null only when no
+	// if-block starts at lines[i] and no block-less rule applies.
+	function parseRuleAt(lines, i, name, enabled) {
+		let line = lines[i].trim();
+		// Collect an `if ... { ... }` possibly spanning multiple lines until matching brace.
+		if (/^if\b/.test(line)) {
+			let buf = lines[i], j = i, open = netBraces(lines[i]);
+			let inBlock = open !== 0 || lines[i].includes('{');
+			while (j + 1 < lines.length && (!inBlock || open > 0)) {
+				j++; buf += '\n' + lines[j];
+				open += netBraces(lines[j]);
+				if (!inBlock && lines[j].includes('{')) inBlock = true;
+			}
+			const m = buf.match(/^\s*if\b([\s\S]*?){([\s\S]*)}\s*$/);
+			if (!m) return { def: null, next: j + 1 };
+			const cond = parseConditionClause(m[1].trim());
+			const act = parseActionBlock(m[2].trim());
+			if (!cond || !act) return { def: null, next: j + 1 };
+			const def = Object.assign(newDef(), cond, act, { Name:name||'Filter', Enabled:enabled });
+			return { def, next: j + 1 };
+		}
+		// Block-less (conditionless) rule — only when anchored by a name comment.
+		if (name) {
+			const act = parseActionBlock(line);
+			if (act) { const def = Object.assign(newDef(), act, { Name:name, Enabled:enabled, Conditions:[] }); return { def, next: i + 1 }; }
+		}
+		return null;
+	}
+
+	function migrateLegacy(body) {
+		if (!/X2MAIL:SIEVE|RAINLOOP:SIEVE|BEGIN:HEADER/.test(body)) return null;
+		const defs = [];
+		const re = /BEGIN:HEADER([\s\S]+?)END:HEADER/g;
+		let m;
+		while ((m = re.exec(body))) {
+			try {
+				const json = JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/\s+/g, '')))));
+				defs.push(Object.assign(newDef(), json));
+			} catch (e) { /* ignore malformed */ }
+		}
+		// Re-emit as clean sieve; foreign (non-managed) lines dropped — legacy scripts
+		// were fully x2mail-owned. A bare `keep;` baseline is implied by the server default.
+		return filterDefsToSieve(defs, '');
+	}
+
+	function sieveToFilterDefs(body) {
+		body = (body || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+		// Migrate legacy base64/# FILTER metadata scripts to clean sieve before parsing.
+		const migrated = migrateLegacy(body);
+		if (migrated != null) body = migrated;
+
+		// Strip our own fence markers and the require they contain so that
+		// filterDefsToSieve(sieveToFilterDefs(s).defs, ...) can regenerate an
+		// identical script (round-trip). Lines that are exactly the fence delimiters
+		// are removed; require lines inside the fenced block are also skipped because
+		// filterDefsToSieve regenerates them from the parsed defs.
+		const fenceStartRe = new RegExp('^' + FILTER_FENCE_START.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '$');
+		const fenceEndRe   = new RegExp('^' + FILTER_FENCE_END.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '$');
+		{
+			const raw = body.split('\n');
+			const out = []; let inFence = false;
+			for (const l of raw) {
+				const t = l.trim();
+				if (fenceStartRe.test(t)) { inFence = true; continue; }
+				if (fenceEndRe.test(t))   { inFence = false; continue; }
+				// Drop require lines that are inside our fence (we regenerate them).
+				if (inFence && /^require\b/.test(t)) continue;
+				out.push(l);
+			}
+			body = out.join('\n');
+		}
+
+		const lines = body.split('\n');
+		const defs = [], foreign = [];
+		let i = 0;
+		while (i < lines.length) {
+			const raw = lines[i];
+			const t = raw.trim();
+			if (t === '') { foreign.push(raw); i++; continue; }
+
+			// Skip require — regenerated from defs.
+			if (/^require\b/.test(t)) { foreign.push(raw); i++; continue; }
+
+			// Optional name comment.
+			let name = null, start = i;
+			const nameM = t.match(/^#\s?(.*)$/);
+			if (nameM) {
+				// Peek: is the next non-blank line a rule or a /* disabled */ wrapper?
+				let k = i + 1; while (k < lines.length && lines[k].trim() === '') k++;
+				const nt = (lines[k] || '').trim();
+				if (/^if\b/.test(nt) || /^\/\*/.test(nt) || /^(fileinto|redirect|discard|reject|vacation|addflag|stop)\b/.test(nt)) {
+					name = nameM[1].trim(); i = k;
+				} else { foreign.push(raw); i++; continue; }
+			}
+
+			// Optional disabled wrapper — handles both bare `/*` and `/* @Filter is disabled`.
+			let enabled = true, ruleStart = i;
+			if (/^\/\*/.test(lines[i].trim())) {
+				// find closing */
+				let k = i + 1; const inner = [];
+				while (k < lines.length && lines[k].trim() !== '*/') { inner.push(lines[k]); k++; }
+				if (k < lines.length) {
+					const sub = parseRuleAt(inner.map(s=>s).concat([]), 0, name, false);
+					if (sub && sub.def) { defs.push(sub.def); i = k + 1; continue; }
+				}
+				// not a parseable disabled rule -> foreign, preserve entire wrapper verbatim
+				if (k < lines.length) {
+					// closing */ was found at lines[k]
+					for (let x = start; x <= k; x++) foreign.push(lines[x]); i = k + 1;
+				} else {
+					// unterminated /* — push everything to end
+					for (let x = start; x < k; x++) foreign.push(lines[x]); i = k;
+				}
+				continue;
+			}
+
+			const res = parseRuleAt(lines, ruleStart, name, enabled);
+			if (res && res.def) { defs.push(res.def); i = res.next; continue; }
+			// Block collected but unparseable: skip all collected lines as foreign.
+			if (res && !res.def) {
+				for (let x = start; x < res.next; x++) foreign.push(lines[x]);
+				i = res.next; continue;
+			}
+
+			// Foreign: emit everything from `start` (includes a consumed name comment).
+			for (let x = start; x <= i; x++) foreign.push(lines[x]);
+			i++;
+		}
+
+		return { defs, untouched: foreign.join('\n').trim() };
+	}
+
+	if (typeof module !== 'undefined' && module.exports) {
+		module.exports = { filterDefsToSieve, sieveToFilterDefs, parseTest, parseConditionClause, parseActionBlock };
+	}
 
 })();

@@ -3576,6 +3576,11 @@ html.x2m-fullscreen .messageView {
 .filter-item .filter-sub-name {
   color: #aaa;
 }
+/* Filter rows render as direct rows of the Filters table (flat, like the
+   Folders list), so the standard .table-hover per-row highlight applies. */
+#V-Settings-Filters .filter-item {
+  cursor: pointer;
+}
 #V-PopupsSieveScript textarea {
   height: 300px;
   font-family: var(--fontMono);
