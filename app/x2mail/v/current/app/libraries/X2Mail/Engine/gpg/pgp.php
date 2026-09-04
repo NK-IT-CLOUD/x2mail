@@ -50,7 +50,9 @@ class PGP extends Base implements \X2Mail\Engine\PGP\PGPInterface
 		// How to use gpgme-json ?
 		$this->binary = static::findBinary('gpg');
 
-		$info = \preg_replace('/\R +/', ' ', `$this->binary --with-colons --list-config`);
+		$info = \preg_replace('/\R +/', ' ', (string) \shell_exec(
+			\escapeshellarg((string) $this->binary) . ' --with-colons --list-config'
+		));
 		if (\preg_match('/cfg:version:([0-9]+\\.[0-9]+\\.[0-9]+)/', $info, $match)) {
 			$this->version = $match[1];
 		}

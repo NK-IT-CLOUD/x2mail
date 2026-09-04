@@ -486,7 +486,9 @@ abstract class Base
 
 	protected static function findBinary($name) : ?string
 	{
-		$binary = \function_exists('shell_exec') ? \trim((string) `which $name`) : '';
+		$binary = \function_exists('shell_exec')
+			? \trim((string) \shell_exec('command -v ' . \escapeshellarg($name) . ' 2>/dev/null'))
+			: '';
 		if ($binary && \X2Mail\Engine\Utils::inOpenBasedir($binary) && \is_executable($binary)) {
 			return $binary;
 		}

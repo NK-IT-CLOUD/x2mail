@@ -19,7 +19,6 @@ class GD2 implements \X2Mail\Engine\Image
 	function __destruct()
 	{
 		if ($this->img) {
-			\imagedestroy($this->img);
 			$this->img = null;
 		}
 	}
@@ -58,7 +57,6 @@ class GD2 implements \X2Mail\Engine\Image
 		$w = \imagesx($gd2->img);
 		$h = \imagesy($gd2->img);
 		if ($w * $h > 25000000) { // 25 megapixels max
-			\imagedestroy($gd2->img);
 			return false;
 		}
 		$gd2->file = 'blob';
@@ -155,10 +153,8 @@ class GD2 implements \X2Mail\Engine\Image
 		$height  = \min($height, \imagesy($this->img) - $y);
 		$tmp_img = $this->create_image($width, $height);
 		if (!\imagecopy($tmp_img, $this->img, 0, 0, $x, $y, $width, $height)) {
-			\imagedestroy($tmp_img);
 			throw new \Exception('Failed image transformation: crop()');
 		}
-		\imagedestroy($this->img);
 		$this->img = $tmp_img;
 		return true;
 	}
@@ -232,7 +228,6 @@ class GD2 implements \X2Mail\Engine\Image
 		if (!\function_exists('imagerotate')) { require __DIR__ . '/gd2/imagerotate.inc'; }
 		$tmp_img = \imagerotate($this->img, $degrees * -1, 0);
 		if (!$tmp_img) { return false; }
-		\imagedestroy($this->img);
 		$this->img = $tmp_img;
 		return true;
 	}
@@ -252,11 +247,9 @@ class GD2 implements \X2Mail\Engine\Image
 		\imagealphablending($tmp_img, false);
 		if (!\imagecopyresampled($tmp_img, $this->img, 0, 0, 0, 0, $width, $height, $x, $y)) {
 			if (!\imagecopyresized($tmp_img, $this->img, 0, 0, 0, 0, $width, $height, $x, $y)) {
-				\imagedestroy($tmp_img);
 				return false;
 			}
 		}
-		\imagedestroy($this->img);
 		$this->img = $tmp_img;
 		return true;
 	}

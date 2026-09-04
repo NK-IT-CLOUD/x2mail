@@ -168,6 +168,13 @@ trait UserAuth
 	 * Under the NC-only deployment no plugin registers that hook, so the sentinel
 	 * reaches setCredentials() unchanged and beforeLogin() swaps it for the live
 	 * token at connect.
+	 *
+	 * Identity comes from the token, server settings come from the instance: when the
+	 * token email's domain has no domain config of its own, the instance domain named
+	 * by login.default_domain supplies the IMAP/SMTP/Sieve settings. One instance is
+	 * one tenant with one server set, so every own domain works without per-domain
+	 * provisioning — which matters because x2mail:setup consolidates to a single
+	 * domain config and would delete any hand-placed extras on its next run.
 	 */
 	protected function accountFromNcSession() : ?MainAccount
 	{
@@ -188,6 +195,40 @@ trait UserAuth
 		// Sentinel password — beforeLogin() swaps it for the live OIDC token at connect.
 		$oPassword = new SensitiveString('oidc_login|' . $sUid);
 		$aCred = $this->resolveLoginCredentials($sEmail, $oPassword);
+		if (!($aCred['domain'] instanceof \X2Mail\Engine\Model\Domain)) {
+			// Own domain without its own config: one instance = one tenant = one server
+			// set, so borrow the instance domain's IMAP/SMTP/Sieve settings while the
+			// identity stays the token email. login.default_domain is written by both
+			// setup paths (occ x2mail:setup and the admin setup controller), so no
+			// per-domain provisioning is needed for current or future own domains.
+			$sMailDomain = \X2Mail\Mail\Base\Utils::getEmailAddressDomain($sEmail);
+			$sInstanceDomain = \trim($this->Config()->Get('login', 'default_domain', ''));
+			$oFallback = $sInstanceDomain ? $this->DomainProvider()->Load($sInstanceDomain) : null;
+			if (!$oFallback) {
+				$this->logWrite(
+					"No domain config for '{$sMailDomain}' and no usable instance domain"
+					. ' — run occ x2mail:setup',
+					\LOG_WARNING,
+					'LOGIN'
+				);
+				return null;
+			}
+			// Cosmetic only (serialised as aliasName) — records the real email domain.
+			$oFallback->SetAliasName($sMailDomain);
+			$aCred['domain'] = $oFallback;
+			// resolveLoginCredentials() skipped fixUsername() because it found no domain;
+			// apply the instance domain's normalisation so own-domain logins are cased
+			// exactly like instance-domain ones (fixUsername = IDN-ascii + lowerLogin).
+			$aCred['email'] = $oFallback->ImapSettings()->fixUsername($aCred['email']);
+			$aCred['imapUser'] = $oFallback->ImapSettings()->fixUsername($aCred['imapUser']);
+			$aCred['smtpUser'] = $oFallback->SmtpSettings()->fixUsername($aCred['smtpUser']);
+			$this->logWrite(
+				"Domain '{$sMailDomain}' has no config; using instance domain"
+				. " '{$oFallback->Name()}' server settings",
+				\LOG_INFO,
+				'LOGIN'
+			);
+		}
 		$oAccount = new MainAccount;
 		$oAccount->setCredentials(
 			$aCred['domain'], $aCred['email'], $aCred['imapUser'], $oPassword, $aCred['smtpUser']
@@ -272,6 +313,9 @@ trait UserAuth
 			if ($bThrowExceptionOnFalse) {
 				throw $e;
 			}
+			// Normalise the sentinel: leaving it at `false` would return false against
+			// this method's own ?MainAccount return type.
+			$this->oMainAuthAccount = null;
 		}
 
 		return $this->oMainAuthAccount;

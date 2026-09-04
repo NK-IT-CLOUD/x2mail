@@ -6,6 +6,12 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
 ## [Unreleased]
 
+## [0.8.2] — 2026-09-04
+
+### Fixed
+- Users whose email address is on a domain without its own domain configuration can now open their mailbox. The mail server settings of the instance domain are used for them, while the login identity stays the full email address from the token — same server, own identity. Previously such a login failed with a generic error. The setup wizard keeps a single domain configuration, so no extra configuration per domain is needed
+- PHP 8.5 compatibility — removed use of the deprecated backtick operator, `imagedestroy()`, `curl_close()` and `ReflectionMethod::setAccessible()`. These emitted deprecation notices on PHP 8.5 and are slated for removal in PHP 9.0; the binary lookup in the GPG engine now also escapes its argument and uses the POSIX `command -v` builtin instead of the external `which`.
+
 ## [0.8.1] — 2026-06-25
 
 ### Added

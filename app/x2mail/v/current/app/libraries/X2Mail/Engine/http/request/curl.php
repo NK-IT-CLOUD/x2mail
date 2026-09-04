@@ -103,7 +103,7 @@ class CURL extends \X2Mail\Engine\HTTP\Request
 			}
 			return new Response($request_url, $code, $this->response_headers, $this->response_body);
 		} finally {
-			\curl_close($c);
+			unset($c);
 			$this->response_headers = array();
 			$this->response_body = '';
 			$this->streamed_bytes = 0;
