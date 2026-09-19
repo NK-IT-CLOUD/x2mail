@@ -5443,10 +5443,24 @@
 				}
 				let response = await Remote.post('PgpVerifyMessage', null, data);
 				if (response?.Result) {
+					const goodSig = 0 == response.Result.status, // GOODSIG
+						keyId = (response.Result.keyid || '').toUpperCase(),
+						fingerprint = (response.Result.fingerprint || '').toUpperCase(),
+						sender = message.from[0].email,
+						// A good signature only counts when the signing (sub)key belongs to the sender
+						senderKey = goodSig && this.publicKeys.find(key => key.for(sender)
+							&& key.subkeys.some(sub =>
+								(keyId && keyId == (sub.keyid || '').toUpperCase())
+								|| (fingerprint && fingerprint == (sub.fingerprint || '').toUpperCase())
+							)
+						);
 					return {
 						fingerprint: response.Result.fingerprint,
-						success: 0 == response.Result.status, // GOODSIG
-						error: response.Result.message
+						success: !!senderKey,
+						// TODO: translate
+						error: senderKey ? '' : (goodSig
+							? 'Good signature, but key ' + keyId + ' does not belong to ' + sender
+							: (response.Result.message || 'Verification failed') + (keyId ? ' (key ' + keyId + ')' : ''))
 					};
 				}
 			}
@@ -5464,6 +5478,27 @@
 
 	const
 		loaded = () => !!window.openpgp,
+
+		/**
+		 * OpenPGP.js returns a signature entry even for an invalid signature;
+		 * validity is its `verified` promise, which rejects when the check fails
+		 * (bad signature, or no matching key: "Could not find signing key ...").
+		 * @returns {Promise<{valid: Array, error: string}>}
+		 */
+		verifiedSignatures = async signatures => {
+			const valid = [];
+			let error = '';
+			for (const signature of signatures || []) {
+				try {
+					if (true === await signature.verified) {
+						valid.push(signature);
+					}
+				} catch (e) {
+					error = error || e?.message || String(e);
+				}
+			}
+			return { valid, error };
+		},
 
 		findOpenPGPKey = (keys, query/*, sign*/) =>
 			keys.find(key =>
@@ -5622,7 +5657,8 @@
 		async importKeys(keys) {
 			if (loaded()) {
 				const privateKeys = this.privateKeys(),
-					publicKeys = this.publicKeys();
+					publicKeys = this.publicKeys(),
+					failed = [];
 				for (const armoredKey of keys) try {
 					let key = await openpgp.readKey({armoredKey:armoredKey});
 					if (!key.err) {
@@ -5633,7 +5669,10 @@
 					}
 				} catch (e) {
 					console.error(e, armoredKey);
+					failed.push(e?.message || String(e));
 				}
+				// TODO: translate
+				failed.length && alert('OpenPGP.js could not import the key: ' + failed.join('; '));
 				this.privateKeys(sort(privateKeys));
 				this.publicKeys(sort(publicKeys));
 				storeOpenPgpKeys(privateKeys, privateKeysItem);
@@ -5719,41 +5758,71 @@
 		}
 
 		/**
-		 * https://docs.openpgpjs.org/#sign-and-verify-cleartext-messages
+		 * Signed text and detached signature: inline from the message, or for
+		 * PGP/MIME the signed part and the signature fetched from the server.
+		 * Works on a copy, so message.pgpSigned() keeps its original request data.
 		 */
-		async verify(message) {
-			const data = message.pgpSigned(), // { partId: "1", sigPartId: "2", micAlg: "pgp-sha256" }
-				publicKey = this.publicKeys().find(key => key.for(message.from[0].email));
-			if (data && publicKey) {
+		async signedParts(message) {
+			const data = { ...message.pgpSigned() }; // { partId: "1", sigPartId: "2", micAlg: "pgp-sha256" }
+			if (data.sigPartId) {
 				data.folder = message.folder;
 				data.uid = message.uid;
 				data.tryGnuPG = 0;
-				let response;
-				if (data.sigPartId) {
-					response = await Remote.post('PgpVerifyMessage', null, data);
-				} else if (data.bodyPart) {
-					// MimePart
-					response = { Result: { text: data.bodyPart.raw, signature: data.sigPart.body } };
-				} else {
-					response = { Result: { text: message.plain(), signature: null } };
+				return (await Remote.post('PgpVerifyMessage', null, data))?.Result;
+			}
+			if (data.bodyPart) {
+				// MimePart
+				return { text: data.bodyPart.raw, signature: data.sigPart.body };
+			}
+			return { text: message.plain(), signature: null };
+		}
+
+		async readSigned(parts) {
+			const signature = parts.signature
+				? await openpgp.readSignature({ armoredSignature: parts.signature })
+				: null;
+			const signedMessage = signature
+				? await openpgp.createMessage({ text: parts.text })
+				: await openpgp.readCleartextMessage({ cleartextMessage: parts.text });
+			return { signature, signedMessage };
+		}
+
+		/**
+		 * Key IDs the message was signed with (hex), to tell the user which key is missing.
+		 */
+		async signingKeyIds(message) {
+			if (loaded() && message.pgpSigned()) {
+				const parts = await this.signedParts(message);
+				if (parts) {
+					const { signature, signedMessage } = await this.readSigned(parts);
+					return (signature || signedMessage).getSigningKeyIDs().map(id => id.toHex().toUpperCase());
 				}
-				if (response) {
-					const signature = response.Result.signature
-						? await openpgp.readSignature({ armoredSignature: response.Result.signature })
-						: null;
-					const signedMessage = signature
-						? await openpgp.createMessage({ text: response.Result.text })
-						: await openpgp.readCleartextMessage({ cleartextMessage: response.Result.text });
-	//				(signature||signedMessage).getSigningKeyIDs();
+			}
+			return [];
+		}
+
+		/**
+		 * https://docs.openpgpjs.org/#sign-and-verify-cleartext-messages
+		 */
+		async verify(message) {
+			// A sender may have several keys; any of them may have signed
+			const publicKeys = this.publicKeys().filter(key => key.for(message.from[0].email));
+			if (message.pgpSigned() && publicKeys.length) {
+				const parts = await this.signedParts(message);
+				if (parts) {
+					const { signature, signedMessage } = await this.readSigned(parts);
 					let result = await openpgp.verify({
 						message: signedMessage,
-						verificationKeys: publicKey.key,
+						verificationKeys: publicKeys.map(key => key.key),
 	//					expectSigned: true, // !!detachedSignature
 						signature: signature
 					});
+					const { valid, error } = await verifiedSignatures(result?.signatures),
+						signer = valid.length && publicKeys.find(key => key.key.getKeys(valid[0].keyID).length);
 					return {
-						fingerprint: publicKey.fingerprint,
-						success: result && !!result.signatures.length
+						fingerprint: signer ? signer.fingerprint : '',
+						success: !!valid.length,
+						error: valid.length ? '' : (error || 'No signature found')
 					};
 				}
 			}
@@ -5974,7 +6043,12 @@
 							if (gnuPG && oData?.Result/* && (oData.Result.imported || oData.Result.secretimported)*/) {
 								GnuPGUserStore.loadKeyrings();
 							}
-							iError && alert(oData.message);
+							if (iError) {
+								alert(oData.message);
+							} else if (gnuPG && !oData?.Result?.gnuPG) {
+								// TODO: translate
+								alert('GnuPG could not import the key');
+							}
 						}, {
 							key, gnuPG, backup
 						}
@@ -6024,15 +6098,47 @@
 				const signed = message.pgpSigned(),
 					sender = message.from[0].email;
 				if (signed) {
-					// OpenPGP only when inline, else we must download the whole message
-					if (!signed.sigPartId && OpenPGPUserStore.hasPublicKeyForEmails([sender])) {
-						return OpenPGPUserStore.verify(message);
+					const openPgpKey = OpenPGPUserStore.hasPublicKeyForEmails([sender]),
+						verifiers = [];
+					// Inline: OpenPGP.js first, it has the text already
+					if (!signed.sigPartId && openPgpKey) {
+						verifiers.push(OpenPGPUserStore);
 					}
 					if (GnuPGUserStore.hasPublicKeyForEmails([sender])) {
-						return GnuPGUserStore.verify(message);
+						verifiers.push(GnuPGUserStore);
+					}
+					// PGP/MIME: the server returns the signed part and signature
+					if (signed.sigPartId && openPgpKey) {
+						verifiers.push(OpenPGPUserStore);
+					}
+					// The keyrings may hold different keys of the sender:
+					// the first success wins, else report the first failure
+					let failure;
+					for (const store of verifiers) {
+						try {
+							const result = await store.verify(message);
+							if (result?.success) {
+								return result;
+							}
+							// TODO: translate
+							failure = failure || result || { success: false, error: 'Verification failed' };
+						} catch (e) {
+							failure = failure || { success: false, error: e?.message || String(e) };
+						}
+					}
+					if (failure) {
+						return failure;
 					}
 					// Mailvelope can't
 					// https://github.com/mailvelope/mailvelope/issues/434
+					const keyIds = await OpenPGPUserStore.signingKeyIds(message).catch(() => []);
+					return {
+						success: false,
+						// TODO: translate
+						error: 'No public key for ' + sender
+							+ (keyIds.length ? ' (signed with key ' + keyIds.join(', ') + ')' : '')
+							+ '. Import the sender\'s public key, e.g. from an attached .asc file, then verify again.'
+					};
 				}
 			}
 
@@ -14250,7 +14356,7 @@ body > * {
 					match = reg.exec(keyTrimmed);
 					if (match && 0 < count) {
 						if (match[0] && match[1] && match[2] && match[1] === match[2]) {
-							PgpUserStore.importKey(this.key(), GnuPG, backup);
+							PgpUserStore.importKey(match[0], GnuPG, backup);
 						}
 						--count;
 						done = false;
@@ -14823,7 +14929,7 @@ body > * {
 			const oMessage = currentMessage(),
 				data = oMessage.pgpEncrypted();
 			delete data.error;
-			PgpUserStore.decrypt(oMessage).then(result => {
+			PgpUserStore.decrypt(oMessage).then(async result => {
 				if (!result) {
 					// TODO: translate
 					throw Error('Decryption failed, canceled or not possible');
@@ -14833,9 +14939,11 @@ body > * {
 					MimeToMessage(result.data, oMessage);
 					oMessage.html() ? oMessage.viewHtml() : oMessage.viewPlain();
 					if (result.signatures?.length) {
+						const { valid, error } = await verifiedSignatures(result.signatures);
 						oMessage.pgpSigned({
 							signatures: result.signatures,
-							success: !!result.signatures.length
+							success: !!valid.length,
+							error: valid.length ? '' : error
 						});
 					}
 				}
@@ -14852,8 +14960,11 @@ body > * {
 			const oMessage = currentMessage()/*, ctrl = event.target.closest('.openpgp-control')*/;
 			PgpUserStore.verify(oMessage).then(result => {
 				if (result) {
-					oMessage.pgpSigned(result);
+					// Keep partId/sigPartId so the message can be verified again,
+					// e.g. after importing the signer's key.
+					oMessage.pgpSigned({ ...oMessage.pgpSigned(), ...result });
 				} else {
+					// TODO: translate
 					alert('Verification failed or no valid public key found');
 				}
 	/*
@@ -14874,6 +14985,10 @@ body > * {
 					}) + (additional ? ' (' + additional + ')' : '');
 				}
 	*/
+			})
+			.catch(e => {
+				// TODO: translate
+				alert('Verification failed: ' + (e?.message || e));
 			});
 		}
 

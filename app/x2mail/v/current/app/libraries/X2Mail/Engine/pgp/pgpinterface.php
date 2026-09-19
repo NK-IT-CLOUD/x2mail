@@ -2,6 +2,21 @@
 
 namespace X2Mail\Engine\PGP;
 
+// Signature summary bits, values from gpgme (src/gpgme.h.in, gpgme_sigsum_t).
+// The PECL gnupg extension defines them; the gpg binary backend needs them too.
+// Defined here because every PGP backend implements this interface.
+defined('GNUPG_SIGSUM_VALID') || define('GNUPG_SIGSUM_VALID', 0x0001);
+defined('GNUPG_SIGSUM_GREEN') || define('GNUPG_SIGSUM_GREEN', 0x0002);
+defined('GNUPG_SIGSUM_RED') || define('GNUPG_SIGSUM_RED', 0x0004);
+defined('GNUPG_SIGSUM_KEY_REVOKED') || define('GNUPG_SIGSUM_KEY_REVOKED', 0x0010);
+defined('GNUPG_SIGSUM_KEY_EXPIRED') || define('GNUPG_SIGSUM_KEY_EXPIRED', 0x0020);
+defined('GNUPG_SIGSUM_SIG_EXPIRED') || define('GNUPG_SIGSUM_SIG_EXPIRED', 0x0040);
+defined('GNUPG_SIGSUM_KEY_MISSING') || define('GNUPG_SIGSUM_KEY_MISSING', 0x0080);
+defined('GNUPG_SIGSUM_CRL_MISSING') || define('GNUPG_SIGSUM_CRL_MISSING', 0x0100);
+defined('GNUPG_SIGSUM_CRL_TOO_OLD') || define('GNUPG_SIGSUM_CRL_TOO_OLD', 0x0200);
+defined('GNUPG_SIGSUM_BAD_POLICY') || define('GNUPG_SIGSUM_BAD_POLICY', 0x0400);
+defined('GNUPG_SIGSUM_SYS_ERROR') || define('GNUPG_SIGSUM_SYS_ERROR', 0x0800);
+
 use X2Mail\Engine\SensitiveString;
 
 interface PGPInterface

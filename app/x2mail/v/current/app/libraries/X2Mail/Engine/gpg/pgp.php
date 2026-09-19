@@ -689,7 +689,9 @@ class PGP extends Base implements \X2Mail\Engine\PGP\PGPInterface
 			$this->setInput($input);
 		}
 
-		$result = $this->exec($arguments);
+		// gpg exits non-zero for a bad signature or a missing key; the status
+		// lines still say which, so evaluate them instead of throwing.
+		$result = $this->exec($arguments, false);
 
 		$signatures = [];
 		if ($result) {
@@ -707,14 +709,23 @@ class PGP extends Base implements \X2Mail\Engine\PGP\PGPInterface
 				case 'BADSIG':
 				case 'ERRSIG':
 				case 'GOODSIG':
+					// ERRSIG <keyid> <pkalgo> <hashalgo> <sig_class> <time> <rc> [<fpr>]: rc 9 = no public key
+					$summary = match ($tokens[0]) {
+						'GOODSIG' => \GNUPG_SIGSUM_VALID,
+						'EXPSIG' => \GNUPG_SIGSUM_GREEN | \GNUPG_SIGSUM_SIG_EXPIRED,
+						'EXPKEYSIG' => \GNUPG_SIGSUM_GREEN | \GNUPG_SIGSUM_KEY_EXPIRED,
+						'REVKEYSIG' => \GNUPG_SIGSUM_GREEN | \GNUPG_SIGSUM_KEY_REVOKED,
+						'ERRSIG' => '9' === ($tokens[6] ?? '') ? \GNUPG_SIGSUM_KEY_MISSING : \GNUPG_SIGSUM_SYS_ERROR,
+						default => \GNUPG_SIGSUM_RED,
+					};
 					$signatures[] = [
 						'fingerprint' => '',
 						'validity' => 0,
 						'timestamp' => 0,
 						'status' => 'GOODSIG' === $tokens[0] ? 0 : 1,
-						'summary' => 'GOODSIG' === $tokens[0] ? 0 : 4,
+						'summary' => $summary,
 						'keyid' => $tokens[1],
-						'uid' => \rawurldecode(\implode(' ', \array_splice($tokens, 2))),
+						'uid' => 'ERRSIG' === $tokens[0] ? '' : \rawurldecode(\implode(' ', \array_splice($tokens, 2))),
 						'valid' => false
 					];
 					break;

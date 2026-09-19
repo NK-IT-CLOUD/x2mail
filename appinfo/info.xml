@@ -38,7 +38,7 @@ occ x2mail:setup --imap-host mail.example.com --domain example.com --sieve
 - `user_oidc` with an OIDC provider; tested with Keycloak
 
 	]]></description>
-	<version>0.8.3</version>
+	<version>0.8.4</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author homepage="https://github.com/NK-IT-CLOUD/x2mail">NK-IT Dev</author>
 	<namespace>X2Mail</namespace>

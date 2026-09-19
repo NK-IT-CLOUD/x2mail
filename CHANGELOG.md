@@ -6,6 +6,22 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
 ## [Unreleased]
 
+## [0.8.4] — 2026-09-19
+
+### Security
+- Signature check with OpenPGP.js no longer shows a signature as valid when the message was changed after signing or was signed with a different key. This also applies to signed messages shown after decryption
+- A valid GnuPG signature only counts when the signing key belongs to the sender. A signature by any other key in the keyring is reported as such instead of being shown as valid
+
+### Fixed
+- When a sender has several public keys, in the browser or on the server, the signature is checked against all of them, not only the first one found
+- PGP/MIME signed emails can now be checked with public keys stored in the browser, not only with keys on the server
+- A failed signature check now says why: the signature is bad, the public key is missing (with the ID of the key that signed the message), or the key has expired or been revoked. Before, the check could end without any message
+- Checking a signature again, for example after importing the sender's key, works without reopening the message
+- Key import reports errors instead of failing silently, and importing several keys at once imports each key once
+
+### Changed
+- OpenPGP.js 6.3.1
+
 ## [0.8.3] — 2026-09-19
 
 ### Fixed

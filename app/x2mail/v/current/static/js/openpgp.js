@@ -1,8 +1,23 @@
-/*! OpenPGP.js v6.3.0 - 2025-12-09 - this is LGPL licensed code, see LICENSE/our website https://openpgpjs.org/ for more information. */
+/*! OpenPGP.js v6.3.1 - 2026-06-04 - this is LGPL licensed code, see LICENSE/our website https://openpgpjs.org/ for more information. */
 var openpgp = (function (exports) {
   'use strict';
 
   const globalThis = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
+
+  function _mergeNamespaces(n, m) {
+    m.forEach(function (e) {
+      e && typeof e !== 'string' && !Array.isArray(e) && Object.keys(e).forEach(function (k) {
+        if (k !== 'default' && !(k in n)) {
+          var d = Object.getOwnPropertyDescriptor(e, k);
+          Object.defineProperty(n, k, d.get ? d : {
+            enumerable: true,
+            get: function () { return e[k]; }
+          });
+        }
+      });
+    });
+    return Object.freeze(n);
+  }
 
   const doneWritingPromise = Symbol('doneWritingPromise');
   const doneWritingResolve = Symbol('doneWritingResolve');
@@ -230,7 +245,7 @@ var openpgp = (function (exports) {
       if (doneReading) {
         try {
           doneReadingSet.add(input);
-        } catch(e) {}
+        } catch {}
       }
     };
   }
@@ -447,14 +462,14 @@ var openpgp = (function (exports) {
    * @returns {ReadableStream} Concatenated list
    */
   function concatStream(list) {
-    list = list.map(toStream);
+    const streamedList = list.map(toStream);
     const transform = transformWithCancel(async function(reason) {
       await Promise.all(transforms.map(stream => cancel(stream, reason)));
     });
     let prev = Promise.resolve();
-    const transforms = list.map((stream, i) => transformPair(stream, (readable, writable) => {
+    const transforms = streamedList.map((stream, i) => transformPair(stream, (readable, _writable) => {
       prev = prev.then(() => pipe(readable, transform.writable, {
-        preventClose: i !== list.length - 1
+        preventClose: i !== streamedList.length - 1
       }));
       return prev;
     }));
@@ -507,7 +522,7 @@ var openpgp = (function (exports) {
           preventAbort,
           preventCancel
         });
-      } catch(e) {}
+      } catch {}
       return;
     }
     if (!isStream(input)) {
@@ -821,11 +836,11 @@ var openpgp = (function (exports) {
                 await writer.ready;
                 const { done, value } = await reader.read();
                 if (done) {
-                  try { controller.close(); } catch(e) {}
+                  try { controller.close(); } catch {}
                   await writer.close();
                   return;
                 }
-                try { controller.enqueue(value); } catch(e) {}
+                try { controller.enqueue(value); } catch {}
                 await writer.write(value);
               }
             } catch(e) {
@@ -930,7 +945,7 @@ var openpgp = (function (exports) {
             lastBytes = slice(returnValue, end);
             return slice(returnValue, begin, end);
           }
-            lastBytes = returnValue;
+          lastBytes = returnValue;
         });
       }
       console.warn(`stream.slice(input, ${begin}, ${end}) not implemented efficiently.`);
@@ -1486,9 +1501,10 @@ var openpgp = (function (exports) {
   // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
   /**
    * Global configuration values
+   * @module config
    * @access public
    */
-  var config = {
+  const config = {
       /**
        * @memberof module:config
        * @property {Integer} preferredHashAlgorithm Default hash algorithm {@link module:enums.hash}
@@ -1594,6 +1610,17 @@ var openpgp = (function (exports) {
           parallelism: 4, // lanes
           memoryExponent: 16 // 64 MiB of RAM
       },
+      /**
+       * Max memory exponent allowed for Argon2 memory allocation (e.g. `maxArgon2MemoryExponent: 20` corresponds
+       * to a memory limit of 2**20 KiB = 1GiB).
+       * This limit is applied both on encryption (if `config.s2kType` is set to `enums.s2k.argon2`)
+       * and decryption.
+       * If the input memory exponent exceeds this value, the library will not attempt the argon2 key derivation
+       * and instead directly throw an `Argon2OutOfMemoryError` error.
+       * NB: on encryption, if `s2kArgon2Params.memoryExponent` is larger than `maxArgon2MemoryExponent`,
+       * the operation will fail.
+       */
+      maxArgon2MemoryExponent: 30,
       /**
        * Allow decryption of messages without integrity protection.
        * This is an **insecure** setting:
@@ -1713,7 +1740,7 @@ var openpgp = (function (exports) {
        * @memberof module:config
        * @property {String} versionString A version string to be included in armored messages
        */
-      versionString: 'OpenPGP.js 6.3.0',
+      versionString: 'OpenPGP.js 6.3.1',
       /**
        * @memberof module:config
        * @property {String} commentString A comment string to be included in armored messages
@@ -1779,13 +1806,6 @@ var openpgp = (function (exports) {
        */
       rejectCurves: new Set([enums.curve.secp256k1])
   };
-
-  /**
-   * @fileoverview This object contains global configuration values.
-   * @see module:config/config
-   * @module config
-   * @access public
-   */
 
   // GPG4Browsers - An OpenPGP implementation in javascript
   // Copyright (C) 2011 Recurity Labs GmbH
@@ -1904,7 +1924,7 @@ var openpgp = (function (exports) {
        * @throws if the input array is too short.
        */
       readExactSubarray: function (input, start, end) {
-          if (input.length < (end - start)) {
+          if (input.length < end) {
               throw new Error('Input array too short');
           }
           return input.subarray(start, end);
@@ -2945,6 +2965,17 @@ var openpgp = (function (exports) {
       return reduced < _0n$8 ? reduced + m : reduced;
   }
   /**
+   * Return either `a` or `b` based on `cond`, in algorithmic constant time.
+   * @param {BigInt} cond
+   * @param {BigInt} a
+   * @param {BigInt} b
+   * @returns `a` if `cond` is `1n`, `b` otherwise
+   */
+  function selectBigInt(cond, a, b) {
+      const mask = -cond; // ~0n === -1n
+      return (a & mask) | (b & ~mask);
+  }
+  /**
    * Compute modular exponentiation using square and multiply
    * @param {BigInt} a - Base
    * @param {BigInt} e - Exponent
@@ -2963,12 +2994,12 @@ var openpgp = (function (exports) {
       x %= n;
       let r = BigInt(1);
       while (exp > _0n$8) {
-          const lsb = exp & _1n$c;
+          const lsb = (exp & _1n$c);
           exp >>= _1n$c; // e / 2
           // Always compute multiplication step, to reduce timing leakage
           const rx = (r * x) % n;
           // Update r only if lsb is 1 (odd exponent)
-          r = lsb ? rx : r;
+          r = selectBigInt(lsb, rx, r);
           x = (x * x) % n; // Square
       }
       return r;
@@ -3580,6 +3611,10 @@ var openpgp = (function (exports) {
       0x00, 0x04, 0x40];
   hash_headers[11] = [0x30, 0x2d, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x04, 0x05,
       0x00, 0x04, 0x1C];
+  hash_headers[12] = [0x30, 0x31, 0x30, 0x0D, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x08, 0x05,
+      0x00, 0x04, 0x20];
+  hash_headers[14] = [0x30, 0x51, 0x30, 0x0D, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x0a, 0x05,
+      0x00, 0x04, 0x40];
   /**
    * Create padding with secure random data
    * @private
@@ -8603,7 +8638,8 @@ var openpgp = (function (exports) {
       constructor(algo, key, iv) {
           const { blockSize } = getCipherParams(algo);
           this.key = key;
-          this.prevBlock = iv;
+          this.iv = iv;
+          this.prevBlock = iv.slice();
           this.nextBlock = new Uint8Array(blockSize);
           this.i = 0; // pointer inside next block
           this.blockSize = blockSize;
@@ -9627,6 +9663,10 @@ var openpgp = (function (exports) {
   const ARGON2_TYPE = 0x02; // id
   const ARGON2_VERSION = 0x13;
   const ARGON2_SALT_SIZE = 16;
+  // Max exponent supported, that applies regardless of `config.maxArgon2MemoryExponent`;
+  // the argon2 lib in principle supports a larger value, but this is already unrealistically large,
+  // and it enables us to use bitwise operations.
+  const ARGON2_MAX_ENCODEDM = 30;
   class Argon2OutOfMemoryError extends Error {
       constructor(...params) {
           super(...params);
@@ -9703,12 +9743,20 @@ var openpgp = (function (exports) {
       * Produces a key using the specified passphrase and the defined
       * hashAlgorithm
       * @param {String} passphrase - Passphrase containing user input
+      * @param {Number} keySize
+      * @param {Object} config
       * @returns {Promise<Uint8Array>} Produced key with a length corresponding to `keySize`
       * @throws {Argon2OutOfMemoryError|Errors}
       * @async
       */
-      async produceKey(passphrase, keySize) {
-          const decodedM = 2 << (this.encodedM - 1);
+      async produceKey(passphrase, keySize, config) {
+          if (config.maxArgon2MemoryExponent > ARGON2_MAX_ENCODEDM) {
+              throw new Argon2OutOfMemoryError(`'config.maxArgon2MemoryExponent' exceeds the max allowed value of ${ARGON2_MAX_ENCODEDM}`);
+          }
+          if (this.encodedM > config.maxArgon2MemoryExponent) {
+              throw new Argon2OutOfMemoryError('Argon2 required memory exceeds `config.maxArgon2MemoryExponent`');
+          }
+          const decodedM = 1 << this.encodedM;
           try {
               // on first load, the argon2 lib is imported and the WASM module is initialized.
               // the two steps need to be atomic to avoid race conditions causing multiple wasm modules
@@ -9889,7 +9937,7 @@ var openpgp = (function (exports) {
        * hashAlgorithm hash length
        * @async
        */
-      async produceKey(passphrase, numBytes) {
+      async produceKey(passphrase, numBytes, _config) {
           passphrase = util.encodeUTF8(passphrase);
           const arr = [];
           let rlength = 0;
@@ -10123,7 +10171,7 @@ var openpgp = (function (exports) {
       'invalid distance',
       'stream finished',
       'no stream handler',
-      ,
+      , // determined by compression function
       'no callback',
       'invalid UTF-8 data',
       'extra field too long',
@@ -10796,18 +10844,37 @@ var openpgp = (function (exports) {
               this.p(this.b, final || false);
               this.s.w = this.s.i, this.s.i -= 2;
           }
+          if (final) {
+              // cleanup unneeded buffers/state to reduce memory usage
+              this.s = this.o = {};
+              this.b = et;
+          }
       };
       /**
        * Flushes buffered uncompressed data. Useful to immediately retrieve the
        * deflated output for small inputs.
+       * @param sync Whether to flush to a byte boundary. A sync flush takes 4-5
+       *             extra bytes, but guarantees all pushed data is immediately
+       *             decompressible. A separate DEFLATE stream may be concatenated
+       *             with the current output after a sync flush.
        */
-      Deflate.prototype.flush = function () {
+      Deflate.prototype.flush = function (sync) {
           if (!this.ondata)
               err(5);
           if (this.s.l)
               err(4);
           this.p(this.b, false);
           this.s.w = this.s.i, this.s.i -= 2;
+          // could technically skip writing the type-0 block for (this.s.r & 7) == 0,
+          // but the deterministic trailer (00 00 FF FF) is useful in some situations
+          if (sync) {
+              var c = new u8(6);
+              c[0] = this.s.r >> 3;
+              // write empty, non-final type-0 block
+              var ep = wfblk(c, this.s.r, et);
+              this.s.r = 0;
+              this.ondata(c.subarray(0, ep >> 3), false);
+          }
       };
       return Deflate;
   }());
@@ -10886,9 +10953,12 @@ var openpgp = (function (exports) {
       /**
        * Flushes buffered uncompressed data. Useful to immediately retrieve the
        * zlibbed output for small inputs.
+       * @param sync Whether to flush to a byte boundary. A sync flush takes 4-5
+       *             extra bytes, but guarantees all pushed data is immediately
+       *             decompressible.
        */
-      Zlib.prototype.flush = function () {
-          Deflate.prototype.flush.call(this);
+      Zlib.prototype.flush = function (sync) {
+          Deflate.prototype.flush.call(this, sync);
       };
       return Zlib;
   }());
@@ -13665,15 +13735,16 @@ var openpgp = (function (exports) {
       /**
        * Decrypts the session key with the given passphrase
        * @param {String} passphrase - The passphrase in string form
+       * @param {Object} config
        * @throws {Error} if decryption was not successful
        * @async
        */
-      async decrypt(passphrase) {
+      async decrypt(passphrase, config$1 = config) {
           const algo = this.sessionKeyEncryptionAlgorithm !== null ?
               this.sessionKeyEncryptionAlgorithm :
               this.sessionKeyAlgorithm;
           const { blockSize, keySize } = getCipherParams(algo);
-          const key = await this.s2k.produceKey(passphrase, keySize);
+          const key = await this.s2k.produceKey(passphrase, keySize, config$1);
           if (this.version >= 5) {
               const mode = getAEADMode(this.aeadAlgorithm, true);
               const adata = new Uint8Array([0xC0 | SymEncryptedSessionKeyPacket.tag, this.version, this.sessionKeyEncryptionAlgorithm, this.aeadAlgorithm]);
@@ -13709,7 +13780,7 @@ var openpgp = (function (exports) {
           this.s2k = newS2KFromConfig(config$1);
           this.s2k.generateSalt();
           const { blockSize, keySize } = getCipherParams(algo);
-          const key = await this.s2k.produceKey(passphrase, keySize);
+          const key = await this.s2k.produceKey(passphrase, keySize, config$1);
           if (this.sessionKey === null) {
               this.sessionKey = generateSessionKey$1(this.sessionKeyAlgorithm);
           }
@@ -14636,7 +14707,7 @@ var openpgp = (function (exports) {
               this.isLegacyAEAD = this.version === 5; // v4 is always re-encrypted with standard format instead.
               this.usedModernAEAD = !this.isLegacyAEAD; // legacy AEAD does not guarantee integrity of public key material
               const serializedPacketTag = writeTag(this.constructor.tag);
-              const key = await produceEncryptionKey(this.version, this.s2k, passphrase, this.symmetric, this.aead, serializedPacketTag, this.isLegacyAEAD);
+              const key = await produceEncryptionKey(this.version, this.s2k, passphrase, this.symmetric, this.aead, serializedPacketTag, this.isLegacyAEAD, config$1);
               const modeInstance = await mode(this.symmetric, key);
               this.iv = this.isLegacyAEAD ? getRandomBytes(blockSize) : getRandomBytes(mode.ivLength);
               const associateData = this.isLegacyAEAD ?
@@ -14647,7 +14718,7 @@ var openpgp = (function (exports) {
           else {
               this.s2kUsage = 254;
               this.usedModernAEAD = false;
-              const key = await produceEncryptionKey(this.version, this.s2k, passphrase, this.symmetric);
+              const key = await produceEncryptionKey(this.version, this.s2k, passphrase, this.symmetric, undefined, undefined, undefined, config$1);
               this.iv = getRandomBytes(blockSize);
               this.keyMaterial = await encrypt$1(this.symmetric, key, util.concatUint8Array([
                   cleartext,
@@ -14661,10 +14732,11 @@ var openpgp = (function (exports) {
        * {@link SecretKeyPacket.isDecrypted} should be false, as
        * otherwise calls to this function will throw an error.
        * @param {String} passphrase - The passphrase for this private key as string
+       * @param {Object} config
        * @throws {Error} if the key is already decrypted, or if decryption was not successful
        * @async
        */
-      async decrypt(passphrase) {
+      async decrypt(passphrase, config$1 = config) {
           if (this.isDummy()) {
               return false;
           }
@@ -14677,7 +14749,7 @@ var openpgp = (function (exports) {
           let key;
           const serializedPacketTag = writeTag(this.constructor.tag); // relevant for AEAD only
           if (this.s2kUsage === 254 || this.s2kUsage === 253) {
-              key = await produceEncryptionKey(this.version, this.s2k, passphrase, this.symmetric, this.aead, serializedPacketTag, this.isLegacyAEAD);
+              key = await produceEncryptionKey(this.version, this.s2k, passphrase, this.symmetric, this.aead, serializedPacketTag, this.isLegacyAEAD, config$1);
           }
           else if (this.s2kUsage === 255) {
               throw new Error('Encrypted private key is authenticated using an insecure two-byte hash');
@@ -14789,10 +14861,11 @@ var openpgp = (function (exports) {
    * @param {module:enums.aead} [aeadMode] - for AEAD-encrypted keys only (excluding v5)
    * @param {Uint8Array} [serializedPacketTag] - for AEAD-encrypted keys only (excluding v5)
    * @param {Boolean} [isLegacyAEAD] - for AEAD-encrypted keys from RFC4880bis (v4 and v5 only)
+   * @param {Object} config
    * @returns encryption key
    * @access private
    */
-  async function produceEncryptionKey(keyVersion, s2k, passphrase, cipherAlgo, aeadMode, serializedPacketTag, isLegacyAEAD) {
+  async function produceEncryptionKey(keyVersion, s2k, passphrase, cipherAlgo, aeadMode, serializedPacketTag, isLegacyAEAD, config) {
       if (s2k.type === 'argon2' && !aeadMode) {
           throw new Error('Using Argon2 S2K without AEAD is not allowed');
       }
@@ -14800,7 +14873,7 @@ var openpgp = (function (exports) {
           throw new Error('Using Simple S2K with version 6 keys is not allowed');
       }
       const { keySize } = getCipherParams(cipherAlgo);
-      const derivedKey = await s2k.produceKey(passphrase, keySize);
+      const derivedKey = await s2k.produceKey(passphrase, keySize, config);
       if (!aeadMode || keyVersion === 5 || isLegacyAEAD) {
           return derivedKey;
       }
@@ -17288,7 +17361,7 @@ var openpgp = (function (exports) {
           };
           const signatureProperties = getKeySignatureProperties();
           signatureProperties.signatureType = enums.signature.key;
-          const signaturePacket = await createSignaturePacket(dataToSign, [], secretKeyPacket, signatureProperties, options.date, undefined, undefined, undefined, config);
+          const signaturePacket = await createSignaturePacket(dataToSign, [], secretKeyPacket, signatureProperties, options.date, undefined, options.signatureNotations, undefined, config);
           packetlist.push(signaturePacket);
       }
       await Promise.all(options.userIDs.map(async function (userID, index) {
@@ -17302,7 +17375,7 @@ var openpgp = (function (exports) {
           if (index === 0) {
               signatureProperties.isPrimaryUserID = true;
           }
-          const signaturePacket = await createSignaturePacket(dataToSign, [], secretKeyPacket, signatureProperties, options.date, undefined, undefined, undefined, config);
+          const signaturePacket = await createSignaturePacket(dataToSign, [], secretKeyPacket, signatureProperties, options.date, undefined, options.signatureNotations, undefined, config);
           return { userIDPacket, signaturePacket };
       })).then(list => {
           list.forEach(({ userIDPacket, signaturePacket }) => {
@@ -17665,7 +17738,7 @@ var openpgp = (function (exports) {
                   }
                   await Promise.all(packets.map(async function (skeskPacket) {
                       try {
-                          await skeskPacket.decrypt(password);
+                          await skeskPacket.decrypt(password, config$1);
                           decryptedSessionKeyPackets.push(skeskPacket);
                       }
                       catch (err) {
@@ -17922,7 +17995,7 @@ var openpgp = (function (exports) {
           if (passwords) {
               const testDecrypt = async function (keyPacket, password) {
                   try {
-                      await keyPacket.decrypt(password);
+                      await keyPacket.decrypt(password, config$1);
                       return 1;
                   }
                   catch {
@@ -18602,13 +18675,14 @@ var openpgp = (function (exports) {
    * @param {Array<Object>} [options.subkeys=a single encryption subkey] - Options for each subkey e.g. `[{sign: true, passphrase: '123'}]`
    *                                             default to main key options, except for `sign` parameter that defaults to false, and indicates whether the subkey should sign rather than encrypt
    * @param {'armored'|'binary'|'object'} [options.format='armored'] - format of the output keys
+   * @param {Object|Object[]} [options.signatureNotations=[]] - Array of notations to add to the primary self-signature, e.g. `[{ name: 'test@example.org', value: new TextEncoder().encode('test'), humanReadable: true, critical: false }]`
    * @param {Object} [options.config] - Custom configuration settings to overwrite those in [config]{@link module:config}
    * @returns {Promise<Object>} The generated key object in the form:
    *                                     { privateKey:PrivateKey|Uint8Array|String, publicKey:PublicKey|Uint8Array|String, revocationCertificate:String }
    * @async
    * @static
    */
-  async function generateKey({ userIDs = [], passphrase, type, curve, rsaBits = 4096, keyExpirationTime = 0, date = new Date(), subkeys = [{}], format = 'armored', config: config$1, ...rest }) {
+  async function generateKey({ userIDs = [], passphrase, type, curve, rsaBits = 4096, keyExpirationTime = 0, date = new Date(), subkeys = [{}], format = 'armored', signatureNotations = [], config: config$1, ...rest }) {
       config$1 = { ...config, ...config$1 };
       checkConfig(config$1);
       if (!type && !curve) {
@@ -18620,6 +18694,7 @@ var openpgp = (function (exports) {
           curve = curve || 'curve25519Legacy';
       }
       userIDs = toArray(userIDs);
+      signatureNotations = toArray(signatureNotations);
       const unknownOptions = Object.keys(rest);
       if (unknownOptions.length > 0)
           throw new Error(`Unknown option: ${unknownOptions.join(', ')}`);
@@ -18629,7 +18704,7 @@ var openpgp = (function (exports) {
       if (type === 'rsa' && rsaBits < config$1.minRSABits) {
           throw new Error(`rsaBits should be at least ${config$1.minRSABits}, got: ${rsaBits}`);
       }
-      const options = { userIDs, passphrase, type, rsaBits, curve, keyExpirationTime, date, subkeys };
+      const options = { userIDs, passphrase, type, rsaBits, curve, keyExpirationTime, date, subkeys, signatureNotations };
       try {
           const { key, revocationCertificate } = await generate(options, config$1);
           key.getKeys().forEach(({ keyPacket }) => checkKeyRequirements(keyPacket, config$1));
@@ -18653,23 +18728,25 @@ var openpgp = (function (exports) {
    * @param {Date}   [options.date] - Override the creation date of the key signatures. If the key was previously used to sign messages, it is recommended
    *                                  to set the same date as the key creation time to ensure that old message signatures will still be verifiable using the reformatted key.
    * @param {'armored'|'binary'|'object'} [options.format='armored'] - format of the output keys
+   * @param {Object|Object[]} [options.signatureNotations=[]] - Array of notations to add to the primary self-signature, e.g. `[{ name: 'test@example.org', value: new TextEncoder().encode('test'), humanReadable: true, critical: false }]`
    * @param {Object} [options.config] - Custom configuration settings to overwrite those in [config]{@link module:config}
    * @returns {Promise<Object>} The generated key object in the form:
    *                                     { privateKey:PrivateKey|Uint8Array|String, publicKey:PublicKey|Uint8Array|String, revocationCertificate:String }
    * @async
    * @static
    */
-  async function reformatKey({ privateKey, userIDs = [], passphrase, keyExpirationTime = 0, date, format = 'armored', config: config$1, ...rest }) {
+  async function reformatKey({ privateKey, userIDs = [], passphrase, keyExpirationTime = 0, date, format = 'armored', signatureNotations = [], config: config$1, ...rest }) {
       config$1 = { ...config, ...config$1 };
       checkConfig(config$1);
       userIDs = toArray(userIDs);
+      signatureNotations = toArray(signatureNotations);
       const unknownOptions = Object.keys(rest);
       if (unknownOptions.length > 0)
           throw new Error(`Unknown option: ${unknownOptions.join(', ')}`);
       if (userIDs.length === 0 && privateKey.keyPacket.version !== 6) {
           throw new Error('UserIDs are required for V4 keys');
       }
-      const options = { privateKey, userIDs, passphrase, keyExpirationTime, date };
+      const options = { privateKey, userIDs, passphrase, keyExpirationTime, date, signatureNotations };
       try {
           const { key: reformattedKey, revocationCertificate } = await reformat(options, config$1);
           return {
@@ -18746,7 +18823,7 @@ var openpgp = (function (exports) {
       try {
           await Promise.all(clonedPrivateKey.getKeys().map(key => (
           // try to decrypt each key with any of the given passphrases
-          util.anyPromise(passphrases.map(passphrase => key.keyPacket.decrypt(passphrase))))));
+          util.anyPromise(passphrases.map(passphrase => key.keyPacket.decrypt(passphrase, config$1))))));
           await clonedPrivateKey.validate(config$1);
           return clonedPrivateKey;
       }
@@ -28376,10 +28453,10 @@ var openpgp = (function (exports) {
   var unbzip2StreamExports = requireUnbzip2Stream();
   var index = /*@__PURE__*/getDefaultExportFromCjs(unbzip2StreamExports);
 
-  var index$1 = /*#__PURE__*/Object.freeze({
+  var index$1 = /*#__PURE__*/_mergeNamespaces({
     __proto__: null,
     default: index
-  });
+  }, [unbzip2StreamExports]);
 
   exports.AEADEncryptedDataPacket = AEADEncryptedDataPacket;
   exports.CleartextMessage = CleartextMessage;
