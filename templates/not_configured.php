@@ -12,7 +12,7 @@
             <p style="margin-bottom:1em;color:var(--color-text-maxcontrast);">
                 <?php echo($l->t('X2Mail is not configured yet.')); ?>
             </p>
-            <a href="<?php echo \OCP\Util::linkToAbsolute('settings', 'admin/x2mail'); ?>" class="button primary">
+            <a href="<?php p($_['setupUrl']); ?>" class="button primary">
                 <?php echo($l->t('Setup Wizard')); ?>
             </a>
         <?php } else { ?>

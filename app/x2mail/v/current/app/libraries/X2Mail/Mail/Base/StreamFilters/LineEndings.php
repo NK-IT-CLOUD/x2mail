@@ -11,7 +11,9 @@ class LineEndings extends \php_user_filter
 		while ($bucket = \stream_bucket_make_writeable($in)) {
 			$bucket->data = \preg_replace('/\R/s', "\r\n", \rtrim($bucket->data, "\r"));
 //			$bucket->data = \preg_replace('/\R/s', "\n", \rtrim($bucket->data, "\r"));
-			$consumed += $bucket->datalen;
+			/** @var int $iLength buckets are untyped objects before PHP 8.4 (StreamBucket) */
+			$iLength = $bucket->datalen;
+			$consumed += $iLength;
 			\stream_bucket_append($out, $bucket);
 		}
 /*

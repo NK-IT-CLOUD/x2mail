@@ -27,7 +27,7 @@ class Status extends Command
         parent::__construct();
     }
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->setName('x2mail:status')

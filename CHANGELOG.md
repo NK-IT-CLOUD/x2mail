@@ -6,6 +6,15 @@ Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
 ## [Unreleased]
 
+## [0.8.3] — 2026-09-19
+
+### Fixed
+- Saving an email to Nextcloud Files works again. The save failed with an error before the file was written
+- Updates now refresh X2Mail's built-in Nextcloud integration. Before, this only happened on the first installation, so fixes to the integration did not take effect after an update
+
+### Changed
+- Nextcloud 35 compatibility: X2Mail no longer uses Nextcloud interfaces that are deprecated or removed in Nextcloud 35
+
 ## [0.8.2] — 2026-09-04
 
 ### Fixed

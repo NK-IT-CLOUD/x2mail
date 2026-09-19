@@ -41,7 +41,6 @@ class NextcloudPlugin extends \X2Mail\Engine\Plugins\AbstractPlugin
 			$this->addHook('sieve.before-login', 'beforeLogin');
 		} else {
 			\X2Mail\Engine\Log::debug('Nextcloud', 'NOT integrated');
-			// \OC::$server->getConfig()->getAppValue('x2mail', 'x2mail-no-embed');
 			$this->addHook('main.content-security-policy', 'ContentSecurityPolicy');
 		}
 	}
@@ -88,11 +87,6 @@ class NextcloudPlugin extends \X2Mail\Engine\Plugins\AbstractPlugin
 		}
 	}
 
-	/*
-	\OC::$server->getCalendarManager();
-	\OC::$server->getLDAPProvider();
-	*/
-
 	private static function getUserFolder(): ?\OCP\Files\Folder
 	{
 		$user = \OCP\Server::get(\OCP\IUserSession::class)->getUser();
@@ -113,7 +107,7 @@ class NextcloudPlugin extends \X2Mail\Engine\Plugins\AbstractPlugin
 		if (\str_contains($sFile, '..') || \str_contains($sFile, "\0")) {
 			return $this->jsonResponse(__FUNCTION__, $aResult);
 		}
-		$userFolder = static::getUserFolder();
+		$userFolder = self::getUserFolder();
 		if ($userFolder && $userFolder->nodeExists($sFile)) {
 			$node = $userFolder->get($sFile);
 			if ($node instanceof \OCP\Files\File && $fp = $node->fopen('rb')) {
@@ -150,13 +144,13 @@ class NextcloudPlugin extends \X2Mail\Engine\Plugins\AbstractPlugin
 		if ($sSaveFolder && !empty($aValues['folder']) && !empty($aValues['uid'])) {
 			$oActions = \X2Mail\Engine\Api::Actions();
 			$oMailClient = $oActions->MailClient();
-			if (!$oMailClient->IsLoggined()) {
+			if (!$oMailClient->ImapClient()->IsLoggined()) {
 				$oAccount = $oActions->getAccountFromToken();
 				$oAccount->ImapConnectAndLogin($oActions->Plugins(), $oMailClient->ImapClient(), $oActions->Config());
 			}
 
 			$sSaveFolder = $sSaveFolder ?: 'Emails';
-			$userFolder = static::getUserFolder();
+			$userFolder = self::getUserFolder();
 			$saveFolder = $userFolder?->getOrCreateFolder($sSaveFolder);
 			$aResult['folder'] = $sSaveFolder;
 			$aResult['filename'] = \X2Mail\Mail\Base\Utils::SecureFileName(
@@ -182,7 +176,7 @@ class NextcloudPlugin extends \X2Mail\Engine\Plugins\AbstractPlugin
 	public function DoAttachmentsActions(\X2Mail\Engine\AttachmentsAction $data)
 	{
 		if (static::isLoggedIn() && 'nextcloud' === $data->action) {
-			$userFolder = static::getUserFolder();
+			$userFolder = self::getUserFolder();
 			if ($userFolder) {
 				$sSaveFolder = \ltrim($this->jsonParam('NcFolder', ''), '/');
 				if (\str_contains($sSaveFolder, '..') || \str_contains($sSaveFolder, "\0")) {
@@ -217,7 +211,6 @@ class NextcloudPlugin extends \X2Mail\Engine\Plugins\AbstractPlugin
 			$sUID = $ocUser->getUID();
 			$oUrlGen = \OCP\Server::get(\OCP\IURLGenerator::class);
 			$sWebDAV = $oUrlGen->getAbsoluteURL($oUrlGen->linkTo('', 'remote.php') . '/dav');
-//			$sWebDAV = \OCP\Util::linkToRemote('dav');
 			$aResult['Nextcloud'] = [
 				'UID' => $sUID,
 				'WebDAV' => $sWebDAV,
@@ -225,36 +218,25 @@ class NextcloudPlugin extends \X2Mail\Engine\Plugins\AbstractPlugin
 //				'WebDAV_files' => $sWebDAV . '/files/' . $sUID
 			];
 			if (empty($aResult['Auth'])) {
-				$config = \OCP\Server::get(\OCP\IConfig::class);
+				$appConfig = \OCP\Server::get(\OCP\IAppConfig::class);
+				$userConfig = \OCP\Server::get(\OCP\Config\IUserConfig::class);
 				$sEmail = '';
-				if ($config->getAppValue('x2mail', 'autologin', false)
-					|| $config->getAppValue('x2mail', 'autologin-with-email', false)) {
+				if ($appConfig->getValueString('x2mail', 'autologin', '')
+					|| $appConfig->getValueString('x2mail', 'autologin-with-email', '')) {
 					// Always use NC profile email, never bare UID
-					$sEmail = $config->getUserValue($sUID, 'settings', 'email', '')
+					$sEmail = $userConfig->getValueString($sUID, 'settings', 'email', '')
 						?: $ocUser->getEMailAddress()
 						?: $sUID;
 				} else {
 					\X2Mail\Engine\Log::debug('Nextcloud', 'autologin is off');
 				}
-				$sCustomEmail = $config->getUserValue($sUID, 'x2mail', 'email', '');
+				$sCustomEmail = $userConfig->getValueString($sUID, 'x2mail', 'email', '');
 				if ($sCustomEmail) {
 					$sEmail = $sCustomEmail;
 				}
 				if (!$sEmail) {
 					$sEmail = $ocUser->getEMailAddress();
 				}
-/*
-				if ($config->getAppValue('x2mail', 'autologin-oidc', false)) {
-					if (\OC::$server->getSession()->get('is_oidc')) {
-						$sEmail = "{$sUID}@nextcloud";
-						$aResult['DevPassword'] = \OC::$server->getSession()->get('oidc_access_token');
-					} else {
-						\X2Mail\Engine\Log::debug('Nextcloud', 'Not an OIDC login');
-					}
-				} else {
-					\X2Mail\Engine\Log::debug('Nextcloud', 'OIDC is off');
-				}
-*/
 				$aResult['DevEmail'] = $sEmail ?: '';
 			}
 		}
@@ -265,7 +247,7 @@ class NextcloudPlugin extends \X2Mail\Engine\Plugins\AbstractPlugin
 		if (!\X2Mail\Engine\Api::Config()->Get('webmail', 'allow_languages_on_settings', true)) {
 			$aResultLang = \X2Mail\Engine\L10n::getLanguages($bAdmin);
 			$userId = \OCP\Server::get(\OCP\IUserSession::class)->getUser()->getUID();
-			$userLang = \OCP\Server::get(\OCP\IConfig::class)->getUserValue($userId, 'core', 'lang', 'en');
+			$userLang = \OCP\Server::get(\OCP\Config\IUserConfig::class)->getValueString($userId, 'core', 'lang', 'en');
 			$userLang = \strtr($userLang, '_', '-');
 			$sLanguage = $this->determineLocale($userLang, $aResultLang);
 			// Check if $sLanguage is null

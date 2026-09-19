@@ -1,7 +1,7 @@
 # Stalwart with OAUTHBEARER/XOAUTH2
 
-Masked reference for running X2Mail against Stalwart with OIDC token validation
-and optional LDAP directory backend.
+Reference setup for X2Mail with Stalwart, using OIDC token validation and an
+optional LDAP directory. All values are masked examples.
 
 ## Scope
 
@@ -11,16 +11,16 @@ and optional LDAP directory backend.
 - IdP example: Keycloak
 - Directory example: LDAP/LLDAP
 
-## 1) Stalwart Requirements
+## 1) Stalwart requirements
 
-- Stalwart configured with OIDC provider (issuer/JWKS or introspection)
-- Mail domain exists and is enabled
-- User identity mapping aligns with token claim (`email` recommended)
-- TLS certificates valid for hostnames used by Nextcloud
+- Stalwart is configured with the OIDC provider (issuer/JWKS or introspection)
+- The mail domain exists and is enabled
+- The user identity mapping uses the same claim as the token (`email` recommended)
+- The TLS certificates are valid for the hostnames Nextcloud connects to
 
-## 2) Listener Strategy
+## 2) Listener strategy
 
-Pick one TLS strategy and keep X2Mail values aligned:
+Pick one TLS strategy and use the matching X2Mail values:
 
 - STARTTLS style (example):
   - IMAP `143` + `--imap-ssl starttls`
@@ -32,7 +32,7 @@ Pick one TLS strategy and keep X2Mail values aligned:
   - SMTP `465` + `--smtp-ssl ssl`
   - Sieve `4190` (if implicit configured) + `--sieve-ssl ssl`
 
-## 3) X2Mail Setup Example
+## 3) X2Mail setup example
 
 ```bash
 occ x2mail:setup \
@@ -46,11 +46,11 @@ occ x2mail:setup \
   --sieve-port 4190 --sieve-ssl ssl
 ```
 
-## 4) Identity and Audience
+## 4) Identity and audience
 
-Token must contain:
+The token must contain:
 
-- `aud` including your **mail** OIDC client id (dedicated Keycloak client or audience mapper — not a Webadmin-only client)
+- `aud` including your **mail** OIDC client id (a dedicated Keycloak client or an audience mapper, not a Webadmin-only client)
 - stable mailbox identity claim (typically `email`; set Stalwart `claimUsername` to `email`)
 
 Keycloak (external IdP) checklist:
@@ -60,9 +60,9 @@ Keycloak (external IdP) checklist:
 3. X2Mail domain profile must match the mailbox domain (e.g. `example.com` for `user@example.com`).
 4. Optional: `--oidc-audience mail-service` when the login token does not already carry the mail audience (token exchange).
 
-Stalwart Webadmin/Management uses Stalwart’s internal OAuth; external IdP SSO for the admin UI is not supported in current releases — configure mail via OIDC + optional LDAP; use Stalwart’s recovery/fallback admin for server management.
+Stalwart's Webadmin/Management uses Stalwart's internal OAuth. Current releases do not support SSO with an external IdP for the admin UI. Configure mail access via OIDC and optional LDAP, and use Stalwart's recovery/fallback admin to manage the server.
 
-## 5) Troubleshooting Patterns
+## 5) Troubleshooting
 
 - `AUTHENTICATIONFAILED` + domain errors:
   - missing/disabled mail domain in Stalwart
@@ -73,7 +73,7 @@ Stalwart Webadmin/Management uses Stalwart’s internal OAuth; external IdP SSO 
 - SMTP temporary auth failure:
   - OIDC validation path broken or audience mismatch
 
-## 6) LDAP/LLDAP Note
+## 6) LDAP/LLDAP note
 
-LDAP/LLDAP can back mailbox directory lookups, but OAuth auth success still depends
-on token validation and identity mapping consistency.
+LDAP/LLDAP can serve the mailbox directory lookups. Whether an OAuth login succeeds
+still depends on token validation and on a consistent identity mapping.

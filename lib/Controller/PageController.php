@@ -39,6 +39,7 @@ class PageController extends Controller
             $isAdmin = $this->userId && $this->groupManager->isAdmin($this->userId);
             return new TemplateResponse('x2mail', 'not_configured', [
                 'isAdmin' => $isAdmin,
+                'setupUrl' => $this->urlGenerator->linkToRoute('settings.AdminSettings.index', ['section' => 'x2mail']),
             ]);
         }
 

@@ -1,12 +1,12 @@
-# Release Process
+# Release process
 
 ## Versioning
 
 X2Mail follows [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`
 
-- **MAJOR** — Breaking changes
-- **MINOR** — New features
-- **PATCH** — Bug fixes, security patches
+- **MAJOR**: breaking changes
+- **MINOR**: new features
+- **PATCH**: bug fixes and security patches
 
 ## Installation
 
@@ -14,7 +14,7 @@ Download the latest release from [GitHub Releases](https://github.com/NK-IT-CLOU
 
 ## Upgrade
 
-Nextcloud handles upgrades automatically when a new version is published to the App Store. For manual upgrades, replace the app directory and run:
+Nextcloud installs new versions automatically once they are published to the App Store. To upgrade by hand, replace the app directory and run:
 
 ```bash
 occ upgrade

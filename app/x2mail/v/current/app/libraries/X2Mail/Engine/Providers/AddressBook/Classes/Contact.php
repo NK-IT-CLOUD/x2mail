@@ -4,6 +4,9 @@ namespace X2Mail\Engine\Providers\AddressBook\Classes;
 
 use Sabre\VObject\Component\VCard;
 
+/**
+ * @property-read ?VCard $vCard read-only via __get()
+ */
 class Contact implements \JsonSerializable
 {
 	public string $id = '';
