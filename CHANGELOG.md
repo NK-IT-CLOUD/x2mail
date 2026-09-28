@@ -4,7 +4,16 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
-## [Unreleased]
+## [0.8.5] — 2026-09-28
+
+### Added
+- Standalone webmail: X2Mail now also runs without Nextcloud (`standalone/`). Users sign in at your OIDC provider (authorization code with PKCE), and IMAP, SMTP and Sieve use their access token, just like in the Nextcloud app
+- Access rules on token claims (roles, client roles, groups; `any_of` / `all_of`) decide who may use the standalone webmail
+- Optional CardDAV address book for the standalone webmail: contacts, address suggestions while writing, adding and deleting contacts. The server URL can contain the tenant from the organization claim, and the user's token is sent as bearer. It is only offered to users whose access rules allow it
+- Container image for the standalone webmail with separate `php` and `web` roles and a read-only root filesystem. Deployment and configuration are described in `standalone/OPERATIONS.md`, all settings in `standalone/webmail.example.toml`
+- Light and dark theme in the standalone webmail following the browser setting, with a configurable primary colour
+
+The Nextcloud app has no functional changes in this release.
 
 ## [0.8.4] — 2026-09-19
 

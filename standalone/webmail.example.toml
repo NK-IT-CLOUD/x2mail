@@ -1,0 +1,48 @@
+# X2Mail standalone webmail. Path via X2W_CONFIG (default /etc/x2mail-webmail/webmail.toml).
+# Unknown keys are a start error.
+
+[webmail]
+base_url = "https://webmail.example.com"      # redirect/logout URIs are built from this only
+# data_dir = "/var/lib/x2mail-webmail"
+
+[oidc]
+issuer = "https://id.example.com/realms/central"
+client_id = "webmail"
+client_secret_file = "/run/secrets/oidc_client_secret"
+# tenant_claim = "organization"                # list with exactly one org alias
+# tenant_pattern = '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$'
+# scopes = ["openid", "email", "profile", "organization"]
+
+[mail]
+host = "mail-at.example.com"                   # one host for every tenant; the mailproxy routes by token
+# imap_port = 993    (implicit TLS)
+# smtp_port = 587    (STARTTLS)
+# sieve_port = 4190  (STARTTLS)
+
+# [session]
+# backend = "files"                            # only "files" in this version
+
+# [theme]
+# primary_color = "#00679e"                    # #rrggbb; buttons, links and highlights derive from it
+
+# Rules: claim is a dot path; any_of = at least one, all_of = every one; both = both.
+[rules.mail_user]
+claim = "realm_access.roles"
+any_of = ["mailxyz"]
+# strip_path = true                            # "/mailxyz" counts as "mailxyz"
+
+[rules.nc_user]
+claim = "resource_access.webmail.roles"
+any_of = ["abz"]
+
+[access]
+login_requires = "mail_user"
+
+[dav.contacts]
+type = "carddav"
+requires = "nc_user"
+url_template = "https://{tenant}.example.cloud/remote.php/dav/"
+# enabled = true
+# timeout_s = 3
+# include_system_addressbook = true
+# writable = "personal"                        # personal | none

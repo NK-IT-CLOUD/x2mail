@@ -78,6 +78,18 @@ class EngineHelper
             return;
         }
         require_once $index;
+
+        $this->registerHostBridge();
+    }
+
+    /**
+     * Registers this Nextcloud instance as the engine host. The autoloaders
+     * above need X2MAIL_LIBRARIES_PATH, which only the engine's include.php
+     * defines, so loadApp() calls this after requiring the engine index.
+     */
+    public function registerHostBridge(): void
+    {
+        \X2Mail\Engine\Host::set(new NextcloudBridge($this));
     }
 
     public function startApp(bool $handle = false): void

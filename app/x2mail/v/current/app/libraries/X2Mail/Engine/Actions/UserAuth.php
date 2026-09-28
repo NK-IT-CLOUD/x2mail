@@ -156,7 +156,7 @@ trait UserAuth
 	 * or an auth cookie. Primary account-resolution path — called unconditionally
 	 * by getMainAccountFromToken().
 	 *
-	 * Sources the email from EngineHelper::getSsoEmail() and uses the sentinel
+	 * Sources the email from HostBridge::ssoEmail() and uses the sentinel
 	 * password 'oidc_login|<uid>'; beforeLogin() swaps the sentinel for the live
 	 * OAUTHBEARER token on every connect (for both IMAP and SMTP), so there is no
 	 * token-expiry issue and no separate SMTP password is needed — mirroring the
@@ -178,17 +178,17 @@ trait UserAuth
 	 */
 	protected function accountFromNcSession() : ?MainAccount
 	{
-		$helper = \OCP\Server::get(\OCA\X2Mail\Util\EngineHelper::class);
-		if (!$helper->isOIDCLogin()) {
+		$oHost = \X2Mail\Engine\Host::get();
+		if (!$oHost->isSsoLogin()) {
 			return null;
 		}
-		$sEmail = $helper->getSsoEmail();
+		$sEmail = $oHost->ssoEmail();
 		if (!$sEmail || !\str_contains($sEmail, '@')) {
 			return null;
 		}
 		// Self-contained guard: never build a uid-less 'oidc_login|' sentinel that
 		// would still pass LoginProcess()'s str_starts_with('oidc_login|') check.
-		$sUid = $helper->getSsoUid();
+		$sUid = $oHost->ssoUid();
 		if (!$sUid) {
 			return null;
 		}

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav" xmlns:cs="http://calendarserver.org/ns/" xmlns:oc="http://owncloud.org/ns" xmlns:nc="http://nextcloud.org/ns">
+  <d:response>
+    <d:href>/remote.php/dav/addressbooks/users/nk/contacts/anna.vcf</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:getetag>"etag-anna-1"</d:getetag>
+        <card:address-data>BEGIN:VCARD
+VERSION:3.0
+UID:anna-beispiel-uid
+FN:Anna Beispiel
+EMAIL:anna@example.org
+END:VCARD
+</card:address-data>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/remote.php/dav/addressbooks/users/nk/contacts/bruno.vcf</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:getetag>"etag-bruno-1"</d:getetag>
+        <card:address-data>BEGIN:VCARD
+VERSION:3.0
+UID:bruno-muster-uid
+FN:Bruno Muster
+EMAIL:bruno@example.org
+END:VCARD
+</card:address-data>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+</d:multistatus>

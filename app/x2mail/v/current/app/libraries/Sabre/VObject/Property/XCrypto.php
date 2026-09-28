@@ -39,8 +39,7 @@ class XCrypto extends Property
      */
     public function setRawMimeDirValue($val): void
     {
-        error_log("setRawMimeDirValue({$val})");
-//        $this->setValue(MimeDir::unescapeValue($val, $this->delimiter));
+        // X-CRYPTO carries its data in parameters; the value is empty and ignored.
     }
 
     /**

@@ -71,14 +71,14 @@ class Utils
 			}
 			return '1-' . \sha1(APP_SALT.$oAccount->Hash());
 		}
-		// Guest/pre-auth branch: derive the per-session secret from the NC session
-		// instead of a self-set cookie. The NC session id is stable for the life of
-		// the session, so the value AppData seeds as System.token matches the value
-		// ServiceActions validates on later POSTs. Fall back to the SSO uid, then to
-		// a per-process-stable value so a single CLI/no-session request stays
-		// consistent (under the SSO web app an NC session is always present).
-		$helper = \OCP\Server::get(\OCA\X2Mail\Util\EngineHelper::class);
-		$sSeed = $helper->getNcSessionId() ?: $helper->getSsoUid();
+		// Guest/pre-auth branch: derive the per-session secret from the host session
+		// (NC session id or the standalone webmail session) instead of a self-set
+		// cookie. The id is stable for the life of the session, so the value AppData
+		// seeds as System.token matches the value ServiceActions validates on later
+		// POSTs. Fall back to the SSO uid, then to a per-process-stable value so a
+		// single CLI/no-session request stays consistent.
+		$oHost = \X2Mail\Engine\Host::get();
+		$sSeed = $oHost->sessionSeed() ?: $oHost->ssoUid();
 		if (!$sSeed) {
 			static $sFallback = null;
 			$sSeed = $sFallback ??= \X2Mail\Mail\Base\Utils::Sha1Rand(APP_SALT);

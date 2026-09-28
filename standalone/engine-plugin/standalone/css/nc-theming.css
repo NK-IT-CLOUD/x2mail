@@ -1,0 +1,151 @@
+/* X2Mail standalone: the Nextcloud 35 default theming variables that
+ * themes/x2mail/styles.css and plugins/nextcloud/style.css read. Inside
+ * Nextcloud the theming app defines them; standalone has no theming app,
+ * so without this file the theme's own fallbacks would apply.
+ *
+ * Values are copied from a Nextcloud 35 instance with default branding.
+ * Only primary-derived tones are computed, all from --x2w-primary, which
+ * js/theme.js overrides with [theme] primary_color from webmail.toml.
+ * Not defined here because Nextcloud 35 does not define them either:
+ * --color-primary-default, --color-primary-text-dark, --color-text-light,
+ * --color-text-lighter, --color-text-warning (the theme's fallbacks apply). */
+
+:root {
+	--x2w-primary: #00679e;
+
+	--color-main-background: #ffffff;
+	--color-main-background-rgb: 255,255,255;
+	--color-main-background-blur: rgba(var(--color-main-background-rgb), .8);
+	--color-main-text: #222222;
+	--color-background-hover: #f5f5f5;
+	--color-background-dark: #ededed;
+	--color-background-darker: #dbdbdb;
+	--color-placeholder-light: #e6e6e6;
+	--color-placeholder-dark: #cccccc;
+	--color-text-maxcontrast: #6b6b6b;
+	--color-text-error: #bf0000;
+	--color-border: #ededed;
+	--color-border-dark: #dbdbdb;
+	--color-border-maxcontrast: #7d7d7d;
+	--color-box-shadow-rgb: 77,77,77;
+	--color-box-shadow: rgba(var(--color-box-shadow-rgb), 0.5);
+	--color-loading-light: #cccccc;
+	--color-loading-dark: #444444;
+	--color-scrollbar: var(--color-border-maxcontrast) transparent;
+
+	--color-error: #FFE7E7;
+	--color-error-rgb: 255,231,231;
+	--color-error-hover: #ffc3c3;
+	--color-error-text: #8A0000;
+	--color-element-error: #c90000;
+	--color-warning: #FFEEC5;
+	--color-warning-rgb: 255,238,197;
+	--color-warning-hover: #ffe4a1;
+	--color-warning-text: #664700;
+	--color-element-warning: #BF7900;
+	--color-success: #D8F3DA;
+	--color-success-rgb: 216,243,218;
+	--color-success-hover: #bdebc0;
+	--color-success-text: #005416;
+	--color-element-success: #099f05;
+	--color-info: #D5F1FA;
+	--color-info-rgb: 213,241,250;
+	--color-info-text: #0066AC;
+	--color-element-info: #0077C7;
+
+	/* Primary. Nextcloud 35 default (#00679e): hover #3285b1,
+	 * element-hover #00507a, light #e5eff5, light-hover #d9e3e8,
+	 * light-text #00293f; the mixes below reproduce these within 1 per channel. */
+	--color-primary: var(--x2w-primary);
+	--color-primary-text: #ffffff;
+	--color-primary-hover: color-mix(in srgb, var(--x2w-primary) 80%, white);
+	--color-primary-element: var(--x2w-primary);
+	--color-primary-element-hover: color-mix(in srgb, var(--x2w-primary) 77.5%, black);
+	--color-primary-element-text: #ffffff;
+	--color-primary-element-text-dark: #ededed;
+	--color-primary-light: color-mix(in srgb, var(--x2w-primary) 10%, white);
+	--color-primary-light-hover: color-mix(in srgb, var(--color-primary-light) 95%, black);
+	--color-primary-light-text: color-mix(in srgb, var(--x2w-primary) 40%, black);
+	--color-primary-element-light: var(--color-primary-light);
+	--color-primary-element-light-hover: var(--color-primary-light-hover);
+	--color-primary-element-light-text: var(--color-primary-light-text);
+
+	--border-radius-small: 4px;
+	--border-radius-element: 8px;
+	--border-radius: var(--border-radius-small);
+	--border-radius-large: var(--border-radius-element);
+	--border-radius-pill: 100px;
+
+	--font-face: system-ui, -apple-system, 'Segoe UI', Roboto, Oxygen-Sans, Cantarell, Ubuntu, 'Helvetica Neue', 'Noto Sans', 'Liberation Sans', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+	--default-font-size: 15px;
+	--default-line-height: 1.5;
+	--animation-quick: 100ms;
+	--animation-slow: 200ms;
+}
+
+/* Dark: only the values that differ from light. */
+@media (prefers-color-scheme: dark) {
+	:root {
+		--color-main-background: #171717;
+		--color-main-background-rgb: 23,23,23;
+		--color-main-background-blur: rgba(var(--color-main-background-rgb), .85);
+		--color-main-text: #EBEBEB;
+		--color-background-hover: #212121;
+		--color-background-dark: #292929;
+		--color-background-darker: #3b3b3b;
+		--color-placeholder-light: #313131;
+		--color-placeholder-dark: #4a4a4a;
+		--color-text-maxcontrast: #999999;
+		--color-text-error: #ff6f6f;
+		--color-border: #292929;
+		--color-border-dark: #3b3b3b;
+		--color-box-shadow-rgb: 0,0,0;
+		--color-box-shadow: #000000;
+		--color-loading-light: #777;
+		--color-loading-dark: #CCC;
+
+		--color-error: #552121;
+		--color-error-rgb: 85,33,33;
+		--color-error-hover: #7a2f2f;
+		--color-error-text: #FFCCCC;
+		--color-element-error: #FF5050;
+		--color-warning: #3D3010;
+		--color-warning-rgb: 61,48,16;
+		--color-warning-hover: #65501b;
+		--color-warning-text: #FFEEC5;
+		--color-element-warning: #FFCC00;
+		--color-success: #11321A;
+		--color-success-rgb: 17,50,26;
+		--color-success-hover: #1e582e;
+		--color-success-text: #D5F2DC;
+		--color-element-success: #40A330;
+		--color-info: #003553;
+		--color-info-rgb: 0,53,83;
+		--color-info-text: #00AEFF;
+		--color-element-info: #0099E0;
+
+		/* Primary. Nextcloud 35 default: hover #045783, element #0091f2,
+		 * element-hover #17a2ff, light #14232c, light-hover #1f2e36,
+		 * light-text #99c2d8. Nextcloud lightens the element colour in HSL for
+		 * dark backgrounds, which also raises its saturation. A mix with white
+		 * cannot do that: the closest one (73%) gives #4590b8, about 8 dE2000
+		 * from #0091f2. It stays as the fallback; browsers with relative colour
+		 * syntax use HSL lightness +13 (#0092e0, about 3 dE2000) and +18 for
+		 * hover (#00a3fa, about 1.4 dE2000), as in the @supports block below. */
+		--color-primary-hover: color-mix(in srgb, var(--x2w-primary) 80%, #171717);
+		--color-primary-element: color-mix(in srgb, var(--x2w-primary) 73%, white);
+		--color-primary-element-hover: color-mix(in srgb, var(--color-primary-element) 86%, white);
+		--color-primary-element-text: #000000;
+		--color-primary-element-text-dark: #121212;
+		--color-primary-light: color-mix(in srgb, var(--x2w-primary) 15%, #171717);
+		--color-primary-light-hover: color-mix(in srgb, var(--color-primary-light) 95%, white);
+		--color-primary-light-text: color-mix(in srgb, var(--x2w-primary) 40%, white);
+	}
+
+	@supports (color: hsl(from red h s calc(l + 10))) {
+		:root {
+			--color-primary-element: hsl(from var(--x2w-primary) h s calc(l + 13));
+			--color-primary-element-hover: hsl(from var(--x2w-primary) h s calc(l + 18));
+		}
+	}
+}

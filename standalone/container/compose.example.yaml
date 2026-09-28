@@ -1,0 +1,35 @@
+# Example deployment. TLS is terminated by the reverse proxy in front of port 8080.
+services:
+  php:
+    image: registry.example.com/x2mail-webmail:1.0.0
+    command: ["php"]
+    read_only: true
+    tmpfs: ["/tmp:size=128m"]
+    volumes:
+      - ./config:/etc/x2mail-webmail:ro
+      - data:/var/lib/x2mail-webmail
+    mem_limit: 512m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  web:
+    image: registry.example.com/x2mail-webmail:1.0.0
+    command: ["web"]
+    # X2W_PHP_UPSTREAM: host:port of the php role, resolved at request time. Default: php:9000.
+    read_only: true
+    tmpfs: ["/tmp:size=128m"]
+    ports: ["8080:8080"]
+    depends_on: [php]
+    mem_limit: 256m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  data: {}

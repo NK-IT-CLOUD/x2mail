@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav" xmlns:cs="http://calendarserver.org/ns/" xmlns:oc="http://owncloud.org/ns" xmlns:nc="http://nextcloud.org/ns">
+  <d:response>
+    <d:href>/remote.php/dav/addressbooks/users/nk/</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:resourcetype>
+          <d:collection/>
+        </d:resourcetype>
+        <d:displayname/>
+        <d:current-user-privilege-set>
+          <d:privilege><d:read/></d:privilege>
+          <d:privilege><d:write/></d:privilege>
+        </d:current-user-privilege-set>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/remote.php/dav/addressbooks/users/nk/contacts/</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:resourcetype>
+          <d:collection/>
+          <card:addressbook/>
+        </d:resourcetype>
+        <d:displayname>Kontakte</d:displayname>
+        <d:current-user-privilege-set>
+          <d:privilege><d:read/></d:privilege>
+          <d:privilege><d:write/></d:privilege>
+        </d:current-user-privilege-set>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/remote.php/dav/addressbooks/users/nk/test-adressbuch/</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:resourcetype>
+          <d:collection/>
+          <card:addressbook/>
+        </d:resourcetype>
+        <d:displayname>Test-Adressbuch</d:displayname>
+        <d:current-user-privilege-set>
+          <d:privilege><d:read/></d:privilege>
+          <d:privilege><d:write/></d:privilege>
+        </d:current-user-privilege-set>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/remote.php/dav/addressbooks/users/nk/z-server-generated--system/</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:resourcetype>
+          <d:collection/>
+          <card:addressbook/>
+        </d:resourcetype>
+        <d:displayname>Systemadressbuch</d:displayname>
+        <d:current-user-privilege-set>
+          <d:privilege><d:read/></d:privilege>
+        </d:current-user-privilege-set>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/remote.php/dav/addressbooks/users/nk/z-app-generated--contactsinteraction--recent/</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:resourcetype>
+          <d:collection/>
+          <card:addressbook/>
+        </d:resourcetype>
+        <d:displayname>Kürzlich kontaktiert</d:displayname>
+        <d:current-user-privilege-set>
+          <d:privilege><d:read/></d:privilege>
+        </d:current-user-privilege-set>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/remote.php/dav/addressbooks/users/nk/shared-freigegeben/</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:resourcetype>
+          <d:collection/>
+          <card:addressbook/>
+        </d:resourcetype>
+        <d:displayname>Freigegeben</d:displayname>
+        <d:current-user-privilege-set>
+          <d:privilege><d:read/></d:privilege>
+        </d:current-user-privilege-set>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+</d:multistatus>

@@ -1,0 +1,23 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/../vendor/autoload.php';
+
+use X2Mail\Standalone\Config\Config;
+use X2Mail\Standalone\Config\ConfigException;
+use X2Mail\Standalone\Engine\Provisioner;
+
+$path = \getenv('X2W_CONFIG') ?: '/etc/x2mail-webmail/webmail.toml';
+try {
+    $config = Config::fromFile($path);
+    (new Provisioner($config, \dirname(__DIR__, 2) . '/app/index.php', \dirname(__DIR__) . '/engine-plugin/standalone'))->run();
+} catch (ConfigException $e) {
+    \fwrite(\STDERR, "config error: {$e->getMessage()}\n");
+    exit(2);
+} catch (\Throwable $e) {
+    \fwrite(\STDERR, "provisioning failed: {$e->getMessage()}\n");
+    exit(1);
+}
+\fwrite(\STDOUT, "provisioned: mail host {$config->mail->host}\n");

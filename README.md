@@ -286,6 +286,18 @@ of the token store.
 - Multiple identities, OpenPGP and S/MIME
 - `occ x2mail:setup`, `occ x2mail:status`
 
+## Standalone webmail (without Nextcloud)
+
+The same webmail also runs on its own, without Nextcloud, from the `standalone/` directory:
+OIDC login (authorization code with PKCE) against your IdP, IMAP, SMTP and Sieve with the user's
+access token, access rules on token claims, and an optional CardDAV address book per tenant.
+
+- Container image with two roles (`php`, `web`), built from `standalone/container/Containerfile`
+- Configuration: [webmail.example.toml](standalone/webmail.example.toml)
+- Deployment and operations: [standalone/OPERATIONS.md](standalone/OPERATIONS.md)
+
+The mail server requirements above apply unchanged.
+
 ## Troubleshooting
 
 ### Login form appears instead of mailbox

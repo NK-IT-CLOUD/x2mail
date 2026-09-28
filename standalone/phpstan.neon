@@ -1,0 +1,15 @@
+parameters:
+    phpVersion:
+        min: 80401
+        max: 80599
+    level: 7
+    paths:
+        - src
+        - public
+        - bin/provision
+        - engine-plugin
+    scanDirectories:
+        - ../app/x2mail/v/current/app/libraries
+    bootstrapFiles:
+        - vendor/autoload.php
+        - ../stubs/sm-constants.php

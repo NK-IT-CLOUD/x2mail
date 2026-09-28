@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav" xmlns:cs="http://calendarserver.org/ns/" xmlns:oc="http://owncloud.org/ns" xmlns:nc="http://nextcloud.org/ns">
+  <d:response>
+    <d:href>/remote.php/dav/addressbooks/users/nk/</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:resourcetype>
+          <d:collection/>
+        </d:resourcetype>
+        <d:displayname/>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/remote.php/dav/addressbooks/users/nk/contacts/</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:displayname/>
+        <d:current-user-privilege-set/>
+      </d:prop>
+      <d:status>HTTP/1.1 404 Not Found</d:status>
+    </d:propstat>
+    <d:propstat>
+      <d:prop>
+        <d:resourcetype>
+          <d:collection/>
+          <card:addressbook/>
+        </d:resourcetype>
+        <d:displayname>Kontakte</d:displayname>
+        <d:current-user-privilege-set>
+          <d:privilege><d:read/></d:privilege>
+          <d:privilege><d:write/></d:privilege>
+        </d:current-user-privilege-set>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+  <D:response xmlns:D="DAV:">
+    <D:href>/remote.php/dav/addressbooks/users/nk/test-adressbuch/</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:resourcetype>
+          <D:collection/>
+          <card:addressbook/>
+        </D:resourcetype>
+        <D:displayname>Test-Adressbuch</D:displayname>
+        <D:current-user-privilege-set>
+          <D:privilege><D:read/></D:privilege>
+          <D:privilege><D:write/></D:privilege>
+        </D:current-user-privilege-set>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <response xmlns="DAV:">
+    <href>/remote.php/dav/addressbooks/users/nk/default-ns/</href>
+    <propstat>
+      <prop>
+        <resourcetype>
+          <collection/>
+          <card:addressbook xmlns:card="urn:ietf:params:xml:ns:carddav"/>
+        </resourcetype>
+        <displayname>Default-NS</displayname>
+        <current-user-privilege-set>
+          <privilege><read/></privilege>
+        </current-user-privilege-set>
+      </prop>
+      <status>HTTP/1.1 200 OK</status>
+    </propstat>
+  </response>
+</d:multistatus>
