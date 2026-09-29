@@ -4,6 +4,11 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.8.7] — 2026-09-29
+
+### Fixed
+- Single sign-on with `user_oidc` configured without auto-provisioning (users from another backend such as LDAP): the mail identity is now taken from the email claim of the ID token that `user_oidc` verified at login. Since 0.8.6 these users could not open their mailbox
+
 ## [0.8.6] — 2026-09-29
 
 ### Security

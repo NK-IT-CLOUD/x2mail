@@ -184,7 +184,10 @@ class EngineHelper
      *      (occ user:setting <uid> x2mail email <address>); users cannot, as
      *      X2Mail accepts no user preference writes for it. Wins over the token.
      *   2. the email claim user_oidc validated and mapped at login
-     *      (OidcEmailClaimListener). The profile email (settings/email) never
+     *      (OidcEmailClaimListener); if user_oidc does not provision users, it
+     *      dispatches no mapping event and the claim is read from the ID token
+     *      it verified and kept in the session (getIdTokenEmail).
+     *      The profile email (settings/email) never
      *      selects the account: users can edit it unless
      *      allow_user_to_change_email is false. A different profile email
      *      (e.g. an alias) is only logged; the claim still applies.
@@ -206,10 +209,13 @@ class EngineHelper
         }
 
         $claim = $this->session->get(OidcEmailClaimListener::SESSION_KEY);
+        if ((!\is_string($claim) || $claim === '') && !$this->userOidcProvisions()) {
+            $claim = $this->getIdTokenEmail($uid);
+        }
         if (!\is_string($claim) || $claim === '') {
             $this->logger->warning(
                 'No validated OIDC email claim in the session of "' . $uid . '"; mail access refused '
-                . '(sign in again via SSO; user_oidc must provision the user and map an email claim)'
+                . '(sign in again via SSO; the ID token must carry the mapped email claim)'
             );
             return null;
         }
@@ -223,6 +229,59 @@ class EngineHelper
         }
 
         return $claim;
+    }
+
+    /**
+     * Same test as user_oidc's LoginController::code(): provisioning is on unless
+     * 'user_oidc' => ['auto_provision' => false]. Only with provisioning does
+     * user_oidc dispatch AttributeMappedEvent (OidcEmailClaimListener).
+     */
+    private function userOidcProvisions(): bool
+    {
+        $oidcConfig = $this->config->getSystemValue('user_oidc', []);
+        return !\is_array($oidcConfig) || !isset($oidcConfig['auto_provision']) || (bool) $oidcConfig['auto_provision'];
+    }
+
+    /**
+     * Email from the ID token user_oidc keeps in the session, for logins without
+     * provisioning (no AttributeMappedEvent). LoginController::code() is the only
+     * writer of 'oidc.id_token' and stores it after it verified the signature
+     * (JWKS), exp, iss, aud, azp and nonce, so the payload is read as is. Claim
+     * names follow the provider's user_oidc mapping (plain claim names; nested
+     * mappings are not resolved and refuse). The token's uid claim must name the
+     * session user, so a token left in a session that changed hands (impersonate)
+     * is not used.
+     */
+    private function getIdTokenEmail(string $uid): ?string
+    {
+        $idToken = $this->session->get('oidc.id_token');
+        $providerId = $this->session->get('oidc.providerid');
+        if (!\is_string($idToken) || !\is_int($providerId)) {
+            return null;
+        }
+        $parts = \explode('.', $idToken);
+        $payload = \count($parts) === 3
+            ? \json_decode((string) \base64_decode(\strtr($parts[1], '-_', '+/'), true), true)
+            : null;
+        if (!\is_array($payload)) {
+            return null;
+        }
+
+        $mapping = fn (string $setting, string $default): string => $this->appConfig->getValueString(
+            'user_oidc',
+            'provider-' . $providerId . '-' . $setting,
+            '',
+            true
+        ) ?: $default;
+
+        $tokenUid = $payload[$mapping('mappingUid', 'sub')] ?? null;
+        if (!\is_string($tokenUid) || \mb_strtolower($tokenUid) !== \mb_strtolower($uid)) {
+            $this->logger->warning('The OIDC ID token in the session does not belong to "' . $uid . '"; not used');
+            return null;
+        }
+
+        $email = $payload[$mapping('mappingEmail', 'email')] ?? null;
+        return \is_string($email) && \trim($email) !== '' ? \mb_strtolower(\trim($email)) : null;
     }
 
     /**

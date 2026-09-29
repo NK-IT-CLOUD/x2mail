@@ -110,8 +110,10 @@ The mail server accepts a token only if one of these is true:
 The token also needs a claim that identifies the mailbox, typically `email`.
 
 X2Mail uses the email claim that `user_oidc` validated at login as the mail
-identity, so `user_oidc` must provision the user and map the email claim
-(the defaults do). The Nextcloud profile email does not select the mailbox
+identity: the mapped email claim when `user_oidc` provisions users (the default),
+or, with `'user_oidc' => ['auto_provision' => false]`, the claims of the ID token
+`user_oidc` verified at login (the provider's user ID and email mapping must be
+plain claim names). The Nextcloud profile email does not select the mailbox
 account; recommended anyway: `'allow_user_to_change_email' => false` in `config.php`.
 An admin can set a different mail address per user; it takes precedence over the claim:
 `occ user:setting <uid> x2mail email <address>`.
