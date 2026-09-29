@@ -78,7 +78,12 @@ class NextcloudPlugin extends \X2Mail\Engine\Plugins\AbstractPlugin
 		) {
 			$sToken = \OCP\Server::get(\OCA\X2Mail\Util\EngineHelper::class)->getOidcAccessToken();
 			if (!$sToken) {
-				return;
+				// No token (e.g. the configured token exchange failed): stop here
+				// instead of sending the oidc_login| placeholder as a password.
+				throw new \X2Mail\Engine\Exceptions\ClientException(
+					\X2Mail\Engine\Notifications::AuthError->value, null,
+					'No OIDC access token for the mail server, see the Nextcloud log'
+				);
 			}
 			$oSettings->passphrase = $sToken;
 			$oSettings->SASLMechanisms = \array_values(\array_unique(

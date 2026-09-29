@@ -166,29 +166,10 @@ trait SMime
 		if (!$SMIME) {
 			return $this->FalseResponse();
 		}
+		// Certificates of the signature are not imported: an unknown sender
+		// must not become trusted, nor a recipient for encryption, just by
+		// sending a signed message. See DoSMimeImportCertificatesFromMessage.
 		$result = $SMIME->verify($sBody, null, !$bDetached);
-
-		// Import the certificates automatically
-		$sBody = $this->GetActionParam('sigPart', '');
-		$sPartId = $this->GetActionParam('sigPartId', '') ?: $sPartId;
-		if (!$sBody && $sPartId && $oImapClient) {
-			$sBody = $oImapClient->Fetch(
-				[FetchType::BODY_PEEK->value.'['.$sPartId.']'],
-				$iUid,
-				true
-			)[0]->GetFetchValue(FetchType::BODY->value.'['.$sPartId.']');
-		}
-		if ($sBody) {
-			$sBody = \trim($sBody);
-			$certificates = [];
-			\openssl_pkcs7_read(
-				"-----BEGIN PKCS7-----\n\n{$sBody}\n-----END PKCS7-----",
-				$certificates
-			) || $this->logWrite("openssl_pkcs7_read: " . \openssl_error_string(), \LOG_ERR, 'OpenSSL');
-			foreach ($certificates as $certificate) {
-				$SMIME->storeCertificate($certificate);
-			}
-		}
 
 		return $this->DefaultResponse($result);
 	}
@@ -202,33 +183,35 @@ trait SMime
 		);
 	}
 
+	/**
+	 * Explicit user action: trust the signer certificate of a message.
+	 * The message is read from the server, not from the request. Only signer
+	 * certificates of a valid signature whose address matches the From header
+	 * are imported (RFC 8550 section 3).
+	 */
 	public function DoSMimeImportCertificatesFromMessage() : array
 	{
-/*
-		$sBody = $this->GetActionParam('sigPart', '');
-		if (!$sBody) {
-			$sPartId = $this->GetActionParam('sigPartId', '') ?: $this->GetActionParam('partId', '');
-			$this->initMailClientConnection();
-			$oImapClient = $this->ImapClient();
-			$oImapClient->FolderExamine($this->GetActionParam('folder', ''));
-			$sBody = $oImapClient->Fetch([
-				FetchType::BODY_PEEK->value.'['.$sPartId.']'
-			], (int) $this->GetActionParam('uid', 0), true)[0]
-			->GetFetchValue(FetchType::BODY->value.'['.$sPartId.']');
-		}
-		$sBody = \trim($sBody);
-		$certificates = [];
-		\openssl_pkcs7_read(
-			"-----BEGIN PKCS7-----\n\n{$sBody}\n-----END PKCS7-----",
-			$certificates
-		);
+		$sFolderName = $this->GetActionParam('folder', '');
+		$iUid = (int) $this->GetActionParam('uid', 0);
 
-		foreach ($certificates as $certificate) {
-			$this->SMIME()->storeCertificate($certificate);
+		$this->initMailClientConnection();
+		$oMessage = $this->MailClient()->Message($sFolderName, $iUid);
+		if (!$oMessage || !$oMessage->smimeSigned) {
+			return $this->FalseResponse();
+		}
+		$sBody = $this->ImapClient()->FetchMessagePart($iUid, $oMessage->smimeSigned['partId']);
+
+		$SMIME = $this->requireSMimeEngine();
+		$result = $SMIME->verify($sBody, null, !$oMessage->smimeSigned['detached']);
+		if (empty($result['success'])) {
+			return $this->FalseResponse();
 		}
 
-		return $this->DefaultResponse($certificates);
-*/
-		return $this->FalseResponse();
+		$aFrom = [];
+		foreach ($oMessage->From() ?: [] as $oEmail) {
+			$aFrom[] = \mb_strtolower($oEmail->GetEmail());
+		}
+
+		return $this->DefaultResponse($SMIME->importSigners($aFrom) ?: false);
 	}
 }

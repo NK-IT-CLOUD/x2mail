@@ -31,6 +31,10 @@ class TokenBridgeListener implements IEventListener
             return;
         }
 
+        // A new OIDC login starts: the previous identity is void until user_oidc
+        // has validated the new ID token (OidcEmailClaimListener).
+        $this->session->remove(OidcEmailClaimListener::SESSION_KEY);
+
         $tokenData = $event->getToken();
         $accessToken = $tokenData['access_token'] ?? null;
 

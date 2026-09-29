@@ -323,9 +323,11 @@
 							</div>
 						</div>
 						<div data-bind="visible: message().smimeSigned()">
-							<div class="crypto-control signed" data-bind="css: {success: true === message().smimeSigned()?.success, error: false === message().smimeSigned()?.success}">
+							<div class="crypto-control signed" data-bind="css: {success: true === message().smimeSigned()?.trusted, unknown: true === message().smimeSigned()?.success && true !== message().smimeSigned()?.trusted, error: false === message().smimeSigned()?.success}">
 								<span data-icon="✍" data-i18n="SMIME/SIGNED_MESSAGE"></span>
 								<button class="btn" data-bind="click: smimeVerify" data-i18n="CRYPTO/VERIFY"></button>
+								<div data-icon="⚠" data-i18n="SMIME/SIGNER_UNKNOWN" data-bind="visible: true === message().smimeSigned()?.success && true !== message().smimeSigned()?.trusted"></div>
+								<button class="btn import-signer" data-i18n="SMIME/TRUST_SIGNER" data-bind="visible: $data.smimeImportSigner && true === message().smimeSigned()?.success && true !== message().smimeSigned()?.trusted, click: $data.smimeImportSigner"></button>
 							</div>
 						</div>
 					</div>

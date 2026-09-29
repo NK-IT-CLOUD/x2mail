@@ -1593,6 +1593,8 @@
 
 		htmlre = /[&<>"']/g,
 		httpre = /^(https?:)?\/\//i,
+		// CSS that makes the browser fetch a resource. A backslash may hide one behind an escape: u\72l(
+		cssFetchRe = /\\|(url|image|image-set|cross-fade|element|src)\s*\(/i,
 		htmlmap = {
 			'&': '&amp;',
 			'<': '&lt;',
@@ -1787,7 +1789,8 @@
 						// ignores @import, @keyframe, @font-face statements
 						css.push({
 							selector: selector,
-							rules: cleanCSS(arr[4])
+							// Style sheets have no per-image consent, so they fetch nothing
+							rules: cleanCSS(arr[4]).split(';').filter(rule => !cssFetchRe.test(rule)).join(';')
 						});
 					}
 				}
@@ -1852,8 +1855,8 @@
 					'color', 'face', 'size',
 					// hr
 					'noshade',
-					// img
-					'hspace', 'sizes', 'srcset', 'vspace',
+					// img (no srcset: it loads without the consent that src needs)
+					'hspace', 'vspace',
 					// meter
 					'low', 'high', 'optimum', 'value',
 					// ol
@@ -2141,6 +2144,9 @@
 					oStyle.color = delAttribute('color');
 				}
 
+				// Style properties whose URL was checked below
+				const checkedUrls = [];
+
 				if (!skipStyle) {
 	/*
 					if ('fixed' === oStyle.position) {
@@ -2166,6 +2172,7 @@
 									const attachment = findAttachmentByCid(found);
 									if (attachment?.linkPreview && name) {
 										oStyle[property] = "url('" + attachment.linkPreview() + "')";
+										checkedUrls.push(property);
 										attachment.isInline(true);
 										attachment.isLinked(true);
 									}
@@ -2173,7 +2180,8 @@
 									result.hasExternals = true;
 									urls_remote.push([property, found]);
 								} else if (lowerUrl.startsWith('data:image/')) {
-									oStyle[property] = value;
+									oStyle[property] = 'url("' + found + '")';
+									checkedUrls.push(property);
 								} else {
 									urls_broken.push([property, found]);
 								}
@@ -2204,6 +2212,15 @@
 					}
 
 					oStyle.cssText && (oStyle.cssText = cleanCSS(oStyle.cssText));
+				}
+
+				// Any other property that fetches (border-image, mask, custom properties,
+				// image-set() ...) would load without consent, also on hidden elements
+				for (let i = oStyle.length; i--;) {
+					const property = oStyle.item(i);
+					!checkedUrls.includes(property.replace(/-([a-z])/g, (m, c) => c.toUpperCase()))
+					&& cssFetchRe.test(oStyle.getPropertyValue(property))
+					&& oStyle.removeProperty(property);
 				}
 			});
 
@@ -12862,7 +12879,8 @@ body > * {
 				count
 					&& count === recipients.filter(email =>
 						email == from
-						|| SMimeUserStore.find(certificate => email == certificate.emailAddress && certificate.smimeencrypt)
+						|| SMimeUserStore.find(certificate => certificate.smimeencrypt && certificate.trusted
+							&& (certificate.emails || [certificate.emailAddress]).includes(email.toLowerCase()))
 					).length
 					&& options.push('S/MIME');
 
@@ -13070,9 +13088,13 @@ body > * {
 						}
 						if ('S/MIME' == encryptOptions[i]) {
 							params.encryptCertificates = [identity.smimeCertificate()];
+							const own = identity.email().toLowerCase(),
+								to = recipients.map(email => email.toLowerCase());
 							SMimeUserStore.forEach(certificate => {
-								certificate.emailAddress != identity.email()
-								&& recipients.includes(certificate.emailAddress)
+								const emails = certificate.emails || [certificate.emailAddress];
+								certificate.trusted
+								&& !emails.includes(own)
+								&& emails.some(email => to.includes(email))
 								&& params.encryptCertificates.push(certificate.id);
 							});
 							break;
@@ -14386,7 +14408,19 @@ body > * {
 			message && MessagelistUserStore.setAction(message.folder, action, [message]);
 		},
 
-		fetchRaw = url => rl.fetch(url).then(response => response.ok && response.text());
+		fetchRaw = url => rl.fetch(url).then(response => response.ok && response.text()),
+
+		/**
+		 * A valid signature only verifies the sender when the server knows the signer
+		 * and a signer certificate names the From address (RFC 8550 section 3).
+		 */
+		smimeSenderVerified = (result, from) => {
+			from = (from || '').toLowerCase();
+			return !!(result?.success && true === result.trusted && from
+				&& (result.signers || []).some(signer =>
+					(signer.emails || [signer.email]).some(email => (email || '').toLowerCase() === from)
+				));
+		};
 
 	class MailMessageView extends AbstractViewRight {
 		constructor() {
@@ -15034,6 +15068,24 @@ body > * {
 			}
 		}
 
+		// Explicit user action: trust the signer. The server only imports a
+		// certificate of a valid signature that matches the From address.
+		smimeImportSigner() {
+			const message = currentMessage();
+			Remote.post('SMimeImportCertificatesFromMessage', null, {
+				folder: message.folder,
+				uid: message.uid
+			}).then(response => {
+				if (response?.Result) {
+					SMimeUserStore.loadCertificates();
+					this.smimeVerify();
+				} else {
+					// TODO: translate
+					alert('Certificate not imported: invalid signature or the address does not match the sender');
+				}
+			}).catch(e => alert('Certificate not imported: ' + (e?.message || e)));
+		}
+
 		smimeVerify(/*self, event*/) {
 			const message = currentMessage(),
 				data = message.smimeSigned(); // { partId: "1", micAlg: "pgp-sha256" }
@@ -15050,6 +15102,7 @@ body > * {
 							message.html() ? message.viewHtml() : message.viewPlain();
 						}
 						data.success = response.Result.success;
+						data.trusted = smimeSenderVerified(response.Result, message.from[0]?.email);
 						message.smimeSigned(data);
 					}
 				});

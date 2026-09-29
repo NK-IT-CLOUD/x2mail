@@ -6,6 +6,7 @@ use OCA\X2Mail\Dashboard\UnreadMailWidget;
 use OCA\X2Mail\Listeners\ImpersonateListener;
 use OCA\X2Mail\Listeners\LoginBridgeListener;
 use OCA\X2Mail\Listeners\LogoutListener;
+use OCA\X2Mail\Listeners\OidcEmailClaimListener;
 use OCA\X2Mail\Listeners\TokenBridgeListener;
 use OCA\X2Mail\Middleware\TokenRefreshMiddleware;
 use OCA\X2Mail\Search\Provider;
@@ -42,6 +43,14 @@ class Application extends App implements IBootstrap
         $context->registerEventListener(
             'OCA\\UserOIDC\\Event\\TokenObtainedEvent',
             TokenBridgeListener::class
+        );
+
+        // user_oidc AttributeMappedEvent — validated email claim = engine identity.
+        // Low priority: runs after other listeners that may still change the mapped value.
+        $context->registerEventListener(
+            'OCA\\UserOIDC\\Event\\AttributeMappedEvent',
+            OidcEmailClaimListener::class,
+            -100
         );
 
         // UserLoggedInEvent — bridge NC login to engine session

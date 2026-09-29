@@ -31,12 +31,13 @@ class Certificate
 	];
 
 	/**
-	 * A string having the format file://path/to/cert.pem; the named file must contain a PEM encoded certificate
-	 * A string containing the content of a certificate, PEM encoded, may start with -----BEGIN CERTIFICATE-----
+	 * A string containing the content of a certificate, PEM encoded, starting with -----BEGIN CERTIFICATE-----
 	 */
 	function __construct($x509cert = null, $privateKey = null)
 	{
 		if ($x509cert) {
+			OpenSSL::assertPem($x509cert, 'x509');
+			$privateKey && OpenSSL::assertPem($privateKey, 'pkey');
 			$x509cert = \openssl_x509_read($x509cert);
 			if (!$x509cert) {
 				throw new \RuntimeException('OpenSSL x509: ' . \openssl_error_string());
@@ -142,6 +143,7 @@ class Certificate
 
 		$pkey = null; // openssl_pkey_new($options);
 		if ($privateKey) {
+			OpenSSL::assertPem($privateKey, 'pkey');
 			$pkey = \openssl_pkey_get_private($privateKey, $passphrase);
 			if (!$pkey) {
 				throw new \RuntimeException('OpenSSL pkey: ' . \openssl_error_string());

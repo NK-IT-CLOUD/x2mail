@@ -4,6 +4,26 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.8.6] — 2026-09-29
+
+### Security
+- Opening a message can no longer trigger actions in the webmail: every action requires the request token, and actions that change data can no longer be triggered by a link or image URL
+- Images in messages are no longer loaded through srcset or CSS properties such as border-image or mask-image before you allow external images
+- The mail account identity now comes from the email address verified at single sign-on instead of the editable Nextcloud profile email, and webmail logins are only accepted for the signed-in account. Sender identities and aliases are unchanged. After updating, users sign in via SSO once
+- S/MIME certificates from received signatures are no longer trusted or used for encryption automatically. Import a sender's certificate explicitly, or trust it from a validly signed message whose address matches the sender. Existing certificates count as not trusted until imported again
+- S/MIME key and certificate fields accept PEM data only
+- Attachment thumbnails check image size and dimensions before decoding; oversized images get no thumbnail. Thumbnails are made for GIF, JPEG, PNG and WebP only
+- The setup wizard's SSO login test never sends the sign-in token without TLS
+- With a token-exchange audience configured, a failed exchange stops the mail login instead of falling back to the Nextcloud login token
+- Deleting or exporting a GnuPG key requires a key id
+
+### Changed
+- S/MIME: a valid signature is shown as verified only when the signer's certificate is trusted and matches the sender; otherwise it reads "valid signature, unknown sender", with a button to trust the certificate. Certificates with the address only in the subjectAltName are recognized
+
+### Fixed
+- Sieve filters: when the mail server rejects an expired sign-in, the error now shows right away instead of after a long wait
+- Mail login and sending with an XOAUTH2 sign-in end cleanly when the mail server rejects the token
+
 ## [0.8.5] — 2026-09-28
 
 ### Added

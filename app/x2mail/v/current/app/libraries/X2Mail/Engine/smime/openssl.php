@@ -20,9 +20,45 @@ class OpenSSL
 	private $certificate; // OpenSSLCertificate|array|string
 	private $privateKey; // OpenSSLAsymmetricKey|OpenSSLCertificate|array|string
 
+	// PEM of the signer certificates found by the last verify()
+	private array $lastSigners = [];
+
 	function __construct(string $homedir)
 	{
 		$this->homedir = $homedir;
+	}
+
+	/**
+	 * The openssl_* functions also accept "file://" paths (and arrays) for keys
+	 * and certificates. Callers pass user input, so only accept PEM data.
+	 */
+	public static function assertPem(/*string|Stringable*/ $value, string $what) : void
+	{
+		if (!(\is_string($value) || $value instanceof \Stringable)
+		 || !\str_starts_with(\ltrim((string) $value), '-----BEGIN ')
+		) {
+			throw new \RuntimeException("OpenSSL {$what}: PEM data expected");
+		}
+	}
+
+	/**
+	 * Lowercased addresses of a certificate: subject emailAddress and
+	 * subjectAltName rfc822Name entries (RFC 8550 section 3).
+	 */
+	public static function certificateEmails(string $certificate) : array
+	{
+		$data = \openssl_x509_parse($certificate);
+		if (!$data) {
+			return [];
+		}
+		$emails = (array) ($data['subject']['emailAddress'] ?? []);
+		foreach (\explode(',', $data['extensions']['subjectAltName'] ?? '') as $name) {
+			$name = \trim($name);
+			if (\str_starts_with($name, 'email:')) {
+				$emails[] = \substr($name, 6);
+			}
+		}
+		return \array_values(\array_unique(\array_map('mb_strtolower', \array_filter($emails))));
 	}
 
 	public function getCertificate(string $filename)/* : string*/
@@ -30,25 +66,55 @@ class OpenSSL
 		return \file_get_contents("{$this->homedir}/{$filename}");
 	}
 
+	/**
+	 * Stores the certificate and marks it as trusted. Only call this for an
+	 * explicit user action, never for certificates that arrived in a message.
+	 */
 	public function storeCertificate(string $certificate) : bool
 	{
-		$data = \openssl_x509_parse(\openssl_x509_read($certificate));
+		static::assertPem($certificate, 'storeCertificate');
+		$x509 = \openssl_x509_read($certificate);
+		$data = $x509 ? \openssl_x509_parse($x509) : false;
 		if (!$data) {
 			\X2Mail\Engine\Log::error('OpenSSL', "parse: " . \openssl_error_string());
 			return false;
 		}
+		$fingerprint = \openssl_x509_fingerprint($x509, 'sha256');
 		$key = \str_replace(':', '', $data['extensions']['subjectKeyIdentifier'] ?? $data['hash']);
 		$key = \basename($key);
 		$filename = "{$this->homedir}/{$key}.crt";
-		if (\file_exists($filename)) {
+		$trusted = $this->trustedFingerprints();
+		// The file name comes from the subjectKeyIdentifier, which the
+		// certificate issuer chooses. A different certificate stored under it
+		// is only replaced when the user never trusted it.
+		$stored = \file_exists($filename) ? \openssl_x509_fingerprint(\file_get_contents($filename), 'sha256') : false;
+		if ($stored === $fingerprint) {
 			\X2Mail\Engine\Log::debug('OpenSSL', "certificate {$key} already imported");
+		} else if ($stored && isset($trusted[$stored])) {
+			\X2Mail\Engine\Log::error('OpenSSL', "certificate {$key}: a different trusted certificate is stored under this id");
+			return false;
 		} else {
-			\file_put_contents("{$this->homedir}/{$key}.crt", $certificate);
-//			\unlink("{$this->homedir}/certificates.json");
-			$this->certificates(true);
+			\file_put_contents($filename, $certificate);
 			\X2Mail\Engine\Log::debug('OpenSSL', "certificate {$key} imported");
 		}
+		$trusted[$fingerprint] = true;
+		\file_put_contents("{$this->homedir}/trusted.json", \json_encode(\array_keys($trusted)));
+		$this->certificates(true);
 		return true;
+	}
+
+	/**
+	 * SHA-256 fingerprints of the certificates the user imported explicitly.
+	 * Certificates in the store that are not listed here (e.g. imported
+	 * automatically by older versions) are not trusted.
+	 *
+	 * @return array<string, true>
+	 */
+	private function trustedFingerprints() : array
+	{
+		$file = "{$this->homedir}/trusted.json";
+		$list = \file_exists($file) ? \json_decode(\file_get_contents($file), true) : null;
+		return \is_array($list) ? \array_fill_keys(\array_filter($list, 'is_string'), true) : [];
 	}
 
 	public function certificates(bool $force = false) : array
@@ -57,7 +123,12 @@ class OpenSSL
 		$result = (!$force && \file_exists($cacheFile))
 			? \json_decode(\file_get_contents($cacheFile), true)
 			: null;
+		// Cache written before the trust flag and the address list existed
+		if (\is_array($result) && $result && !\array_key_exists('emails', $result[0] ?? [])) {
+			$result = null;
+		}
 		if (!\is_array($result)) {
+			$trusted = $this->trustedFingerprints();
 			$keys = [];
 			foreach (\glob("{$this->homedir}/*.key") as $file) {
 				$data = \file_get_contents($file);
@@ -81,12 +152,15 @@ class OpenSSL
 						'file' => $filename,
 						'id' => $key,
 						'CN' => $data['subject']['CN'],
-						'emailAddress' => $data['subject']['emailAddress'],
+						'emailAddress' => $data['subject']['emailAddress'] ?? '',
+						// subject and subjectAltName, lowercased
+						'emails' => static::certificateEmails($certificate),
 //						'validTo' => \gmdate('Y-m-d\\TH:i:s\\Z', $data['validTo_time_t']),
 						'validTo_time_t' => $data['validTo_time_t'],
 						'smimesign' => false,
 						'smimeencrypt' => false,
-						'privateKey' => null // not found or encrypted
+						'privateKey' => null, // not found or encrypted
+						'trusted' => isset($trusted[\openssl_x509_fingerprint($certificate, 'sha256')])
 					];
 					foreach ($data['purposes'] as $purpose) {
 						if ('smimesign' === $purpose[2] || 'smimeencrypt' === $purpose[2]) {
@@ -124,6 +198,7 @@ class OpenSSL
 
 	public function setCertificate(/*OpenSSLCertificate|string*/$certificate)
 	{
+		static::assertPem($certificate, 'x509');
 		$this->certificate = \openssl_x509_read($certificate);
 		if (!$this->certificate) {
 			throw new \RuntimeException('OpenSSL x509: ' . \openssl_error_string());
@@ -137,6 +212,7 @@ class OpenSSL
 		?\X2Mail\Engine\SensitiveString $passphrase = null
 	) : void
 	{
+		static::assertPem($privateKey, 'setPrivateKey');
 		$this->privateKey = \openssl_pkey_get_private($privateKey, $passphrase);
 		if (!$this->privateKey) {
 			throw new \RuntimeException('OpenSSL setPrivateKey: ' . \openssl_error_string());
@@ -198,6 +274,9 @@ class OpenSSL
 
 	public function encrypt(/*string|Temporary*/$input, array $certificates) : ?string
 	{
+		foreach ($certificates as $certificate) {
+			static::assertPem($certificate, 'encrypt');
+		}
 		if (\is_string($input)) {
 			$tmp = new Temporary('smimein-');
 			if (!$tmp->putContents($input)) {
@@ -325,6 +404,7 @@ class OpenSSL
 			$output_filename = null
 		);
 
+		$this->lastSigners = [];
 		$signers = $valid ? $this->parseSigners($signersTmp->getContents() ?: '') : [];
 
 		return [
@@ -338,7 +418,7 @@ class OpenSSL
 	/**
 	 * Parse signer identities out of the extracted PEM bundle.
 	 *
-	 * @return list<array{email: string, cn: string, fingerprint: string}>
+	 * @return list<array{email: string, emails: list<string>, cn: string, fingerprint: string}>
 	 */
 	private function parseSigners(string $pem) : array
 	{
@@ -349,8 +429,10 @@ class OpenSSL
 				if (!$data) {
 					continue;
 				}
+				$this->lastSigners[] = $certPem;
 				$out[] = [
 					'email' => (string) ($data['subject']['emailAddress'] ?? ''),
+					'emails' => static::certificateEmails($certPem),
 					'cn' => (string) ($data['subject']['CN'] ?? ''),
 					'fingerprint' => \openssl_x509_fingerprint($certPem, 'sha256') ?: '',
 				];
@@ -360,24 +442,37 @@ class OpenSSL
 	}
 
 	/**
-	 * TOFU trust: every signer cert must already be present in the user's
-	 * store (by SHA-256 fingerprint). An unknown signer is reported untrusted.
+	 * Stores the signer certificates of the last successful verify() whose
+	 * address matches one of $from (the message's From addresses).
 	 *
-	 * @param list<array{email: string, cn: string, fingerprint: string}> $signers
+	 * @param list<string> $from lowercased addresses
+	 * @return list<string> SHA-256 fingerprints of the imported certificates
+	 */
+	public function importSigners(array $from) : array
+	{
+		$imported = [];
+		foreach ($this->lastSigners as $certificate) {
+			if (\array_intersect(static::certificateEmails($certificate), $from)
+			 && $this->storeCertificate($certificate)
+			) {
+				$imported[] = \openssl_x509_fingerprint($certificate, 'sha256');
+			}
+		}
+		return $imported;
+	}
+
+	/**
+	 * Every signer cert must have been imported explicitly by the user
+	 * (by SHA-256 fingerprint). An unknown signer is reported untrusted.
+	 *
+	 * @param list<array{email: string, emails: list<string>, cn: string, fingerprint: string}> $signers
 	 */
 	private function signersAreKnown(array $signers) : bool
 	{
-		if (!$signers) {
+		if (!$signers || '' === $this->homedir) {
 			return false;
 		}
-		$known = [];
-		foreach (\glob("{$this->homedir}/*.crt") ?: [] as $file) {
-			$pem = \file_get_contents($file);
-			$fp = $pem ? \openssl_x509_fingerprint($pem, 'sha256') : false;
-			if ($fp) {
-				$known[$fp] = true;
-			}
-		}
+		$known = $this->trustedFingerprints();
 		foreach ($signers as $signer) {
 			if ('' === $signer['fingerprint'] || empty($known[$signer['fingerprint']])) {
 				return false;

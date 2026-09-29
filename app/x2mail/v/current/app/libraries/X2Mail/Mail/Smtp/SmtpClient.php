@@ -187,11 +187,18 @@ class SmtpClient extends \X2Mail\Mail\Net\NetClient
 				if (!empty($this->aResults[0]) && \str_starts_with($this->aResults[0], '334')) {
 					// RFC 7628: a rejected bearer token comes back as a 334 base64
 					// JSON error challenge; the client must answer with the dummy
-					// response (single ^A) to receive the final reply.
+					// response (single ^A; an empty line for XOAUTH2) to receive the
+					// final reply.
 					if (\preg_match('/^[a-zA-Z0-9=+\/]+$/', $sResult)) {
 						$this->logWrite(\base64_decode($sResult), \LOG_WARNING);
 					}
-					$sResult = $this->sendRequestWithCheck('AQ==', 235);
+					if ('XOAUTH2' === \strtoupper($type)) {
+						$this->sendRaw('');
+						$this->validateResponse(235);
+						$sResult = empty($this->aResults[0]) ? '' : \trim(\substr($this->aResults[0], 4));
+					} else {
+						$sResult = $this->sendRequestWithCheck('AQ==', 235);
+					}
 				}
 				$SASL->verify($sResult);
 			}

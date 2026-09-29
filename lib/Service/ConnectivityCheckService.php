@@ -8,6 +8,15 @@ use OCA\X2Mail\Util\EngineHelper;
 
 class ConnectivityCheckService
 {
+    /**
+     * Returned by the auth checks instead of sending the token in the clear.
+     */
+    private const NO_TLS_RESULT = [
+        'authenticated' => false,
+        'tls_required' => true,
+        'error' => 'No TLS configured, login not tested (the OIDC token is only sent over SSL/TLS or STARTTLS)',
+    ];
+
     public function __construct(
         private ?EngineHelper $engineHelper = null,
     ) {
@@ -23,9 +32,19 @@ class ConnectivityCheckService
     }
 
     /**
+     * Same rule as the engine (NetClient::assertEncryptedForBearerAuth, RFC 7628 §5):
+     * the bearer token never crosses the wire unencrypted, loopback excepted.
+     */
+    private function bearerNeedsTls(string $host, string $mode): bool
+    {
+        return !\in_array($mode, ['ssl', 'starttls', 'tls'], true)
+            && !\in_array($host, ['127.0.0.1', '::1', 'localhost'], true);
+    }
+
+    /**
      * Attempt a real IMAP AUTHENTICATE OAUTHBEARER login.
      *
-     * @return array{authenticated: bool, error?: string}
+     * @return array{authenticated: bool, tls_required?: bool, error?: string}
      */
     public function authCheckImap(
         string $host,
@@ -38,6 +57,9 @@ class ConnectivityCheckService
             return ['authenticated' => false, 'error' => 'No host specified'];
         }
         $mode = \strtolower($ssl);
+        if ($this->bearerNeedsTls($host, $mode)) {
+            return self::NO_TLS_RESULT;
+        }
         $tlsOptions = $this->buildTlsContextOptions($host, false);
         try {
             return $this->runImapAuthCheck($host, $port, $mode, $tlsOptions, $user, $token);
@@ -49,7 +71,7 @@ class ConnectivityCheckService
     /**
      * Attempt a real SMTP AUTH OAUTHBEARER login.
      *
-     * @return array{authenticated: bool, error?: string}
+     * @return array{authenticated: bool, tls_required?: bool, error?: string}
      */
     public function authCheckSmtp(
         string $host,
@@ -62,6 +84,9 @@ class ConnectivityCheckService
             return ['authenticated' => false, 'error' => 'No host specified'];
         }
         $mode = \strtolower($ssl);
+        if ($this->bearerNeedsTls($host, $mode)) {
+            return self::NO_TLS_RESULT;
+        }
         $tlsOptions = $this->buildTlsContextOptions($host, false);
         try {
             return $this->runSmtpAuthCheck($host, $port, $mode, $tlsOptions, $user, $token);
@@ -73,7 +98,7 @@ class ConnectivityCheckService
     /**
      * Attempt a real ManageSieve AUTHENTICATE OAUTHBEARER login.
      *
-     * @return array{authenticated: bool, error?: string}
+     * @return array{authenticated: bool, tls_required?: bool, error?: string}
      */
     public function authCheckSieve(
         string $host,
@@ -86,6 +111,9 @@ class ConnectivityCheckService
             return ['authenticated' => false, 'error' => 'No host specified'];
         }
         $mode = \strtolower($ssl);
+        if ($this->bearerNeedsTls($host, $mode)) {
+            return self::NO_TLS_RESULT;
+        }
         $tlsOptions = $this->buildTlsContextOptions($host, false);
         try {
             return $this->runSieveAuthCheck($host, $port, $mode, $tlsOptions, $user, $token);
@@ -503,8 +531,10 @@ class ConnectivityCheckService
      */
     private function enableTls($fp): void
     {
+        // TLS 1.2+ like the engine (NetClient::EnableCrypto); TLS_CLIENT would also allow 1.0/1.1
+        $method = \STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | \STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT;
         [$enabled, $warning] = $this->captureWarnings(
-            static fn () => \stream_socket_enable_crypto($fp, true, \STREAM_CRYPTO_METHOD_TLS_CLIENT)
+            static fn () => \stream_socket_enable_crypto($fp, true, $method)
         );
 
         if ($enabled !== true) {
@@ -785,8 +815,11 @@ class ConnectivityCheckService
             // Read Sieve greeting (multi-line capability block ending with OK)
             $greeting = $this->readSieveGreeting($fp);
 
-            // STARTTLS if requested and advertised
-            if (($mode === 'starttls' || $mode === 'tls') && \in_array('STARTTLS', $greeting['capabilities'], true)) {
+            // STARTTLS upgrade if requested; never fall back to plaintext (RFC 5804 §2.2)
+            if ($mode === 'starttls' || $mode === 'tls') {
+                if (!\in_array('STARTTLS', $greeting['capabilities'], true)) {
+                    return ['authenticated' => false, 'error' => 'STARTTLS not advertised by server'];
+                }
                 \fwrite($fp, "STARTTLS\r\n");
                 $tlsLine = $this->readLine($fp);
                 if ($tlsLine === null || !\str_starts_with(\strtoupper(\trim($tlsLine)), 'OK')) {

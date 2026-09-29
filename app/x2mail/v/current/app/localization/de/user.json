@@ -331,6 +331,8 @@
 		"CERTIFICATE": "Zertifikat",
 		"CERTIFICATES": "S\/MIME-Zertifikate",
 		"SIGNED_MESSAGE": "S\/MIME-signierte Nachricht",
+		"SIGNER_UNKNOWN": "Signatur gültig, Absender unbekannt",
+		"TRUST_SIGNER": "Zertifikat des Absenders vertrauen",
 		"ENCRYPTED_MESSAGE": "S\/MIME-verschlüsselte Nachricht",
 		"PRIVATE_KEY_OF": "Privater S\/MIME-Schlüssel von %EMAIL%"
 	},

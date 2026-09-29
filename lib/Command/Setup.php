@@ -69,7 +69,8 @@ class Setup extends Command
                 InputOption::VALUE_REQUIRED,
                 'Optional: target OIDC client/audience for the mail server. '
                 . 'When set, x2mail exchanges the login token for one scoped to this audience '
-                . '(requires IdP token-exchange support).'
+                . '(requires IdP token-exchange support). If the exchange fails, the mail login '
+                . 'fails too; there is no fallback to the login token.'
             )
             ->addOption(
                 'oidc-scopes',

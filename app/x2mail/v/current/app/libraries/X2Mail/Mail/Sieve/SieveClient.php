@@ -130,7 +130,20 @@ class SieveClient extends \X2Mail\Mail\Net\NetClient
 					$this->sendRaw("AUTHENTICATE \"{$type}\" \"{$sAuth}\"");
 				}
 
-				$aResponse = $this->parseResponse();
+				$sLine = $this->getNextBuffer();
+				$sChallenge = $this->readChallenge($sLine);
+				if (null === $sChallenge) {
+					$aResponse = $this->parseResponse($sLine);
+				} else {
+					// RFC 7628 §3.2.2: a rejected bearer token comes back as a JSON
+					// error challenge; the client must answer with the dummy response
+					// (§3.2.3, a single ^A; empty for XOAUTH2) to receive the final NO.
+					if (\preg_match('/^[a-zA-Z0-9=+\/]+$/', $sChallenge)) {
+						$this->logWrite(\base64_decode($sChallenge), \LOG_WARNING);
+					}
+					$this->sendRaw('OAUTHBEARER' === $type ? '"AQ=="' : '""');
+					$aResponse = $this->parseResponse();
+				}
 				$this->parseStartupResponse($aResponse);
 				$bAuth = true;
 			}
@@ -359,11 +372,34 @@ class SieveClient extends \X2Mail\Mail\Net\NetClient
 		$this->parseResponse();
 	}
 
-	private function parseResponse() : array
+	/**
+	 * RFC 5804 §2.1: a server challenge is a quoted string or a literal, never
+	 * a response starting with OK, NO or BYE.
+	 *
+	 * @return string|null the base64 challenge, null when the line is no challenge
+	 */
+	private function readChallenge(?string $sLine) : ?string
+	{
+		$sLine = \trim((string) $sLine);
+		if (\preg_match('/^"([^"]*)"$/', $sLine, $aMatch)) {
+			return $aMatch[1];
+		}
+		if (\preg_match('/^\{(\d+)\+?\}$/', $sLine, $aMatch)) {
+			$iLen = \intval($aMatch[1]);
+			$sChallenge = 0 < $iLen ? (string) $this->getNextBuffer($iLen) : '';
+			// CRLF that ends the challenge after the literal
+			$this->getNextBuffer();
+			return \trim($sChallenge);
+		}
+		return null;
+	}
+
+	private function parseResponse(?string $sFirstLine = null) : array
 	{
 		$aResult = array();
 		while (true) {
-			$sResponseBuffer = $this->getNextBuffer();
+			$sResponseBuffer = $sFirstLine ?? $this->getNextBuffer();
+			$sFirstLine = null;
 			if (null === $sResponseBuffer) {
 				break;
 			}

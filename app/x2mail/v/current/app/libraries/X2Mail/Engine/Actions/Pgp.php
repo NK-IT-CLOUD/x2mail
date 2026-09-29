@@ -162,9 +162,14 @@ trait Pgp
 		$oPassphrase = $this->GetActionParam('isPrivate', '')
 			? new \X2Mail\Engine\SensitiveString($this->GetActionParam('passphrase', ''))
 			: null;
+		$sKeyId = $this->GetActionParam('keyId', '');
+		// An empty id matches every key in the keyring, gpg would act on the first one.
+		if (!\is_string($sKeyId) || '' === \trim($sKeyId)) {
+			throw new \X2Mail\Engine\Exceptions\ClientException(\X2Mail\Engine\Notifications::InvalidInputArgument->value, null, 'keyId');
+		}
 		$GPG = $this->GnuPG();
 		return $this->DefaultResponse($GPG ? $GPG->export(
-			$this->GetActionParam('keyId', ''),
+			$sKeyId,
 			$oPassphrase
 		) : false);
 	}
@@ -187,8 +192,12 @@ trait Pgp
 
 	public function DoGnupgDeleteKey() : array
 	{
-		$GPG = $this->GnuPG();
 		$sKeyId = $this->GetActionParam('keyId', '');
+		// An empty id matches every key in the keyring, gpg would delete the first one.
+		if (!\is_string($sKeyId) || '' === \trim($sKeyId)) {
+			throw new \X2Mail\Engine\Exceptions\ClientException(\X2Mail\Engine\Notifications::InvalidInputArgument->value, null, 'keyId');
+		}
+		$GPG = $this->GnuPG();
 		$bPrivate = !!$this->GetActionParam('isPrivate', 0);
 		return $this->DefaultResponse($GPG ? $GPG->deleteKey($sKeyId, $bPrivate) : false);
 	}

@@ -110,6 +110,23 @@ trait UserAuth
 			throw new ClientException(Notifications::AuthError->value);
 		}
 
+		// The sentinel only says "use the SSO token"; the address and uid must be
+		// the SSO session's own identity, never a value posted by the client.
+		$oHost = \X2Mail\Engine\Host::get();
+		$sSsoEmail = (string) $oHost->ssoEmail();
+		$sSsoUid = (string) $oHost->ssoUid();
+		if ('' === $sSsoEmail || '' === $sSsoUid
+		 || 0 !== \strcasecmp(\trim($sEmail), $sSsoEmail)
+		 || $oPassword->getValue() !== 'oidc_login|' . $sSsoUid
+		) {
+			$this->logWrite(
+				"Login for '{$sEmail}' refused: not the SSO identity '{$sSsoEmail}'",
+				\LOG_WARNING,
+				'LOGIN'
+			);
+			throw new ClientException(Notifications::AuthError->value);
+		}
+
 		$aCredentials = $this->resolveLoginCredentials($sEmail, $oPassword);
 
 		if (!\str_contains($aCredentials['email'], '@') || !\strlen($oPassword)) {
@@ -169,8 +186,10 @@ trait UserAuth
 	 * reaches setCredentials() unchanged and beforeLogin() swaps it for the live
 	 * token at connect.
 	 *
-	 * Identity comes from the token, server settings come from the instance: when the
-	 * token email's domain has no domain config of its own, the instance domain named
+	 * Identity comes from the host bridge (Nextcloud: the email claim user_oidc
+	 * validated at login, or the admin override; standalone: the validated token
+	 * claims), server settings come from the instance: when the
+	 * identity's domain has no domain config of its own, the instance domain named
 	 * by login.default_domain supplies the IMAP/SMTP/Sieve settings. One instance is
 	 * one tenant with one server set, so every own domain works without per-domain
 	 * provisioning — which matters because x2mail:setup consolidates to a single

@@ -25,6 +25,7 @@ class GMagick extends \Gmagick implements \X2Mail\Engine\Image
 
 	public static function createFromString(string &$data)
 	{
+		Limits::check($data);
 		/** @phpstan-ignore new.static */
 		$gmagick = new static();
 		if (!$gmagick->readimageblob($data)) {
@@ -40,17 +41,9 @@ class GMagick extends \Gmagick implements \X2Mail\Engine\Image
 
 	public static function createFromStream($fp)
 	{
-		if (!\method_exists('Gmagick', 'getImageOrientation')) {
-			$data = \stream_get_contents($fp);
-			return static::createFromString($data);
-		}
-		/** @phpstan-ignore new.static */
-		$gmagick = new static();
-		if (!$gmagick->readimagefile($fp)) {
-			throw new \InvalidArgumentException('Failed to load image');
-		}
-		$gmagick->orientation = $gmagick->getImageOrientation();
-		return $gmagick;
+		// Always through createFromString(), so the limits apply
+		$data = Limits::read($fp);
+		return static::createFromString($data);
 	}
 
 	public function getOrientation() : int

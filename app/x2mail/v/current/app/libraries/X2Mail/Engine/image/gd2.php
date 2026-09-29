@@ -35,9 +35,7 @@ class GD2 implements \X2Mail\Engine\Image
 
 	public static function createFromString(string &$data)
 	{
-		if (!($imginfo = \getimagesizefromstring($data))) {
-			throw new \InvalidArgumentException('Invalid image');
-		}
+		$imginfo = Limits::check($data);
 		$format = '';
 		switch ($imginfo[2])
 		{
@@ -54,11 +52,6 @@ class GD2 implements \X2Mail\Engine\Image
 		if (!$gd2->img) {
 			throw new \InvalidArgumentException('Failed to load image');
 		}
-		$w = \imagesx($gd2->img);
-		$h = \imagesy($gd2->img);
-		if ($w * $h > 25000000) { // 25 megapixels max
-			return false;
-		}
 		$gd2->file = 'blob';
 		$gd2->type = (int) $imginfo[2];
 		$gd2->format = $format;
@@ -68,7 +61,7 @@ class GD2 implements \X2Mail\Engine\Image
 
 	public static function createFromStream($fp)
 	{
-		$data = \stream_get_contents($fp);
+		$data = Limits::read($fp);
 		return static::createFromString($data);
 	}
 

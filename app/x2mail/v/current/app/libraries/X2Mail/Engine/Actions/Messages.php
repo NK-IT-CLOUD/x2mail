@@ -1290,11 +1290,11 @@ trait Messages
 
 				$SMIME = $this->requireSMimeEngine();
 				$certificates = $SMIME->certificates();
-				// Load certificates by id
+				// Load certificates by id, only those the user imported explicitly
 				foreach ($aCertificates as &$sCertificate) {
 					if (!\str_contains($sCertificate, '-----BEGIN CERTIFICATE-----')) {
 						foreach ($certificates as $certificate) {
-							if ($certificate['id'] === $sCertificate) {
+							if ($certificate['id'] === $sCertificate && !empty($certificate['trusted'])) {
 								$sCertificate = $SMIME->getCertificate($certificate['file']);
 							}
 						}

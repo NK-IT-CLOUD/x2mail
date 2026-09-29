@@ -18,15 +18,26 @@ class IMagick extends \Imagick implements \X2Mail\Engine\Image
 
 	public static function createFromString(string &$data)
 	{
+		Limits::check($data);
 		/** @phpstan-ignore new.static */
 		$imagick = new static();
-		if (!$imagick->readImageBlob($data)) {
+		// ImageMagick decodes every frame (animated GIF/WebP), so sum up the
+		// frame sizes without decoding the pixels first.
+		if (!$imagick->pingImageBlob($data)) {
 			throw new \InvalidArgumentException('Failed to load image');
 		}
-		$geo = $imagick->getImageGeometry();
-		if ($geo['width'] * $geo['height'] > 25000000) { // 25 megapixels max
-			$imagick->clear();
-			return false;
+		$pixels = 0;
+		// No foreach: its frame objects would run __destruct() and clear the wand
+		for ($i = 0, $n = $imagick->getNumberImages(); $i < $n; ++$i) {
+			$imagick->setIteratorIndex($i);
+			$pixels += $imagick->getImageWidth() * $imagick->getImageHeight();
+		}
+		$imagick->clear();
+		if ($pixels > Limits::MAX_PIXELS) {
+			throw new \InvalidArgumentException('Image dimensions out of range');
+		}
+		if (!$imagick->readImageBlob($data)) {
+			throw new \InvalidArgumentException('Failed to load image');
 		}
 		$imagick->setImageAlphaChannel(\Imagick::ALPHACHANNEL_ACTIVATE);
 		return $imagick;
@@ -34,7 +45,7 @@ class IMagick extends \Imagick implements \X2Mail\Engine\Image
 
 	public static function createFromStream($fp)
 	{
-		$data = \stream_get_contents($fp);
+		$data = Limits::read($fp);
 		return static::createFromString($data);
 /*
 		$imagick = new static();

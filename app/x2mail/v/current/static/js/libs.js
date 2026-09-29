@@ -918,6 +918,9 @@ shortcuts.on();
 
 				oXhr.open('POST', sAction, true);
 
+				const sToken = rl.settings.app('token');
+				sToken && oXhr.setRequestHeader('X-SM-Token', sToken);
+
 				if (fProgressFunction && oXhr.upload)
 				{
 					oXhr.upload.onprogress = oEvent => {

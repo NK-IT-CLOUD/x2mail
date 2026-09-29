@@ -144,6 +144,13 @@ document.addEventListener('DOMContentLoaded', () => {
 		return line;
 	}
 
+	// Without TLS the login test is skipped: the token is never sent in the clear
+	function authFailText(proto, result) {
+		return proto + ' ' + (result.tls_required
+			? t('x2mail', 'No TLS configured, login not tested (the OIDC token is only sent over SSL/TLS or STARTTLS)')
+			: (result.error || 'Authentication failed'));
+	}
+
 	el('wiz-preflight-btn').addEventListener('click', e => {
 		e.preventDefault();
 		const results = el('wiz-preflight-results');
@@ -256,6 +263,10 @@ document.addEventListener('DOMContentLoaded', () => {
 						results.appendChild(buildCheckLine('warn',
 							'OIDC  No provider configured in user_oidc (occ user_oidc:provider)'));
 					}
+					if (data.oidc.users_can_change_email) {
+						results.appendChild(buildCheckLine('warn', 'NC    ' + t('x2mail',
+							'Users can change their profile email; X2Mail uses the SSO email regardless. Recommended: \'allow_user_to_change_email\' => false in config.php')));
+					}
 					if (data.oidc.session_is_oidc && data.oidc.session_has_token) {
 						results.appendChild(buildCheckLine('ok', 'SSO   Active session with valid token'));
 						const t = data.oidc.token;
@@ -357,10 +368,6 @@ document.addEventListener('DOMContentLoaded', () => {
 				if (t.exchanged) {
 					results.appendChild(buildCheckLine('ok', 'TOKEN exchanged for "'
 						+ t.audience_requested + '" — ' + info));
-				} else if (t.audience_requested) {
-					results.appendChild(buildCheckLine('warn', 'TOKEN exchange for "'
-						+ t.audience_requested + '" failed, using login token — ' + info
-						+ ' (check Nextcloud log)'));
 				} else {
 					results.appendChild(buildCheckLine('ok', 'TOKEN login token (no exchange) — ' + info));
 				}
@@ -371,8 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				if (data.imap.authenticated) {
 					results.appendChild(buildCheckLine('ok', 'IMAP login OK'));
 				} else {
-					results.appendChild(buildCheckLine('fail',
-						'IMAP ' + (data.imap.error || 'Authentication failed')));
+					results.appendChild(buildCheckLine('fail', authFailText('IMAP', data.imap)));
 					hasError = true;
 				}
 			}
@@ -382,8 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				if (data.smtp.authenticated) {
 					results.appendChild(buildCheckLine('ok', 'SMTP login OK'));
 				} else {
-					results.appendChild(buildCheckLine('fail',
-						'SMTP ' + (data.smtp.error || 'Authentication failed')));
+					results.appendChild(buildCheckLine('fail', authFailText('SMTP', data.smtp)));
 					hasError = true;
 				}
 			}
@@ -393,8 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				if (data.sieve.authenticated) {
 					results.appendChild(buildCheckLine('ok', 'Sieve login OK'));
 				} else {
-					results.appendChild(buildCheckLine('fail',
-						'Sieve ' + (data.sieve.error || 'Authentication failed')));
+					results.appendChild(buildCheckLine('fail', authFailText('Sieve', data.sieve)));
 					hasError = true;
 				}
 			}

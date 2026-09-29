@@ -221,6 +221,10 @@ class SetupController extends Controller
             }
         }
 
+        // Hardening hint: X2Mail ignores the profile email for the mail identity,
+        // but users should not be able to change it at will.
+        $oidcResult['users_can_change_email'] = $this->engineHelper->usersCanChangeEmail();
+
         // Session checks (only available in browser, not occ)
         $oidcResult['session_is_oidc'] = (bool) $this->session->get('is_oidc');
         $oidcResult['session_has_token'] = (bool) $this->session->get('oidc_access_token');
@@ -496,16 +500,21 @@ class SetupController extends Controller
 
         // Test with the audience/scopes typed in the wizard (even if not yet saved).
         $token = $this->engineHelper->getOidcAccessToken($audience, $scopes);
+        if ($token === null && $audience !== '') {
+            return new JSONResponse([
+                'error' => 'Token exchange for audience "' . $audience . '" failed; the login token is not'
+                    . ' used instead, so mail login fails too (see the Nextcloud log)',
+            ], 400);
+        }
         if ($token === null) {
             return new JSONResponse(['error' => 'No active SSO token — log in via SSO first'], 400);
         }
 
-        // Report which token the test actually used (exchange vs login token).
-        $loginToken = $this->session->get('oidc_access_token');
+        // Report which token the test used; with an audience it can only be the exchanged one.
         $tokenInfo = $this->decodeJwtClaims($token) ?? [];
         $tokenInfo['audience_requested'] = $audience;
         $tokenInfo['scopes_requested'] = $scopes;
-        $tokenInfo['exchanged'] = $audience !== '' && $token !== $loginToken;
+        $tokenInfo['exchanged'] = $audience !== '';
 
         // Resolve the user email for OAUTHBEARER (n,a=<email>,...)
         $user = $this->userSession->getUser();

@@ -85,6 +85,7 @@
     <p class="settings-hint" style="margin-top:1em">
         <?php p($l->t('OAUTHBEARER login to IMAP and SMTP with your current OIDC token.')); ?>
         <?php p($l->t('ManageSieve too when filtering is enabled above.')); ?>
+        <?php p($l->t('The token is only sent over SSL/TLS or STARTTLS.')); ?>
     </p>
     <p class="settings-hint">
         <?php p($l->t('Test Login authenticates as your own admin account.')); ?>

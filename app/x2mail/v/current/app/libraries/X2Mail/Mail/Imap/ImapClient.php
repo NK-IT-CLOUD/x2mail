@@ -151,7 +151,8 @@ class ImapClient extends \X2Mail\Mail\Net\NetClient
 					if (!empty($oR->ResponseList[1]) && \preg_match('/^[a-zA-Z0-9=+\/]+$/', $oR->ResponseList[1])) {
 						$this->logWrite(\base64_decode($oR->ResponseList[1]), \LOG_WARNING);
 					}
-					$this->sendRaw('');
+					// RFC 7628 §3.2.3 dummy response: a single ^A, empty for XOAUTH2
+					$this->sendRaw('OAUTHBEARER' === $type ? 'AQ==' : '');
 					$oResponse = $this->getResponse();
 				}
 			}

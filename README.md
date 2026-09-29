@@ -109,6 +109,15 @@ The mail server accepts a token only if one of these is true:
 
 The token also needs a claim that identifies the mailbox, typically `email`.
 
+X2Mail uses the email claim that `user_oidc` validated at login as the mail
+identity, so `user_oidc` must provision the user and map the email claim
+(the defaults do). The Nextcloud profile email does not select the mailbox
+account; recommended anyway: `'allow_user_to_change_email' => false` in `config.php`.
+An admin can set a different mail address per user; it takes precedence over the claim:
+`occ user:setting <uid> x2mail email <address>`.
+Additional sender identities (aliases) stay available; the mail server decides
+which From addresses a login may use.
+
 Details: [docs/configs/keycloak.md](docs/configs/keycloak.md)
 
 ## Installation
@@ -306,6 +315,7 @@ The mail server requirements above apply unchanged.
 - `occ config:app:get user_oidc store_login_token` must return `1`.
 - The user must have logged in via SSO, not with a local Nextcloud password.
 - The configured domain must match the mailbox domain (`user@example.com` needs `example.com`).
+- After updating X2Mail, users sign in via SSO once so the validated email is recorded.
 
 ### IMAP authentication failed
 

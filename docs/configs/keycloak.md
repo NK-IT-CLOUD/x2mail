@@ -43,7 +43,8 @@ Instead of adding the mail audience to every login token, X2Mail can exchange
 the login token for a mail-scoped token: `--oidc-audience mail-service`,
 optionally `--oidc-scopes "mail"` (or the matching setup wizard fields). The
 mail server then rejects the login token and accepts only the exchanged,
-narrowly scoped token.
+narrowly scoped token. If the exchange fails, X2Mail does not fall back to the
+login token: the mail login fails and the Nextcloud log names the IdP error.
 
 Requirements with Keycloak 26.2+ (Standard Token Exchange), all on the
 Nextcloud client:

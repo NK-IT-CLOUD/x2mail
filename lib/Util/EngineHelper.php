@@ -2,6 +2,7 @@
 
 namespace OCA\X2Mail\Util;
 
+use OCA\X2Mail\Listeners\OidcEmailClaimListener;
 use OCP\App\IAppManager;
 use OCP\Config\IUserConfig;
 use OCP\EventDispatcher\Event;
@@ -176,14 +177,21 @@ class EngineHelper
     }
 
     /**
-     * Returns the email for the current SSO user, identical to the value
-     * FilterAppData seeds into AppData in the nextcloud engine plugin so the
-     * NC-session reconstruction matches the live login path. Resolution order:
-     *   1. custom x2mail email: IUserConfig x2mail/email (overrides everything)
-     *   2. profile email: IUserConfig settings/email
-     *   3. IUser::getEMailAddress() (NC account email)
-     *   4. uid itself (last resort — guarantees a non-empty return)
-     * Returns null when no SSO uid is present in the session.
+     * Returns the engine identity (mail address) of the current SSO user. It
+     * selects the engine storage (settings, identities, keys), so it must not
+     * be something the user can edit:
+     *   1. admin override: IUserConfig x2mail/email. Only an admin can set it
+     *      (occ user:setting <uid> x2mail email <address>); users cannot, as
+     *      X2Mail accepts no user preference writes for it. Wins over the token.
+     *   2. the email claim user_oidc validated and mapped at login
+     *      (OidcEmailClaimListener). The profile email (settings/email) never
+     *      selects the account: users can edit it unless
+     *      allow_user_to_change_email is false. A different profile email
+     *      (e.g. an alias) is only logged; the claim still applies.
+     * Sender identities (additional From addresses, aliases) are separate and
+     * unaffected; the mail server decides which From a login may use.
+     * Returns null when there is no SSO uid or no validated claim in this
+     * session (e.g. a session from before the claim was recorded).
      */
     public function getSsoEmail(): ?string
     {
@@ -197,20 +205,35 @@ class EngineHelper
             return $custom;
         }
 
-        $email = $this->userConfig->getValueString($uid, 'settings', 'email', '');
-        if ($email !== '') {
-            return $email;
+        $claim = $this->session->get(OidcEmailClaimListener::SESSION_KEY);
+        if (!\is_string($claim) || $claim === '') {
+            $this->logger->warning(
+                'No validated OIDC email claim in the session of "' . $uid . '"; mail access refused '
+                . '(sign in again via SSO; user_oidc must provision the user and map an email claim)'
+            );
+            return null;
         }
 
-        $user = $this->userSession->getUser();
-        if ($user !== null && $user->getUID() === $uid) {
-            $email = $user->getEMailAddress();
-            if ($email !== '' && $email !== null) {
-                return $email;
-            }
+        $profile = $this->userConfig->getValueString($uid, 'settings', 'email', '');
+        if ($profile !== '' && $profile !== $claim) {
+            $this->logger->info(
+                'Profile email "' . $profile . '" of "' . $uid . '" differs from the validated OIDC email claim "'
+                . $claim . '"; using the claim'
+            );
         }
 
-        return $uid;
+        return $claim;
+    }
+
+    /**
+     * Whether users may edit their own Nextcloud profile email (NC default: yes).
+     */
+    public function usersCanChangeEmail(): bool
+    {
+        return $this->config->getSystemValueBool(
+            'allow_user_to_change_email',
+            $this->config->getSystemValueBool('allow_user_to_change_display_name', true)
+        );
     }
 
     public function isOIDCLogin(): bool
@@ -234,8 +257,9 @@ class EngineHelper
 
     /**
      * Single source for the OIDC access token used for IMAP/SMTP OAUTHBEARER.
-     * Order: token exchange (if an audience is configured) -> fresh login token
-     * via user_oidc public event -> cached session value (last resort).
+     * With an audience configured only the exchanged token is used (null if the
+     * exchange fails). Without one: fresh login token via user_oidc public
+     * event -> cached session value (last resort).
      *
      * Pass $audienceOverride / $scopesOverride (e.g. from the setup wizard
      * Test Login) to use the typed values instead of the stored ones; null
@@ -257,10 +281,13 @@ class EngineHelper
             if ($exchanged !== null) {
                 return $exchanged;
             }
-            $this->logger->warning(
+            // Fail closed: the login token carries a broader audience than the
+            // mail server should see (RFC 9700 section 2.3), so it is not sent instead.
+            $this->logger->error(
                 'OIDC token exchange for audience "' . $audience . '" yielded no token; '
-                . 'falling back to the login token'
+                . 'mail login refused (no fallback to the login token)'
             );
+            return null;
         }
 
         $fresh = $this->dispatchTokenEvent('OCA\\UserOIDC\\Event\\ExternalTokenRequestedEvent', null);
@@ -331,7 +358,7 @@ class EngineHelper
     {
         $sUID = $this->userSession->getUser()->getUID();
         if ($this->session->get('x2mail-uid') === $sUID && $this->isOIDCLogin()) {
-            $sEmail = $this->userConfig->getValueString($sUID, 'settings', 'email');
+            $sEmail = $this->getSsoEmail() ?? '';
             return [$sUID, $sEmail, "oidc_login|{$sUID}"];
         }
         return [$sUID, '', ''];

@@ -29,6 +29,7 @@ class ImpersonateListener implements IEventListener
         }
 
         $this->session->remove('x2mail-uid');
+        $this->session->remove(OidcEmailClaimListener::SESSION_KEY);
         $this->logService->debug("Session cleared on impersonate: {$class}");
     }
 }

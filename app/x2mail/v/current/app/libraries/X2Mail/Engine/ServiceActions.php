@@ -4,6 +4,11 @@ namespace X2Mail\Engine;
 
 class ServiceActions
 {
+	/**
+	 * Json actions the client may address by URL path with GET. Both only read.
+	 */
+	private const GET_ACTIONS = ['MessageList', 'Message'];
+
 	protected \X2Mail\Mail\Base\Http $oHttp;
 
 	protected Actions $oActions;
@@ -73,8 +78,10 @@ class ServiceActions
 		}
 
 		$sAction = $_POST['Action'] ?? '';
+		$bPathAction = false;
 		if (empty($sAction) && $this->oHttp->IsGet() && !empty($this->aPaths[2])) {
 			$sAction = $this->aPaths[2];
+			$bPathAction = true;
 		}
 
 		$this->oActions->SetIsJson(true);
@@ -85,6 +92,13 @@ class ServiceActions
 				throw new Exceptions\ClientException(Notifications::InvalidInputArgument->value, null, 'Action unknown');
 			}
 
+			// A GET must not change state (RFC 9110 §9.2.1), and any element in a
+			// mail body can trigger one. Only read-only actions may come from the path.
+			if ($bPathAction && !\in_array($sAction, self::GET_ACTIONS, true)) {
+				throw new Exceptions\ClientException(Notifications::InvalidInputArgument->value, null, 'Action not allowed via GET');
+			}
+
+			// Every action except Logout needs the token, whatever the HTTP method.
 			if ('Logout' !== $sAction) {
 				$token = Utils::GetCsrfToken();
 				if (isset($_SERVER['HTTP_X_SM_TOKEN'])) {
@@ -94,13 +108,11 @@ class ServiceActions
 						$this->oActions->logWrite("{$_SERVER['HTTP_X_SM_TOKEN']} !== {$token} for {$sEmail}", \LOG_ERR, 'Token');
 						throw new Exceptions\ClientException(Notifications::InvalidToken->value, null, 'HTTP Token mismatch');
 					}
-				} else if ($this->oHttp->IsPost()) {
-					if (empty($_POST['XToken']) || $_POST['XToken'] !== $token) {
-						$oAccount = $this->oActions->getAccountFromToken(false);
-						$sEmail = $oAccount ? $oAccount->Email() : 'guest';
-						$this->oActions->logWrite("{$_POST['XToken']} !== {$token} for {$sEmail}", \LOG_ERR, 'XToken');
-						throw new Exceptions\ClientException(Notifications::InvalidToken->value, null, 'XToken mismatch');
-					}
+				} else if (empty($_POST['XToken']) || $_POST['XToken'] !== $token) {
+					$oAccount = $this->oActions->getAccountFromToken(false);
+					$sEmail = $oAccount ? $oAccount->Email() : 'guest';
+					$this->oActions->logWrite(($_POST['XToken'] ?? '') . " !== {$token} for {$sEmail}", \LOG_ERR, 'XToken');
+					throw new Exceptions\ClientException(Notifications::InvalidToken->value, null, 'XToken mismatch');
 				}
 			}
 
@@ -195,6 +207,11 @@ class ServiceActions
 		$aResponse = null;
 		try
 		{
+			$sToken = $_SERVER['HTTP_X_SM_TOKEN'] ?? $_POST['XToken'] ?? '';
+			if (!\is_string($sToken) || $sToken !== Utils::GetCsrfToken()) {
+				throw new Exceptions\ClientException(Notifications::InvalidToken->value, null, 'Upload token mismatch');
+			}
+
 			$aFile = null;
 			$sInputName = 'uploader';
 			$iSizeLimit = (0 < $iSizeLimit ? $iSizeLimit : ((int) $oConfig->Get('webmail', 'attachment_size_limit', 0))) * 1024 * 1024;

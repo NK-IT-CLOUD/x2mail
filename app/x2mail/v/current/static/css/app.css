@@ -2748,7 +2748,11 @@ html:not(.x2m-msgView-bottom):not(.x2m-msgView-side) .message-selected #V-MailMe
   border-color: #F00;
   color: #F00;
 }
+.messageView .crypto-control.unknown {
+  border-style: solid;
+}
 .messageView .crypto-control.error button,
+.messageView .crypto-control.unknown button:not(.import-signer),
 .messageView .crypto-control.success button {
   display: none;
 }
