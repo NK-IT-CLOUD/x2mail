@@ -68,36 +68,46 @@ trait Pgp
 		 * Workaround error: socket name for '/very/long/path/to/.gnupg/S.gpg-agent.extra' is too long
 		 * BSD 4.4 max length = 104
 		 */
-		if (80 < \strlen($homedir)) {
-			\clearstatcache();
-			// First try a symbolic link
-			$tmpdir = \sys_get_temp_dir() . '/x2mail';
-//			if (\X2Mail\Engine\Utils::inOpenBasedir($tmpdir) &&
-			\is_dir($tmpdir) || \mkdir($tmpdir, 0700);
-			if (\is_dir($tmpdir) && \is_writable($tmpdir)) {
-				$link = $tmpdir . '/' . \md5($homedir);
-				if (\is_link($link) || \symlink($homedir, $link)) {
-					$homedir = $link;
-				} else {
-					$this->logWrite("symlink('{$homedir}', '{$link}') failed", \LOG_WARNING, 'GnuPG');
-				}
-			}
-			// Else try ~/.gnupg/ + hash(email address)
-			if (80 < \strlen($homedir)) {
-				$tmpdir = ($_SERVER['HOME'] ?: \exec('echo ~') ?: \dirname(\getcwd())) . '/.gnupg/';
-				if ($oAccount instanceof \X2Mail\Engine\Model\AdditionalAccount) {
-					$tmpdir .= \sha1($oAccount->ParentEmail());
-				} else {
-					$tmpdir .= \sha1($oAccount->Email());
-				}
-//				if (\X2Mail\Engine\Utils::inOpenBasedir($tmpdir) &&
-				if (\is_dir($tmpdir) || \is_link($tmpdir) || \symlink($homedir, $tmpdir) || \mkdir($tmpdir, 0700, true)) {
-					$homedir = $tmpdir;
-				}
-			}
+		if (80 < \strlen($homedir) && GnuPG::isSupported()) {
+			$homedir = static::gnupgHomeLink($homedir, \sys_get_temp_dir() . '/x2mail');
 		}
 
 		return GnuPG::getInstance($homedir);
+	}
+
+	/**
+	 * A short path to $homedir: a link in $tmpdir. The temp directory is shared
+	 * with other local users, so it must be a real directory of mode 0700 owned
+	 * by this process (not one someone else created first, not a link), and an existing link of that
+	 * name must point to $homedir or is replaced.
+	 *
+	 * @throws \RuntimeException
+	 */
+	protected static function gnupgHomeLink(string $homedir, string $tmpdir) : string
+	{
+		\clearstatcache();
+		if (!\file_exists($tmpdir) && !\is_link($tmpdir) && !\mkdir($tmpdir, 0700)) {
+			throw new \RuntimeException("GnuPG: cannot create {$tmpdir}");
+		}
+		if (\is_link($tmpdir) || !\is_dir($tmpdir) || !\is_writable($tmpdir)
+		 || 0700 !== (\fileperms($tmpdir) & 0777)
+		 || \fileowner($tmpdir) !== \posix_geteuid()
+		) {
+			throw new \RuntimeException("GnuPG: {$tmpdir} must be a writable directory with mode 0700 owned by this process");
+		}
+		$link = $tmpdir . '/' . \sha1($homedir . APP_SALT);
+		if (\is_link($link) && \readlink($link) !== $homedir && !\unlink($link)) {
+			throw new \RuntimeException("GnuPG: cannot replace {$link}");
+		}
+		if (!\is_link($link)) {
+			if (\file_exists($link)) {
+				throw new \RuntimeException("GnuPG: {$link} exists and is not a link");
+			}
+			if (!\symlink($homedir, $link)) {
+				throw new \RuntimeException("GnuPG: symlink to {$link} failed");
+			}
+		}
+		return $link;
 	}
 
 	public function DoGnupgDecrypt() : array
@@ -135,7 +145,7 @@ trait Pgp
 				},
 				$this->GetActionParam('folder', ''),
 				(int) $this->GetActionParam('uid', ''),
-				$this->GetActionParam('partId', '')
+				static::imapPartId((string) $this->GetActionParam('partId', ''))
 			);
 		}
 
@@ -310,8 +320,8 @@ trait Pgp
 		} else {
 			$sFolderName = $this->GetActionParam('folder', '');
 			$iUid = (int) $this->GetActionParam('uid', 0);
-			$sPartId = $this->GetActionParam('partId', '');
-			$sSigPartId = $this->GetActionParam('sigPartId', '');
+			$sPartId = static::imapPartId((string) $this->GetActionParam('partId', ''));
+			$sSigPartId = static::imapPartId((string) $this->GetActionParam('sigPartId', ''));
 //			$sMicAlg = $this->GetActionParam('micAlg', '');
 
 			$this->initMailClientConnection();

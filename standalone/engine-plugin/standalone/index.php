@@ -24,6 +24,7 @@ class StandalonePlugin extends \X2Mail\Engine\Plugins\AbstractPlugin
 		$this->addJs('js/session-guard.js');
 		$this->addJs('js/theme.js');
 		$this->addCss('css/nc-theming.css');
+		$this->addCss('css/standalone.css');
 	}
 
 	public function Supported() : string
@@ -43,6 +44,8 @@ class StandalonePlugin extends \X2Mail\Engine\Plugins\AbstractPlugin
 	{
 		if (!$bAdmin && isset($aResult['System']) && \is_array($aResult['System'])) {
 			$aResult['System']['customLogoutLink'] = '/oidc/logout';
+			// The client logout ends the SSO session, so no idle timer may trigger it.
+			$aResult['AutoLogout'] = 0;
 			$sPrimaryColor = \X2Mail\Standalone\Runtime::primaryColor();
 			if (null !== $sPrimaryColor) {
 				$aResult['System']['x2wPrimaryColor'] = $sPrimaryColor;

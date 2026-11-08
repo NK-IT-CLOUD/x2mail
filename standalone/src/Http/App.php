@@ -14,6 +14,7 @@ use X2Mail\Standalone\Auth\AuthOutcome;
 use X2Mail\Standalone\Auth\Identity;
 use X2Mail\Standalone\Auth\SessionAuth;
 use X2Mail\Standalone\Config\Config;
+use X2Mail\Standalone\Engine\EngineRunner;
 use X2Mail\Standalone\Dav\DavContext;
 use X2Mail\Standalone\Log;
 use X2Mail\Standalone\Oidc\Discovery;
@@ -34,12 +35,16 @@ final class App
     private const REDIRECTS = 'x2w.redirects';
     private const MAX_REDIRECTS = 3;
 
-    /** @param \Closure(): void $engine */
+    /**
+     * @param \Closure(): void $engine
+     * @param (\Closure(): bool)|null $hasMailAccount whether the engine finds a mail account for the bridged identity
+     */
     public function __construct(
         private Config $config,
         private SessionAuth $auth,
         private Session $session,
         private \Closure $engine,
+        private ?\Closure $hasMailAccount = null,
         private Router $router = new Router(),
     ) {
     }
@@ -76,13 +81,16 @@ final class App
             $session,
             new Log(),
         );
-        $engineIndex = \dirname(__DIR__, 3) . '/app/index.php';
-        return new self($config, $auth, $session, static function () use ($config, $engineIndex): void {
-            if (!\defined('APP_DATA_FOLDER_PATH')) {
-                \define('APP_DATA_FOLDER_PATH', $config->dataDir . '/engine/');
-            }
-            require $engineIndex;
-        });
+        $runner = new EngineRunner($config->dataDir, \dirname(__DIR__, 3) . '/app/index.php');
+        return new self(
+            $config,
+            $auth,
+            $session,
+            static function () use ($runner): void {
+                $runner->run();
+            },
+            static fn (): bool => $runner->hasMailAccount(),
+        );
     }
 
     /**
@@ -100,6 +108,12 @@ final class App
             case Route::Login:
                 return self::redirect($this->auth->startLogin());
             case Route::Logout:
+                // Only from our own pages or the address bar: a link on another site
+                // would end the SSO session of every app (logout CSRF). Browsers
+                // without Fetch Metadata cannot log out here.
+                if (!\in_array($server['HTTP_SEC_FETCH_SITE'] ?? '', ['same-origin', 'none'], true)) {
+                    return self::redirect($this->config->baseUrl . '/');
+                }
                 return self::redirect($this->auth->logout());
             case Route::Callback:
                 $code = $query['code'] ?? null;
@@ -147,6 +161,11 @@ final class App
         Runtime::setPrimaryColor($this->config->theme->primaryColor);
         if ($this->session instanceof PhpSession) {
             $this->session->close();
+        }
+        // SSO only: without a mail account the engine would render its password form.
+        if ($query === [] && !self::isAjax($uri, $server)
+            && $this->hasMailAccount !== null && !($this->hasMailAccount)()) {
+            return self::response(503, Pages::noMailbox(), 'text/html; charset=utf-8');
         }
         ($this->engine)();
         return null;

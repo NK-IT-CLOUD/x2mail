@@ -2034,11 +2034,15 @@
 	//			} else
 				if ('A' === name) {
 					value = oElement.href;
-					if (!/^([a-z]+):/i.test(value)) {
+					// Only these schemes are links; javascript:, data:, vbscript: and
+					// the like would run or render on click.
+					if (!/^(https?|mailto|tel):/i.test(value)) {
 						setAttribute('data-x-href-broken', value);
 						delAttribute('href');
 					} else {
-						oElement.href = stripTracking(value);
+						// The unwrapped target of a tracking link must pass the same check.
+						const stripped = stripTracking(value);
+						oElement.href = /^(https?|mailto|tel):/i.test(stripped) ? stripped : value;
 						if (oElement.href != value) {
 							result.tracking = true;
 							setAttribute('data-x-href-tracking', value);
@@ -16638,7 +16642,6 @@ body > * {
 
 							setTimeout(() => mailToHelper(SettingsGet('mailToEmail')), 500);
 						} else {
-							this.logout();
 							alert('Folders error: ' + getErrorMessage(0, error));
 						}
 					} catch (e) {

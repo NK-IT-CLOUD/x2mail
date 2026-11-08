@@ -410,7 +410,7 @@ class SetupController extends Controller
                 $oConfig->Set('login', 'default_domain', $domain);
                 $oConfig->Set('webmail', 'allow_additional_identities', true);
                 $oConfig->Set('imap', 'show_login_alert', false);
-                $oConfig->Set('defaults', 'autologout', 15);
+                $oConfig->Set('defaults', 'autologout', 0);
                 $oConfig->Set('defaults', 'contacts_autosave', false);
                 $oConfig->Set('webmail', 'allow_additional_accounts', false);
                 $oConfig->Save();

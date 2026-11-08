@@ -46,17 +46,6 @@ class Application extends \X2Mail\Engine\Config\AbstractConfig
 			$this->aReplaceEnv = null;
 		}
 
-		$sCipher = $this->Get('security', 'encrypt_cipher', '');
-		if (!$sCipher || !\X2Mail\Engine\Crypt::cipherSupported($sCipher)) {
-			$sCipher && \X2Mail\Engine\Log::warning('Crypt', "OpenSSL no support for cipher '{$sCipher}'");
-			$aCiphers = \X2Mail\Engine\Crypt::listCiphers();
-			$sCipher2 = $aCiphers ? $aCiphers[\array_rand($aCiphers)] : '';
-			if ($sCipher !== $sCipher2) {
-				$this->Set('security', 'encrypt_cipher', $sCipher2);
-				$this->Save();
-			}
-		}
-
 		if (!\in_array($this->Get('logs', 'time_zone', ''), \DateTimeZone::listIdentifiers())) {
 			$this->Set('logs', 'time_zone', 'UTC');
 		}
@@ -204,7 +193,6 @@ Warning: only enable when server does not do this, else double compression error
 				'max_sys_getloadavg'      => array(0.0, 'https://en.m.wikipedia.org/wiki/Load_(computing)'),
 				'content_security_policy' => array('', 'For example to allow all images use "img-src https:". More info at https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy#directives'),
 				'csp_report'              => array(false, 'Report CSP errors to PHP and/or X2Mail Log'),
-				'encrypt_cipher'          => array('aes-256-cbc-hmac-sha1', 'A valid cipher method from https://php.net/openssl_get_cipher_methods'),
 				'cookie_samesite'         => array('Strict', 'Strict, Lax or None'),
 				'secfetch_allow'          => array('', 'Additional allowed Sec-Fetch combinations separated by ";".
 For example:
@@ -373,7 +361,6 @@ Enables caching in the system'),
 				'folders_spec_limit' => array(50),
 				'curl_proxy' => array(''),
 				'curl_proxy_auth' => array(''),
-				'http_client_ip_check_proxy' => array(false),
 				'use_local_proxy_for_external_images' => array(true),
 				'image_exif_auto_rotate' => array(false),
 				'cookie_default_path' => array(''),

@@ -96,7 +96,7 @@ trait SMime
 	{
 		$sFolderName = $this->GetActionParam('folder', '');
 		$iUid = (int) $this->GetActionParam('uid', 0);
-		$sPartId = $this->GetActionParam('partId', '');
+		$sPartId = static::imapPartId((string) $this->GetActionParam('partId', ''));
 		$sCertificate = $this->GetActionParam('certificate', '');
 		$sPrivateKey = $this->GetActionParam('privateKey', '');
 		$oPassphrase = new \X2Mail\Engine\SensitiveString($this->GetActionParam('passphrase', ''));
@@ -149,7 +149,7 @@ trait SMime
 	public function DoSMimeVerifyMessage() : array
 	{
 		$sBody = $this->GetActionParam('bodyPart', '');
-		$sPartId = $this->GetActionParam('partId', '');
+		$sPartId = static::imapPartId((string) $this->GetActionParam('partId', ''));
 		$bDetached = !empty($this->GetActionParam('detached', 0));
 		$oImapClient = null;
 		$iUid = 0;

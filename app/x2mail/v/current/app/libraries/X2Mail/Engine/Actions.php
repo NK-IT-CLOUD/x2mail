@@ -127,7 +127,7 @@ class Actions
 
 			$this->logWrite(
 				'[SM:' . APP_VERSION . '][IP:'
-				. $oHttp->GetClientIp($this->oConfig->Get('labs', 'http_client_ip_check_proxy', false))
+				. $oHttp->GetClientIp()
 				. '][PID:' . (\X2Mail\Mail\Base\Utils::FunctionCallable('getmypid') ? \getmypid() : 'unknown')
 				. '][' . \X2Mail\Mail\Base\Http::GetServer('SERVER_SOFTWARE', '~')
 				. '][' . \PHP_SAPI
@@ -279,7 +279,7 @@ class Actions
 		if (false !== \strpos($sLine, '{request:')) {
 			if (false !== \strpos($sLine, '{request:ip}')) {
 				$sLine = \str_replace('{request:ip}',
-					$this->Http()->GetClientIp($this->oConfig->Get('labs', 'http_client_ip_check_proxy', false)),
+					$this->Http()->GetClientIp(),
 					$sLine);
 			}
 
@@ -306,7 +306,7 @@ class Actions
 
 			if (false !== \strpos($sLine, '{user:ip}')) {
 				$sLine = \str_replace('{user:ip}',
-					$this->Http()->GetClientIp($this->oConfig->Get('labs', 'http_client_ip_check_proxy', false)),
+					$this->Http()->GetClientIp(),
 					$sLine);
 			}
 
@@ -922,6 +922,22 @@ class Actions
 	public function GetActionParams(): array
 	{
 		return $this->aCurrentActionParams;
+	}
+
+	/**
+	 * A part id from the client goes into an IMAP FETCH section, BODY.PEEK[...],
+	 * as is. Accept only a section number (1, 1.2.3) or TEXT, so the value cannot
+	 * close the bracket or the line and add commands of its own.
+	 *
+	 * @throws Exceptions\ClientException
+	 */
+	public static function imapPartId(string $sPartId) : string
+	{
+		$sPartId = \trim($sPartId);
+		if ('' !== $sPartId && !\preg_match('/^(TEXT|[1-9][0-9]*(\.[1-9][0-9]*)*)$/D', $sPartId)) {
+			throw new Exceptions\ClientException(Notifications::InvalidInputArgument->value, null, 'Invalid part id');
+		}
+		return $sPartId;
 	}
 
 	public function HasActionParam(string $sKey): bool

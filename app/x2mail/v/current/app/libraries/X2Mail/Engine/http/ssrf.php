@@ -74,6 +74,14 @@ class Ssrf
 		if (0xfe === $b0 && 0x80 === (\ord($packed[1]) & 0xc0)) {
 			return true;
 		}
+		// fec0::/10 site-local (deprecated, still routed internally)
+		if (0xfe === $b0 && 0xc0 === (\ord($packed[1]) & 0xc0)) {
+			return true;
+		}
+		// ff00::/8 multicast
+		if (0xff === $b0) {
+			return true;
+		}
 		return false;
 	}
 

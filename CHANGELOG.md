@@ -4,6 +4,33 @@ All notable changes to X2Mail will be documented in this file.
 
 Format: [Semantic Versioning](https://semver.org/) — MAJOR.MINOR.PATCH
 
+## [0.8.8] — 2026-11-09
+
+### Security
+- Attachments open in the browser only as images, PDF, audio, video or plain text. Other text types are shown as plain text, everything else (for example HTML, SVG or XML) is downloaded. Attachment views also block forms, redirects and remote content
+- Replies and forwards no longer carry header lines hidden in an encoded Message-ID or subject of the original message
+- Session and settings data is encrypted with XChaCha20-Poly1305 (libsodium) only; the PHP extension sodium is now required, and data encrypted any other way is refused
+- The external image proxy serves only signed-in users, only raster images (no SVG), and also refuses IPv6 multicast and site-local addresses
+- DKIM, SPF and DMARC results are shown only from the server that received the message, not from headers the sender added
+- S/MIME and PGP actions accept only valid message part numbers
+- The GnuPG home link is created only in a private temporary directory
+- Links in messages work only for http, https, mailto and tel addresses, also after removing tracking redirects
+- Standalone webmail: a link from another site or from a mail no longer ends the single sign-on session; the security headers (including HSTS) are sent on every response; the container image includes the current PHP security fixes
+
+### Changed
+- The idle logout is off by default; an existing 15 or 30 minute default is turned off, custom values stay. The single sign-on session decides when a login ends
+- Standalone webmail: same look and defaults as the Nextcloud app (no attachment thumbnails, signatures checked automatically, no contacts autosave)
+
+### Fixed
+- Standalone webmail: no logout when the folder list fails to load at start; the error is shown instead
+- Standalone webmail: a signed-in user without a mail account gets an error page instead of a password form
+- Standalone webmail: attachment limit 25 MB, as in the Nextcloud app
+
+### Removed
+- The `?/Test` diagnostics page
+- The option to take the client IP from the Client-IP or X-Forwarded-For header
+- Conversion of additional accounts stored by RainLoop
+
 ## [0.8.7] — 2026-09-29
 
 ### Fixed

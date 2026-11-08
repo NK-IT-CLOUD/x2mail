@@ -212,6 +212,8 @@ class NextcloudPlugin extends \X2Mail\Engine\Plugins\AbstractPlugin
 	public function FilterAppData($bAdmin, &$aResult) : void
 	{
 		if (!$bAdmin && \is_array($aResult)) {
+			// The idle logout is off; a per-user value from before the setting was hidden stays without effect.
+			$aResult['AutoLogout'] = 0;
 			$ocUser = \OCP\Server::get(\OCP\IUserSession::class)->getUser();
 			$sUID = $ocUser->getUID();
 			$oUrlGen = \OCP\Server::get(\OCP\IURLGenerator::class);

@@ -47,6 +47,18 @@ class ProvisionerTest extends TestCase
             self::assertTrue((bool) $oConfig->Get('plugins', 'enable'));
             self::assertContains('standalone', \array_map('trim', \explode(',', (string) $oConfig->Get('plugins', 'enabled_list'))));
             self::assertSame('x2mail', $oConfig->Get('webmail', 'theme'));
+            // The OIDC session decides when a login ends, not an idle timer in the tab.
+            self::assertSame(0, (int) $oConfig->Get('defaults', 'autologout'));
+            // Engine warnings (refused logins, proxy blocks, mail auth errors) go to the container log.
+            self::assertTrue((bool) $oConfig->Get('logs', 'enable'));
+            self::assertSame('stderr', $oConfig->Get('logs', 'filename'));
+            self::assertTrue((bool) $oConfig->Get('logs', 'hide_passwords'));
+            // Written by the CLI provisioner, whose upload_max_filesize (2M) must not cap it.
+            self::assertSame(25, (int) $oConfig->Get('webmail', 'attachment_size_limit'));
+            // Same defaults as the Nextcloud app.
+            self::assertFalse((bool) $oConfig->Get('interface', 'show_attachment_thumbnail'));
+            self::assertTrue((bool) $oConfig->Get('security', 'auto_verify_signatures'));
+            self::assertFalse((bool) $oConfig->Get('defaults', 'contacts_autosave'));
 
             // No per-domain config: every mail domain falls back to login.default_domain
             // (0.8.2; the fallback itself is covered by AccountFromNcSessionTest).

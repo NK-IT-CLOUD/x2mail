@@ -34,6 +34,15 @@ final class Provisioner
         $oConfig->Set('webmail', 'allow_additional_identities', true);
         $oConfig->Set('security', 'custom_server_signature', 'X2Mail');
         $oConfig->Set('imap', 'show_login_alert', false);
+        $oConfig->Set('defaults', 'autologout', 0);
+        // Fixed value: the default min(upload_max_filesize, 25) would take the CLI's 2M here.
+        $oConfig->Set('webmail', 'attachment_size_limit', 25);
+        $oConfig->Set('logs', 'enable', true);
+        $oConfig->Set('logs', 'filename', 'stderr');
+        // Same values as in the Nextcloud app.
+        $oConfig->Set('interface', 'show_attachment_thumbnail', false);
+        $oConfig->Set('security', 'auto_verify_signatures', true);
+        $oConfig->Set('defaults', 'contacts_autosave', false);
         $oConfig->Set('login', 'default_domain', $this->config->mail->host);
         $oConfig->Set('plugins', 'enable', true);
         $list = \array_values(\array_filter(\array_map('trim', \explode(',', (string) $oConfig->Get('plugins', 'enabled_list', '')))));

@@ -52,7 +52,7 @@ class AppTest extends TestCase
     }
 
     /** @param list<Response> $responses */
-    private function app(array $responses = []): App
+    private function app(array $responses = [], ?\Closure $hasMailAccount = null): App
     {
         $config = Config::fromArray([
             'webmail' => ['base_url' => 'https://webmail.example.org'],
@@ -67,7 +67,7 @@ class AppTest extends TestCase
         }));
         return new App($config, $auth, $this->session, function (): void {
             $this->engineRan = true;
-        });
+        }, $hasMailAccount);
     }
 
     private function loggedIn(): void
@@ -335,9 +335,66 @@ class AppTest extends TestCase
     public function testLogoutRedirectsToIdp(): void
     {
         $this->loggedIn();
-        $r = $this->app()->handle('/oidc/logout', [], []);
+        $r = $this->app()->handle('/oidc/logout', [], ['HTTP_SEC_FETCH_SITE' => 'same-origin']);
         self::assertSame(302, $r['status']);
         self::assertStringStartsWith(self::ISS . '/logout?', $r['headers']['Location']);
+    }
+
+    public function testLogoutTypedIntoAddressBarRedirectsToIdp(): void
+    {
+        $this->loggedIn();
+        $r = $this->app()->handle('/oidc/logout', [], ['HTTP_SEC_FETCH_SITE' => 'none']);
+        self::assertStringStartsWith(self::ISS . '/logout?', $r['headers']['Location']);
+    }
+
+    /**
+     * A link on another site or in a mail must not end the session: the logout
+     * would also end the SSO session of every other app (logout CSRF).
+     */
+    public function testCrossSiteLogoutKeepsSession(): void
+    {
+        $this->loggedIn();
+        foreach ([['HTTP_SEC_FETCH_SITE' => 'cross-site'], ['HTTP_SEC_FETCH_SITE' => 'same-site'], []] as $server) {
+            $r = $this->app()->handle('/oidc/logout', [], $server);
+            self::assertSame(302, $r['status']);
+            self::assertSame('https://webmail.example.org/', $r['headers']['Location']);
+            self::assertNotNull($this->session->get('x2w.tokens'));
+        }
+    }
+
+    public function testPageLoadWithoutMailAccountShowsErrorPage(): void
+    {
+        $this->loggedIn();
+        $r = $this->app([], static fn (): bool => false)->handle('/', [], []);
+
+        self::assertSame(503, $r['status']);
+        self::assertStringContainsString('Kein Postfach', $r['body']);
+        self::assertStringNotContainsString('type="password"', $r['body']);
+        self::assertFalse($this->engineRan);
+    }
+
+    public function testRequestsBesidesThePageSkipTheMailAccountCheck(): void
+    {
+        $this->loggedIn();
+        $probed = false;
+        $probe = static function () use (&$probed): bool {
+            $probed = true;
+            return false;
+        };
+        $r = $this->app([], $probe)->handle('/?/Json/&q[]=/0/', ['/Json/&q' => ['/0/']], []);
+
+        self::assertNull($r);
+        self::assertTrue($this->engineRan);
+        self::assertFalse($probed);
+    }
+
+    public function testPageLoadWithMailAccountHandsOverToEngine(): void
+    {
+        $this->loggedIn();
+        $r = $this->app([], static fn (): bool => true)->handle('/', [], []);
+
+        self::assertNull($r);
+        self::assertTrue($this->engineRan);
     }
 
     public function testLoggedInHandsOverToEngineWithBridgeAndRuntime(): void

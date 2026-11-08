@@ -244,10 +244,10 @@ class InstallStep implements IRepairStep
             $config,
             'defaults',
             'autologout',
-            15,
-            [30],
+            0,
+            [30, 15],
             $output,
-            'Set release autologout default to 15 minutes',
+            'Turned the idle logout off (release default)',
         );
         $this->setIfCurrentIn(
             $config,

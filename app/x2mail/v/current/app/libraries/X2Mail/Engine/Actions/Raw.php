@@ -92,6 +92,31 @@ trait Raw
 	/**
 	 * Message, Message Attachment or Zip
 	 */
+	/**
+	 * The Content-Type to view an attachment inline with, or null to make it a
+	 * download. Raster images, PDF, audio, video and plain text are shown as
+	 * declared; any other text/* is shown as text/plain, so an HTML attachment
+	 * displays its source instead of rendering as a page on this origin.
+	 */
+	public static function inlineContentType(string $sContentType) : ?string
+	{
+		$sType = \strtolower(\trim(\explode(';', $sContentType, 2)[0]));
+		// Common non-standard names for JPEG
+		if ('image/jpg' === $sType || 'image/pjpeg' === $sType) {
+			return 'image/jpeg';
+		}
+		if (\in_array($sType, ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/bmp',
+			'application/pdf', 'text/plain'], true)
+		 || \preg_match('#^(audio|video)/[a-z0-9.+-]+$#', $sType)
+		) {
+			return $sType;
+		}
+		if (\str_starts_with($sType, 'text/')) {
+			return 'text/plain';
+		}
+		return null;
+	}
+
 	private function rawSmart(bool $bDownload, bool $bThumbnail = false) : bool
 	{
 		$sRawKey = (string) $this->GetActionParam('RawKey', '');
@@ -180,6 +205,22 @@ trait Raw
 //							?: \X2Mail\Engine\File\MimeType::fromStream($rResource, $sFileName)
 							?: \X2Mail\Engine\File\MimeType::fromFilename($sFileName)
 							?: 'application/octet-stream';
+					}
+
+					// The type comes from the message: whoever sent the mail decides it.
+					// Viewed inline under this origin, text/html (or SVG, XML, ...)
+					// becomes a page of the sender's choosing. Only a few types are
+					// shown inline as declared, everything else is a download.
+					// Thumbnails are exempt: they are rendered from the real image
+					// data (GIF, JPEG, PNG, WebP only) and always sent as PNG.
+					if (!$bDownload && !$bThumbnail) {
+						$sInlineType = static::inlineContentType($sContentType);
+						if (null === $sInlineType) {
+							$bDownload = true;
+							$sContentType = 'application/octet-stream';
+						} else {
+							$sContentType = $sInlineType;
+						}
 					}
 
 					if (!$bDownload) {

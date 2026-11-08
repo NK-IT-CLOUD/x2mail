@@ -187,6 +187,14 @@ class MailClient
 			throw new \ValueError;
 		}
 
+		// The index goes into BODY.PEEK[<index>.MIME] and can come from a client
+		// raw key: only a section number, so it cannot close the bracket or the
+		// line and add IMAP commands.
+		$sMimeIndex = \trim($sMimeIndex);
+		if ('' !== $sMimeIndex && !\preg_match('/^[1-9][0-9]*(\.[1-9][0-9]*)*$/D', $sMimeIndex)) {
+			throw new \InvalidArgumentException('Invalid mime index');
+		}
+
 		$this->oImapClient->FolderExamine($sFolderName);
 
 		$sFileName = '';
@@ -194,7 +202,6 @@ class MailClient
 		$sMailEncoding = '';
 		$sPeek = FetchType::BODY_PEEK->value;
 
-		$sMimeIndex = \trim($sMimeIndex);
 		$aFetchResponse = $this->oImapClient->Fetch(array(
 			\strlen($sMimeIndex)
 				? FetchType::BODY_PEEK->value.'['.$sMimeIndex.'.MIME]'

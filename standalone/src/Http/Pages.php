@@ -27,6 +27,16 @@ final class Pages
         );
     }
 
+    public static function noMailbox(): string
+    {
+        return self::page(
+            'Kein Postfach',
+            'Für Ihr Konto wurde kein Postfach gefunden. Wenden Sie sich an Ihre IT, wenn das Problem bleibt.',
+            '/',
+            'Erneut versuchen',
+        );
+    }
+
     public static function expired(): string
     {
         return self::page(

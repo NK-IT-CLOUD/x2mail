@@ -9,6 +9,13 @@ class ServiceActions
 	 */
 	private const GET_ACTIONS = ['MessageList', 'Message'];
 
+	// Raw responses carry content from the message. Besides scripts and frames,
+	// deny forms, base and everything not needed to show an image, media, a PDF
+	// or plain text.
+	public const RAW_CSP = "default-src 'none'; script-src 'none'; child-src 'none'; object-src 'self'; "
+		. "form-action 'none'; base-uri 'none'; frame-ancestors 'self'; img-src 'self' data:; "
+		. "media-src 'self'; style-src 'self' 'unsafe-inline'";
+
 	protected \X2Mail\Mail\Base\Http $oHttp;
 
 	protected Actions $oActions;
@@ -281,10 +288,24 @@ class ServiceActions
 		return $this->privateUpload('UploadBackground', 1);
 	}
 
+	/**
+	 * The type a proxied remote image is served with, or null: only raster
+	 * images. SVG would render as a page on the webmail origin.
+	 */
+	public static function proxyImageType(string $sContentType) : ?string
+	{
+		$sType = Actions::inlineContentType($sContentType);
+		return ($sType && \str_starts_with($sType, 'image/')) ? $sType : null;
+	}
+
 	public function ServiceProxyExternal() : string
 	{
 		$sData = empty($this->aPaths[1]) ? '' : $this->aPaths[1];
-		if ($sData && $this->Config()->Get('labs', 'use_local_proxy_for_external_images', false)) {
+		// Only for a signed-in user: without an account this is an open image proxy.
+		if ($sData
+		 && $this->Config()->Get('labs', 'use_local_proxy_for_external_images', false)
+		 && $this->oActions->getMainAccountFromToken(false)
+		) {
 			$this->oActions->verifyCacheByKey($sData);
 			$sUrl = \X2Mail\Mail\Base\Utils::UrlSafeBase64Decode($sData);
 			if (!empty($sUrl)) {
@@ -297,10 +318,12 @@ class ServiceActions
 				$oResponse = $HTTP->doRequest('GET', $sUrl);
 				if ($oResponse) {
 					$sContentType = \X2Mail\Engine\File\MimeType::fromStream($tmp) ?: $oResponse->getHeader('content-type');
-					if (200 === $oResponse->status && \str_starts_with($sContentType, 'image/')) {
+					$sImageType = static::proxyImageType((string) $sContentType);
+					if (200 === $oResponse->status && $sImageType) {
 						try {
 							$this->oActions->cacheByKey($sData);
-							\header('Content-Type: ' . $sContentType);
+							\header('Content-Type: ' . $sImageType);
+							\header('Content-Security-Policy: ' . self::RAW_CSP);
 							\header('Cache-Control: public');
 							\header('Expires: '.\gmdate('D, j M Y H:i:s', 2592000 + \time()).' UTC');
 							\header('X-Content-Redirect-Location: '.$oResponse->final_uri);
@@ -342,7 +365,7 @@ class ServiceActions
 					$sMethodName = 'Raw'.$sAction;
 					if (\method_exists($this->oActions, $sMethodName)) {
 						\header('X-Raw-Action: '.$sMethodName);
-						\header('Content-Security-Policy: script-src \'none\'; child-src \'none\'');
+						\header('Content-Security-Policy: ' . self::RAW_CSP);
 
 						$sRawError = '';
 						$this->oActions->SetActionParams(array(
@@ -525,13 +548,6 @@ class ServiceActions
 		\header('Content-Type: text/plain; charset=utf-8');
 		$this->oActions->logWrite('Pong', \LOG_INFO, 'PING');
 		return 'Pong';
-	}
-
-	public function ServiceTest() : string
-	{
-		$this->oHttp->ServerNoCache();
-		\X2Mail\Engine\Integrity::test();
-		return '';
 	}
 
 	/**

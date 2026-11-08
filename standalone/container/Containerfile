@@ -2,7 +2,7 @@
 #   buildah bud -f standalone/container/Containerfile -t x2mail-webmail .
 # Roles: `php` (provision + php-fpm :9000) and `web` (nginx :8080).
 
-ARG PHP_IMAGE=docker.io/library/php:8.5.10-fpm-alpine3.24
+ARG PHP_IMAGE=docker.io/library/php:8.5.12-fpm-alpine3.24
 
 FROM docker.io/library/node:24.21.0-alpine AS assets
 RUN apk add --no-cache make grep \

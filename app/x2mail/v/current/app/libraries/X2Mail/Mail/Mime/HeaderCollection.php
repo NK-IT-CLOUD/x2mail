@@ -193,7 +193,18 @@ class HeaderCollection extends \X2Mail\Mail\Base\Collection
 			'spf' => []
 		];
 		$aHeaders = $this->ValuesByName(Enumerations\Header::AUTHENTICATION_RESULTS->value);
-		if (\count($aHeaders)) {
+		$bHasAuthResults = !!\count($aHeaders);
+		if ($bHasAuthResults) {
+			// A sender can add this header itself, so a result counts only when the
+			// server that wrote it handled the message: the receiving server adds its
+			// header on top, so its authserv-id is the one of the topmost header.
+			// See RFC 8601 section 7.1.
+			$fAuthservId = static function (string $sValue) : string {
+				$sId = \preg_replace('/\\([^)]*\\)/', ' ', \explode(';', $sValue, 2)[0]);
+				return \strtolower(\trim(\preg_replace('/\\s+\\d+$/', '', \trim($sId)), " \t\""));
+			};
+			$sLocalId = $fAuthservId($aHeaders[0]);
+			$aHeaders = \array_filter($aHeaders, static fn (string $sValue) : bool => $fAuthservId($sValue) === $sLocalId);
 			$aHeaders = \implode(';', $aHeaders);
 			$aHeaders = \preg_replace('/[\\r\\n\\t\\s]+/', ' ', $aHeaders);
 			$aHeaders = \str_replace('-bit key;', '-bit key,', $aHeaders);
@@ -209,9 +220,11 @@ class HeaderCollection extends \X2Mail\Mail\Base\Collection
 				}
 			}
 		}
-		if (!\count($aResult['dkim'])) {
+		if (!$bHasAuthResults) {
 			// X-DKIM-Authentication-Results: signer="hostinger.com" status="pass"
-			$aHeaders = $this->ValuesByName(Enumerations\Header::X_DKIM_AUTHENTICATION_RESULTS->value);
+			// It carries no authserv-id, so nothing ties it to the receiving server:
+			// only the topmost is read, and only without any Authentication-Results.
+			$aHeaders = \array_slice($this->ValuesByName(Enumerations\Header::X_DKIM_AUTHENTICATION_RESULTS->value), 0, 1);
 			foreach ($aHeaders as $sHeaderValue) {
 				$aStatus = array();
 				$aHeader = array();

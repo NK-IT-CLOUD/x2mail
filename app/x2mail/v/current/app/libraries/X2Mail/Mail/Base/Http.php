@@ -125,14 +125,8 @@ class Http
 		return $bWithoutPort ? \preg_replace('/:\d+$/', '', $sHost) : $sHost;
 	}
 
-	public function GetClientIp(bool $bCheckProxy = false) : string
+	public function GetClientIp() : string
 	{
-		if ($bCheckProxy && null !== static::GetServer('HTTP_CLIENT_IP', null)) {
-			return static::GetServer('HTTP_CLIENT_IP', '');
-		}
-		if ($bCheckProxy && null !== static::GetServer('HTTP_X_FORWARDED_FOR', null)) {
-			return static::GetServer('HTTP_X_FORWARDED_FOR', '');
-		}
 		return static::GetServer('REMOTE_ADDR', '');
 	}
 

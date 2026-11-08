@@ -39,8 +39,7 @@ trait Accounts
 				StorageType::CONFIG->value,
 				'additionalaccounts'
 			);
-			$aAccounts = $sAccounts ? \json_decode($sAccounts, true)
-				: \X2Mail\Engine\Upgrade::ConvertInsecureAccounts($this, $oAccount);
+			$aAccounts = $sAccounts ? \json_decode($sAccounts, true) : [];
 			if ($aAccounts && \is_array($aAccounts)) {
 				return $aAccounts;
 			}

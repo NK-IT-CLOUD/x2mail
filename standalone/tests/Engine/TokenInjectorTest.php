@@ -48,7 +48,7 @@ class TokenInjectorTest extends TestCase
         if (!\defined('APP_PRIVATE_DATA')) {
             self::$tempPrivateData = \sys_get_temp_dir() . '/x2w-tokeninjector-' . \bin2hex(\random_bytes(4)) . '/';
             \mkdir(self::$tempPrivateData . 'configs', 0700, true);
-            \file_put_contents(self::$tempPrivateData . 'configs/application.ini', "[security]\nencrypt_cipher = \"aes-256-cbc-hmac-sha1\"\n");
+            \file_put_contents(self::$tempPrivateData . 'configs/application.ini', "[security]\n");
             \define('APP_PRIVATE_DATA', self::$tempPrivateData);
         }
     }
